@@ -1,0 +1,14 @@
+\begin{Schunk}
+\begin{Sinput}
+ ## Confirm the manual approach by using
+ ## lavaan() to get the FIML estimates:
+ mod1 <- "
+ x ~~ y + z
+ y ~~ z
+ "
+ ## Fit the model with lavaan():
+ out1 <- cfa(mod1, data = missData, missing = "fiml")
+ muHatFIML2 <- inspect(out1, "est")$nu
+ sigmaHatFIML2 <- inspect(out1, "theta")
+\end{Sinput}
+\end{Schunk}

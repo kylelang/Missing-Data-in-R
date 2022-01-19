@@ -1,0 +1,25 @@
+\begin{Schunk}
+\begin{Sinput}
+ ## Sample the posterior imputation model parameters:
+ coefSams <- matrix(NA, nReps, length(coefs))
+ for(rp in 1 : nReps) {
+     ## Sample the latent response indicators:
+     yStar[ySuccess] <- rtnorm(sum(ySuccess),
+                               mean = yHats[ySuccess],
+                               sd = 1.0,
+                               lower = 0)
+     yStar[!ySuccess] <- rtnorm(sum(!ySuccess),
+                                mean = yHats[!ySuccess],
+                                sd = 1.0,
+                                upper = 0)
+ 
+     ## Sample the regression coefficients:
+     coefMean <- .lm.fit(y = yStar, x = predMat)$coef
+     coefs <- matrix(rmvnorm(1, coefMean, coefVar))
+     yHats <- predMat %*% coefs
+ 
+     ## Store the coefficient samples for later:
+     coefSams[rp, ] <- coefs
+ }
+\end{Sinput}
+\end{Schunk}

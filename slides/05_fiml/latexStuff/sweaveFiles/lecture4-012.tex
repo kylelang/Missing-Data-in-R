@@ -1,0 +1,11 @@
+\begin{Schunk}
+\begin{Sinput}
+ betaVarDenom <- solve(crossprod(obsPredData))
+ betaSams <- matrix(NA, nSams, length(betaHat))
+ for(m in 1 : nSams) {
+   betaSigma <- sigmaSams[m] * betaVarDenom
+   betaSams[m, ] <- 
+     rmvnorm(1, mean = betaHat, sigma = betaSigma)
+ }
+\end{Sinput}
+\end{Schunk}

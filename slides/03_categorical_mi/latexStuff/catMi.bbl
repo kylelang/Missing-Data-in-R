@@ -1,0 +1,114 @@
+\begin{thebibliography}{}
+
+\bibitem [\protect \citeauthoryear {%
+Allison%
+}{%
+Allison%
+}{%
+{\protect \APACyear {2002}}%
+}]{%
+allison:2002}
+\APACinsertmetastar {%
+allison:2002}%
+\begin{APACrefauthors}%
+Allison, P\BPBI D.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYear{2002}.
+\newblock
+\APACrefbtitle {Missing Data} {Missing data}.
+\newblock
+\APACaddressPublisher{Thousand Oaks, CA}{Sage Publictions}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Honaker%
+\ \BBA {} King%
+}{%
+Honaker%
+\ \BBA {} King%
+}{%
+{\protect \APACyear {2010}}%
+}]{%
+honakerKing:2010}
+\APACinsertmetastar {%
+honakerKing:2010}%
+\begin{APACrefauthors}%
+Honaker, J.%
+\BCBT {}\ \BBA {} King, G.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2010}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {What to Do about Missing Values in Time-Series
+  Cross-Section Data} {What to do about missing values in time-series
+  cross-section data}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{American Journal of Political
+  Science}{54}{2}{561--581}.
+\newblock
+\begin{APACrefDOI} \doi{10.1111/j.1540-5907.2010.00447.x} \end{APACrefDOI}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Lang%
+\ \BBA {} Wu%
+}{%
+Lang%
+\ \BBA {} Wu%
+}{%
+{\protect \APACyear {2017}}%
+}]{%
+langWu:2017}
+\APACinsertmetastar {%
+langWu:2017}%
+\begin{APACrefauthors}%
+Lang, K\BPBI M.%
+\BCBT {}\ \BBA {} Wu, W.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2017}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {A Comparison of Methods for Creating Multiple
+  Imputations of Nominal Variables} {A comparison of methods for creating
+  multiple imputations of nominal variables}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Multivariate Behavioral Research}{52}{3}{290-304}.
+\newblock
+\begin{APACrefDOI} \doi{10.1080/00273171.2017.1289360} \end{APACrefDOI}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Wu%
+, Jia%
+\BCBL {}\ \BBA {} Enders%
+}{%
+Wu%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2015}}%
+}]{%
+wuEtAl:2015}
+\APACinsertmetastar {%
+wuEtAl:2015}%
+\begin{APACrefauthors}%
+Wu, W.%
+, Jia, F.%
+\BCBL {}\ \BBA {} Enders, C.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2015}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {A Comparison of Imputation Strategies for Ordinal
+  Missing Data on Likert Scale Variables} {A comparison of imputation
+  strategies for ordinal missing data on likert scale variables}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Multivariate Behavioral Research}{50}{5}{484-503}.
+\newblock
+\begin{APACrefDOI} \doi{10.1080/00273171.2015.1022644} \end{APACrefDOI}
+\PrintBackRefs{\CurrentBib}
+
+\end{thebibliography}

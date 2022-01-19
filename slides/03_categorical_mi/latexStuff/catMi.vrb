@@ -1,0 +1,50 @@
+\frametitle{Classification Example}
+
+
+
+Let's re-classify our patient into either the ``high glucose'', ``moderate
+glucose'', or ``low glucose'' group using the model fit above.
+\vb
+\begin{itemize}
+\item First we plug their predictor data into the fitted model to get their
+  set of model-implied $\eta_l$ values:
+\end{itemize}
+\begin{align*}
+  \text{logit}\left(\frac{\pi_{low.gluc}}{\pi_{low.gluc}}\right) &=
+  0 + 0 (57) + 0 (28) + 0 (92) &=
+  \mask{10.00} 0\\
+  \text{logit}\left(\frac{\pi_{mid.gluc}}{\pi_{low.gluc}}\right) &=
+  -6.866 + 0.016 (57) + 0.132 (28) + 0.046 (92) &= %~ &
+  1.929\\
+  \text{logit}\left(\frac{\pi_{hi.gluc}}{\pi_{low.gluc}}\right) &=
+  -14.184 + 0.035 (57) + 0.241 (28) + 0.067 (92) &= %~ &
+  0.762
+\end{align*}
+
+\pagebreak
+
+\begin{itemize}
+\item Next we apply the softmax function to convert the predicted $\eta_l$
+  values into model-implied success probabilities:
+\end{itemize}
+\begin{align*}
+  \hat{\pi}_{low.gluc} &=
+  \frac{1}{1 + e^{1.929} + e^{0.762}} =
+  0.1\\
+  \hat{\pi}_{mid.gluc} &=
+  \frac{e^{1.929}}{1 + e^{1.929} + e^{0.762}} =
+  0.687\\
+  \hat{\pi}_{hi.gluc} &=
+  \frac{e^{0.762}}{1 + e^{1.929} + e^{0.762}} =
+  0.214
+\end{align*}
+\begin{itemize}
+\item Finally, to make the classification, we find the largest $\hat{\pi}_l'$:
+  \vb
+  \begin{itemize}
+  \item Because $\hat{\pi}_{mid.gluc} = 0.687$ is the
+    largest, we would classify this patient into the
+    ``moderate glucose'' group.
+  \end{itemize}
+\end{itemize}
+

@@ -1,0 +1,821 @@
+%%% Title:    Missing Data Stats Camp Course: Multivariate MI
+%%% Author:   Kyle M. Lang
+%%% Created:  2017-SEP-12
+%%% Modified: 2018-OCT-18
+
+\documentclass{beamer}
+\usetheme[%
+  pageofpages          = of,
+  bullet               = circle,
+  titleline            = true,
+  alternativetitlepage = true,
+  titlepagelogo        = Logo3,
+  watermark            = watermarkTiU,
+  watermarkheight      = 100px,
+  watermarkheightmult  = 4%
+]{UVT}
+
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage[natbibapa]{apacite}
+\usepackage[libertine]{newtxmath}
+\usepackage{fancybox}
+\usepackage{caption}
+
+%% Ensure styles of `blocks' (used in Definitions, Theorems etc.) follows the
+%% UVT-style theme:
+\setbeamercolor{block title}{fg = darkblue, bg = white}
+\setbeamercolor{block body}{use = block title, bg = block title.bg}
+
+%% Ensure TableOfContents is in UVT-style theme:
+\setbeamercolor{section in toc}{fg = darkblue}
+
+%% Don't number broken frames
+\setbeamertemplate{frametitle continuation}{}
+
+%% Don't label table captions:
+\captionsetup{labelformat = empty}
+
+\title{Multivariate Multiple Imputation}
+\subtitle{Stats Camp 2018: Missing Data Analysis}
+\author{Kyle M. Lang}
+\institute{Department of Methodology \& Statistics\\Tilburg University}
+\date{19--21 October 2018}
+
+
+\begin{document}
+
+%------------------------------------------------------------------------------%
+
+<<setup, include=FALSE>>=
+set.seed(235711)
+
+library(knitr)
+library(ggplot2)
+library(MASS)
+library(mvtnorm)
+library(glmnet)
+library(xtable)
+library(pscl)
+library(LaplacesDemon)
+library(MLmetrics)
+library(SURF)
+library(mice)
+library(mitools)
+library(norm)
+library(MCMCpack)
+library(mgcv)
+
+source("../../../code/supportFunctions.R")
+dataDir <- "../../../data/"
+figDir  <- "figures/"
+
+opts_chunk$set(size = 'footnotesize', fig.align = 'center')
+knit_theme$set('edit-kwrite')
+
+lightBlue <- rgb(0,   137, 191, max = 255)
+midBlue   <- rgb(0,   131, 183, max = 255)
+darkBlue  <- rgb(0,   128, 179, max = 255)
+deepGold  <- rgb(184, 138, 45,  max = 255)
+lightGold <- rgb(195, 146, 48,  max = 255)
+@
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[t,plain]
+    
+  \titlepage
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Outline}
+  
+  \begin{itemize}
+  \item Discuss the two frameworks for multivariate MI
+    \vc
+    \begin{itemize}
+    \item Fully conditional specification
+      \vc
+    \item Joint Modeling
+    \end{itemize}
+    \vb
+  \item Show a manual \textsf{R} example of each approach
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Joint Modeling vs. Fully Conditional Specification}
+
+  When imputing with \emph{Joint Modeling} approaches, the missing data are 
+  replaced by samples from the joint posterior predictive distribution.
+  \vb
+  \begin{itemize}
+    \item To impute $X$, $Y$, and $Z$, we draw:
+      \begin{align*}
+        X, Y, Z \sim P(X, Y, Z | \theta)
+      \end{align*}
+  \end{itemize}
+  \vb
+  With \emph{Fully Conditional Specification}, the missing data are replaced 
+  with samples from the conditional posterior predictive distribution of each 
+  incomplete variable.
+  \vb
+  \begin{itemize}
+  \item To impute $X$, $Y$, and $Z$, we draw:
+    \begin{align*}
+      X &\sim P(X | Y, Z, \theta_X)\\
+      Y &\sim P(Y | X, Z, \theta_Y)\\
+      Z &\sim P(Z | Y, X, \theta_Z)
+    \end{align*}
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[allowframebreaks]{Joint Modeling: Strengths}
+  
+  When correctly implemented, joint modeling approaches are guaranteed to 
+  produce \emph{Bayesianly proper} imputations.
+  \vb
+  \begin{itemize}
+  \item The sufficient condition for \emph{properness} is that the imputations 
+    are randomly sampled from the correctly specified joint posterior predictive 
+    distribution of missing data.
+    \vc
+    \begin{itemize}
+    \item This is the defining characteristic of joint modeling methods.
+    \end{itemize}
+  \end{itemize}
+  \va
+  When using the correct distribution imputations produced by joint modeling 
+  methods will be the best possible imputations.
+  \begin{itemize}
+  \item Unbiased parameter estimates
+  \item Well-calibrated sampling variability
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Joint Modeling: Weaknesses}
+  
+  Joint modeling approaches are very computationally demanding.
+  \vc
+  \begin{itemize}
+  \item The computational burden increases with the number of incomplete 
+    variables.
+  \end{itemize}
+  \va
+  Joint modeling approaches are only applicable when the joint distribution of 
+  all incomplete variables follows a known form.
+  \vc
+  \begin{itemize}
+  \item Mixes of continuous and categorical variables are very difficult to 
+    accommodate.
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Fully Conditional Specification: Strengths}
+  
+  FCS is computationally simpler than JM approaches.
+  \vc
+  \begin{itemize}
+  \item FCS only samples from a series of univariate distributions, not large 
+    joint distributions.
+  \end{itemize}
+  \va 
+  FCS approaches can create imputations for variables that don't have a sensible 
+  joint distribution.
+  \vc
+  \begin{itemize}
+  \item Mixes of continuous and categorical variables are easily treated with 
+    FCS.
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Fully Conditional Specification: Weaknesses}
+
+  FCS will usually be slower than JM.
+  \vc
+  \begin{itemize}
+  \item Each variable is given its own fully parameterized distribution, even if 
+    that granularity is unnecessary.
+  \end{itemize}
+  \va
+  When the incomplete variables don't have a known joint distribution, we don't 
+  have theoretical support for the validity of FCS.
+  \vc
+  \begin{itemize}
+  \item There is, however, a large degree of empirical support for the 
+    tenability of the FCS approach.
+  \item In practice, we will usually use FCS since real data rarely arise from a 
+    known joint distribution.
+  \end{itemize}
+  
+\end{frame}
+  
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Aside: Gibbs Sampling}
+  
+  Up to this point, most of the models we've explored could be approximated by 
+  sampling directly from their posterior distributions.
+  \vc
+  \begin{itemize}
+    \item This won't be true with arbitrary, multivariate missing data
+  \end{itemize}
+  \va 
+  To make inference regarding a multivariate distribution with multiple, 
+  interrelated, unknown parameters, we can use \emph{Gibbs sampling}.
+  \vc
+  \begin{itemize}
+  \item Sample from the conditional distribution of each parameter, conditioning 
+    on the current best guesses of all other parameters.
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Aside: Gibbs Sampling}
+  
+  Suppose the following:
+  \vb
+  \begin{enumerate}
+  \item I want to make some inference about the tri-variate mean of
+    $X, Y, Z = \mu_X, \mu_Y, \mu_Z \sim P(\mu | \theta)$
+    \vb
+  \item $P(\mu | \theta)$ is super hairy and difficult to sample
+    \vb
+  \item The conditional distributions:
+    $P(\mu_X | \hat{\mu}_Y, \hat{\mu}_Z, \theta)$,
+    $P(\mu_Y | \hat{\mu}_X, \hat{\mu}_Z, \theta)$, and
+    $P(\mu_Z | \hat{\mu}_X, \hat{\mu}_Y, \theta)$ are easily sampled.
+  \end{enumerate}
+  \va
+  Then I can approximate the full joint distribution
+  $P(\mu | \theta)$ by repeatedly and sequentially sampling from
+  $P(\mu_X | \hat{\mu}_Y, \hat{\mu}_Z, \theta)$, $P(\mu_Y |
+  \hat{\mu}_X, \hat{\mu}_Z, \theta)$, and $P(\mu_Z | \hat{\mu}_X,
+  \hat{\mu}_Y, \theta)$.
+
+\end{frame}
+  
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Aside: Gibbs Sampling}
+  
+  Starting with initial guesses of $\mu_Y$, $\hat{\mu}_Y^{(0)}$, and
+  $\mu_Z$, $\hat{\mu}_Z^{(0)}$, and assuming $\theta$ is known, Gibbs
+  sampling proceeds as follows:
+  \begin{align*}
+    \hat{\mu}_X^{(1)} &\sim P(\mu_X | \hat{\mu}_Y^{(0)}, \hat{\mu}_Z^{(0)}, \theta)\\
+    \hat{\mu}_Y^{(1)} &\sim P(\mu_Y | \hat{\mu}_X^{(1)}, \hat{\mu}_Z^{(0)}, \theta)\\
+    \hat{\mu}_Z^{(1)} &\sim P(\mu_Z | \hat{\mu}_Y^{(1)}, \hat{\mu}_X^{(1)}, \theta)\\
+    \\
+    \hat{\mu}_X^{(2)} &\sim P(\mu_X | \hat{\mu}_Y^{(1)}, \hat{\mu}_Z^{(1)}, \theta)\\
+    \hat{\mu}_Y^{(2)} &\sim P(\mu_Y | \hat{\mu}_X^{(2)}, \hat{\mu}_Z^{(1)}, \theta)\\
+    \hat{\mu}_Z^{(2)} &\sim P(\mu_Z | \hat{\mu}_Y^{(2)}, \hat{\mu}_X^{(2)}, \theta)
+  \end{align*}
+  \vspace{-40pt}
+  \begin{center}\huge{$\vdots$}\end{center}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Why do we care?}
+  
+  Multivariate MI employs the same logic as Gibbs sampling.
+  \vb
+  \begin{itemize}
+  \item The imputations are created by conditioning on the current estimates of 
+    the imputation model parameters.
+    \vb
+  \item The imputation model parameters are updated by conditioning on the most 
+    recent imputations.
+    \vb
+  \item With FCS, each variable is imputed by conditioning on the most recent 
+    imputations of all other variables.
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Procedure: Fully Conditional Specification}
+  
+  \begin{enumerate}
+  \item Fill the missing data with reasonable guesses.
+    \vb
+  \item For each incomplete variable, do a single iteration of univariate 
+    Bayesian MI (e.g., as seen in the last set of slides). \label{eiStep}
+    \vb
+    \begin{itemize}
+    \item After each variable on the data set is so treated, we've completed one 
+      iteration.
+    \end{itemize}
+    \vc
+  \item Repeat Step \ref{eiStep} many times.
+    \vb
+  \item After the imputation model parameters stabilize, save $M$ imputed data 
+    sets.
+  \end{enumerate}
+  
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example: Fully Conditional Specification}
+  
+<<>>=
+## Simulate some data:
+simData <- 
+    simCovData(nObs = 1000, sigma = 0.25, nVars = 4)
+
+head(simData, 10)
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile, allowframebreaks]{Example: Fully Conditional Specification}
+
+<<>>=
+## Impose missing:
+targets  <- paste0("x", 1 : 3)
+missData <- 
+    imposeMissData(data    = simData,
+                   targets = list(mar = targets),
+                   preds   = "x4",
+                   pm      = 0.3,
+                   snr     = 5.0,
+                   pattern = c(x1 = "low", 
+                               x2 = "center", 
+                               x3 = "high")
+                   )$data
+@ 
+
+\pagebreak
+
+<<>>=
+head(missData, 10)
+@ 
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example: Fully Conditional Specification}
+  
+<<>>=
+## Define iteration numbers:
+nImps <- 100
+nBurn <- 500
+nSams <- nBurn + nImps
+
+## Summarize missingness:
+rMat <- !is.na(missData)
+nObs <- colSums(rMat)
+nMis <- colSums(!rMat)
+
+## Fill the missingness with initial (bad) guesses:
+mean0  <- colMeans(missData, na.rm = TRUE)
+sigma0 <- cov(missData, use = "pairwise")
+draws0 <- rmvnorm(nrow(missData), mean0, sigma0)
+
+impData        <- missData
+impData[!rMat] <- draws0[!rMat]
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example: Fully Conditional Specification}
+  
+  Define an elementary imputation function:
+  
+<<size = "scriptsize">>=
+eif <- function(data, rVec, v) {
+    ## Get the expected betas:
+    fit  <- lm(paste(v, "~ ."), data = data[rVec, ])
+    beta <- coef(fit)
+    
+    ## Sample sigma:
+    sigScale <- (1 / fit$df) * crossprod(resid(fit))
+    sigmaSam <- rinvchisq(1, df = fit$df, scale = sigScale)
+        
+    ## Sample beta:
+    betaVar <- sigmaSam * solve(crossprod(qr.X(fit$qr)))
+    betaSam <- rmvnorm(1, mean = beta, sigma = betaVar)
+    
+    ## Return a randomly sampled imputation:
+    matrix(cbind(1, data[!rVec, ])) %*% betaSam + 
+        rnorm(sum(!rVec), 0, sqrt(sigmaSam))
+}
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example: Fully Conditional Specification}
+  
+  Apply the elementary imputation function to each incomplete variable:
+  
+<<cache = TRUE>>=
+## Iterate through the FCS algorithm:
+impList <- list()
+for(s in 1 : nSams) {
+    for(v in targets) {
+        rVec              <- rMat[ , v]
+        impData[!rVec, v] <- eif(impData, rVec, v)
+    }
+    
+    ## If the chains are burnt-in, save imputed datasets:
+    if(s > nBurn) impList[[s - nBurn]] <- impData
+}
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example: Fully Conditional Specification}
+  
+  Analyze the multiply imputed datasets:
+
+<<cache = TRUE>>=
+## First, our manual version:
+fits1 <- lapply(impList, 
+                function(x) lm(x1 ~ x2 + x3, data = x)
+                )
+pool1 <- MIcombine(fits1)
+
+## Do the same analysis with mice():
+miceOut <- mice(data      = missData,
+                m         = 100,
+                method    = "norm",
+                printFlag = FALSE)
+fits2 <- with(miceOut, lm(x1 ~ x2 + x3))
+pool2 <- pool(fits2)
+@ 
+
+\end{frame}
+
+\watermarkon %-----------------------------------------------------------------%
+
+\begin{frame}{Example: Fully Conditional Specification}
+
+  Compare approaches:\\
+  \vb
+  
+<<echo = FALSE, results = "asis">>=
+cf1  <- coef(pool1)
+se1  <- sqrt(diag(vcov(pool1)))
+t1   <- cf1 / se1
+df1  <- pool1$df
+p1   <- 2 * pt(t1, df1, lower.tail = FALSE)
+fmi1 <- pool1$missinfo
+
+res1 <- round(cbind(cf1, se1, t1, p1, fmi1), 3)
+colnames(res1) <- c("Est", "SE", "t", "p", "FMI")
+
+flag            <- res1[ , "p"] < 0.001
+res1[flag, "p"] <- "<0.001"
+
+cf2  <- pool2$pooled$estimate
+se2  <- sqrt(pool2$pooled$t)
+t2   <- cf2 / se2
+df2  <- pool2$pooled$df
+p2   <- 2 * pt(t2, df2, lower.tail = FALSE)
+fmi2 <- pool2$pooled$fmi
+
+res2 <- round(cbind(cf2, se2, t2, p2, fmi2), 3)
+colnames(res2) <- c("Est", "SE", "t", "p", "FMI")
+rownames(res2) <- rownames(res1)
+
+flag            <- res2[ , "p"] < 0.001
+res2[flag, "p"] <- "<0.001"
+
+print(xtable(res1, caption = "Manual Version"), 
+      booktabs = TRUE, 
+      scalebox = 0.85)
+print(xtable(res2, caption = "MICE Version"), 
+      booktabs = TRUE, 
+      scalebox = 0.85)
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Aside: Definition of Regression Parameters}
+  
+  So far, we've been using the least-squares estimates of $\alpha$, $\beta$, and 
+  $\sigma^2$ to parameterize our posterior distributions.
+  \vc
+  \begin{itemize}
+  \item We can also define the parameters in terms of sufficient statistics.
+  \end{itemize}
+  \vb
+  Given $\mu$ and $\Sigma$, we can define all of our regression moments as:
+  \begin{align*}
+    \beta &= (\mathbf{X}^T \mathbf{X})^{-1} \mathbf{X}^T \mathbf{Y}\\
+    &= \text{Cov}(\mathbf{X})^{-1} \text{Cov}(\mathbf{X}, \mathbf{Y})\\
+    \alpha &= \mu_Y - \beta^T \mu_X\\
+    \Sigma_{\varepsilon} &= \Sigma_Y - \beta^T \Sigma_X \beta
+  \end{align*}
+  These definitions are crucial for JM approaches.
+  \begin{itemize}
+  \item Within the subset of data define by a given response pattern, the 
+    outcome variables will be entirely missing.
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Multivariate Bayesian Regression}
+  
+  Previously, we saw examples of univariate Bayesian regression which used the 
+  following model:
+  \begin{align*}
+    \beta &\sim \text{MVN} \left( \hat{\beta}_{ls}, ~ 
+    \sigma^2 (\mathbf{X}^T \mathbf{X})^{-1} \right)\\
+    \sigma^2 &\sim \text{Inv-}\chi^2 \left(N - P, MSE \right)
+  \end{align*}
+  We can directly extend the above to the multivariate case:
+  \begin{align*}
+    \Sigma^{(i)} &\sim \text{Inv-W} \left(N - 1, (N - 1) \Sigma^{(i - 1)} \right)\\
+    \mu^{(i)} &\sim \text{MVN} \left(\mu^{(i - 1)}, N^{-1}\Sigma^{(i)} \right)
+  \end{align*}
+  We get $\alpha$, $\beta$, and $\Sigma_{\varepsilon}$ via the calculations on the 
+  preceding slide
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Procedure: Joint Modeling}
+  
+  \begin{enumerate}
+  \item Partition the incomplete data by response pattern.
+    \begin{itemize}
+    \item Produce $S$ subsets wherein each row shares the same response pattern.
+    \end{itemize}
+    \vc
+  \item Provide initial guesses for $\mu$ and $\Sigma$.
+    \vb
+  \item Within each subset, use the current guesses of $\mu$ and $\Sigma$ to 
+    generate imputations via multivariate Bayesian regression. \label{iStep}
+    \vb
+  \item Use the filled-in data matrix to updated the sufficient statistics.
+    \label{pStep}
+    \vb
+  \item Repeat Steps \ref{iStep} and \ref{pStep} many times.
+    \vb
+  \item After the imputation model parameters have stabilized, save $M$ imputed 
+    data sets produced in Step \ref{iStep}.
+  \end{enumerate}
+  
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example: Joint Modeling}
+ 
+<<size = "scriptsize">>=
+iStep <- function(data, pats, ind, p0, pars) {
+    ## Loop over non-trivial response patterns:
+    for(i in c(1 : nrow(pats))[-p0]) {
+        ## Define the current response pattern:
+        p1 <- pats[i, ]
+        
+        ## Subset the data:
+        dat1 <- data[ind == i, ]
+        
+        ## Replace missing data with imputations:
+        data[ind == i, !p1] <- getImps(data  = dat1, 
+                                       mu    = pars$mu, 
+                                       sigma = pars$sigma, 
+                                       p1    = p1)
+    }
+    
+    ## Return the imputed data:
+    data
+}
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example: Joint Modeling}
+
+<<size = "scriptsize">>=
+getImps <- function(data, mu, sigma, p1) {
+    ## Partition the parameter matrices:
+    mY  <- matrix(mu[!p1])
+    mX  <- matrix(mu[p1])
+    sY  <- sigma[!p1, !p1]
+    sX  <- sigma[p1, p1]
+    cXY <- sigma[p1, !p1]
+    
+    ## Compute the imputation model parameters:
+    beta  <- solve(sX) %*% cXY
+    alpha <- mY - t(beta) %*% mX
+    sE    <- sY - t(beta) %*% sX %*% beta
+    
+    ## Pull out predictors:
+    X <- as.matrix(data[ , p1])
+    
+    ## Generate and return the imputations:
+    n <- nrow(X)
+    matrix(1, n) %*% t(alpha) + X %*% beta + rmvnorm(n, sigma = sE)
+}
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example: Joint Modeling}
+
+<<>>=
+pStep <- function(data) {
+    ## Update the complete-data sufficient statistics:
+    n <- nrow(data)
+    m <- colMeans(data)
+    s <- (n - 1) * cov(data)
+    
+    ## Sample sigma and mu:
+    sigma <- riwish((n - 1), s)
+    mu    <- rmvnorm(1, m, (sigma / n))
+    
+    ## Return the updated parameters:
+    list(mu = mu, sigma = sigma)
+}
+@
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example: Joint Modeling}
+
+  Now that we've defined the necessary functions, do the imputation:
+  
+<<>>=
+## Some preliminaries:
+impData <- missData
+nIter   <- 50
+nImps   <- 100
+
+## Summarize response patterns:
+rMat <- !is.na(impData)
+pats <- uniquecombs(rMat)
+ind  <- attr(pats, "index")
+p0   <- which(apply(pats, 1, all))
+
+## Get starting values for the parameters:
+pars <- list(mu    = colMeans(impData, na.rm = TRUE),
+             sigma = cov(impData, use = "pairwise")
+             )
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example: Joint Modeling}
+
+<<cache = TRUE>>=
+## Iterate over I- and P-Steps to generate imputations:
+impList3 <- list()
+for(m in 1 : nImps) {
+    for(rp in 1 : nIter) {
+        impData <- iStep(data = impData,
+                         pats = pats,
+                         ind  = ind,
+                         p0   = p0,
+                         pars = pars)
+        pars <- pStep(impData)
+        
+        if(rp == nIter) impList3[[m]] <- impData
+    }
+}
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example: Joint Modeling}
+  
+  Do the same type of imputation with \texttt{norm}:
+  
+<<cache = TRUE>>=
+missData <- as.matrix(missData)
+
+meta   <- prelim.norm(missData)
+theta0 <- em.norm(meta, showits = FALSE)
+
+rngseed(235711)   
+
+impList4 <- list()
+for(m in 1 : nImps) {
+    theta1 <- da.norm(s     = meta,
+                      start = theta0,
+                      steps = nIter)
+    impList4[[m]] <- imp.norm(s     = meta,
+                              theta = theta1,
+                              x     = missData)
+}
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example: Joint Modeling}
+
+  Analyze the multiply imputed data:
+
+<<>>=
+## Manual implementation:
+fits3 <- lapply(impList3, 
+                function(x) lm(x1 ~ x2 + x3, data = x)
+                )
+pool3 <- MIcombine(fits3)
+
+## Imputation using norm():
+fits4 <- lapply(impList4, 
+                function(x) lm(x1 ~ x2 + x3, 
+                               data = as.data.frame(x)
+                               )
+                )
+pool4 <- MIcombine(fits4)
+@ 
+
+\end{frame}
+
+\watermarkon %-----------------------------------------------------------------%
+
+\begin{frame}{Example: Joint Modeling}
+
+  Compare approaches:\\
+  \vb
+  
+<<echo = FALSE, results = "asis">>=
+cf3  <- coef(pool3)
+se3  <- sqrt(diag(vcov(pool3)))
+t3   <- cf3 / se3
+df3  <- pool3$df
+p3   <- 2 * pt(t3, df3, lower.tail = FALSE)
+fmi3 <- pool3$missinfo
+
+res3 <- round(cbind(cf3, se3, t3, p3, fmi3), 3)
+colnames(res3) <- c("Est", "SE", "t", "p", "FMI")
+
+flag            <- res3[ , "p"] < 0.001
+res3[flag, "p"] <- "<0.001"
+
+cf4  <- coef(pool4)
+se4  <- sqrt(diag(vcov(pool4)))
+t4   <- cf4 / se4
+df4  <- pool4$df
+p4   <- 2 * pt(t4, df4, lower.tail = FALSE)
+fmi4 <- pool4$missinfo
+
+res4 <- round(cbind(cf4, se4, t4, p4, fmi4), 3)
+colnames(res4) <- c("Est", "SE", "t", "p", "FMI")
+
+flag            <- res4[ , "p"] < 0.001
+res4[flag, "p"] <- "<0.001"
+
+print(xtable(res3, caption = "Manual Version"), 
+      booktabs = TRUE, 
+      scalebox = 0.85)
+print(xtable(res4, caption = "NORM Version"), 
+      booktabs = TRUE, 
+      scalebox = 0.85)
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\end{document}

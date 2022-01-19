@@ -1,0 +1,13 @@
+base
+knitr
+ggplot2
+MASS
+mvtnorm
+Matrix
+foreach
+glmnet
+xtable
+pscl
+LaplacesDemon
+MLmetrics
+mitools

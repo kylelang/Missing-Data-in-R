@@ -1,0 +1,30 @@
+\begin{Schunk}
+\begin{Sinput}
+ ## Create some data:
+ X <- cbind(1, rnorm(100))
+ trueBeta <- matrix(c(0.25, 0.5))
+ y <- X %*% trueBeta + rnorm(100, 0.0, 0.1)
+ x <- X[ , -1] # Remove constant column
+ ## R's built-in solution:
+ rFit <- lm(y ~ x)
+ coef(rFit) # R's fitted coefficients
+\end{Sinput}
+\begin{Soutput}
+(Intercept)           x 
+  0.2665167   0.4939762 
+\end{Soutput}
+\begin{Sinput}
+ ## Least squares by hand:
+ beta <- solve(t(X) %*% X) %*% t(X) %*% y
+ t(beta) # Our hand-fitted coefficients
+\end{Sinput}
+\begin{Soutput}
+          [,1]      [,2]
+[1,] 0.2665167 0.4939762
+\end{Soutput}
+\begin{Sinput}
+ ## What about prediction?
+ X2 <- cbind(1, rnorm(100, 2.0, 1.0))
+ yHat <- X2 %*% beta
+\end{Sinput}
+\end{Schunk}

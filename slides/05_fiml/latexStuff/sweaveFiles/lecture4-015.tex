@@ -1,0 +1,27 @@
+\begin{Schunk}
+\begin{Sinput}
+ ## Conditional Mean Substitution:
+ miceOut1 <- mice(missData,
+                  m = 1,
+                  maxit = 1,
+                  method = "norm.predict",
+                  printFlag = FALSE)
+ impDat1 <- complete(miceOut1)
+ ## Stochastic Regression Imputation:
+ miceOut2 <- mice(missData,
+                  m = 1,
+                  maxit = 1, 
+                  method = "norm.nob",
+                  printFlag = FALSE)
+ impDat2 <- complete(miceOut2)
+ ## Proper MI:
+ miceOut3 <- mice(missData,
+                  m = nImps,
+                  maxit = 1,
+                  method = "norm",
+                  printFlag = FALSE)
+ impList2 <- list()
+ for(m in 1 : nImps) impList2[[m]] <- complete(miceOut3, m)
+ ## NOTE: Only set maxit = 1 with exactly 1 incomplete variable
+\end{Sinput}
+\end{Schunk}

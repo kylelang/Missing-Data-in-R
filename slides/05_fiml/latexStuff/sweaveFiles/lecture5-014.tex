@@ -1,0 +1,25 @@
+\begin{Schunk}
+\begin{Sinput}
+ ## Create the imputations:
+ sampleIndex <- sample(c(1 : nReps), nImps)
+ predMat <- as.matrix(cbind(1, yMis[ , c("x", "z")]))
+ nObs <- nrow(yMis)
+ impList <- list()
+ counter <- 0
+ for(m in sampleIndex) {
+     counter <- counter + 1
+ 
+     ## 1) Compute the predicted values on the z-scale
+     ## 2) Convert these values to predicted probabilities
+     ## 3) Check if each predictive probability exceeds
+     ##    a standard uniform variate.
+     ## 4) If 'yes' to (3) impute a 1, else impute a 0
+     yHats <- predMat %*% coefSams[m, ]
+     imps <- as.numeric(pnorm(yHats) >= runif(nObs))
+ 
+     ## Fill the missing data with the imputations:
+     impList[[counter]] <- missData
+     impList[[counter]][is.na(missData[ , "y"]), "y"] <- imps
+ }
+\end{Sinput}
+\end{Schunk}

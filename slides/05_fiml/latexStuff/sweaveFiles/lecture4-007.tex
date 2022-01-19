@@ -1,0 +1,10 @@
+\begin{Schunk}
+\begin{Sinput}
+ ## Get the imputation model moments:
+ lsFit <- lm(y ~ x + z, 
+             data = missData, 
+             na.action = "na.omit")
+ betaHat <- matrix(coef(lsFit))
+ sigma2Hat <- var(resid(lsFit))
+\end{Sinput}
+\end{Schunk}

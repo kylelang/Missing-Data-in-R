@@ -1,0 +1,10 @@
+base
+knitr
+ggplot2
+plyr
+mvtnorm
+lattice
+mice
+xtable
+carData
+SURF

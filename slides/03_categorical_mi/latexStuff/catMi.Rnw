@@ -1,0 +1,1283 @@
+%%% Title:    Missing Data Stats Camp Course: Categorical Variable MI
+%%% Author:   Kyle M. Lang
+%%% Created:  2017-SEP-12
+%%% Modified: 2018-OCT-18
+
+\documentclass{beamer}
+\usetheme[%
+  pageofpages          = of,
+  bullet               = circle,
+  titleline            = true,
+  alternativetitlepage = true,
+  titlepagelogo        = Logo3,
+  watermark            = watermarkTiU,
+  watermarkheight      = 100px,
+  watermarkheightmult  = 4%
+]{UVT}
+
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage[natbibapa]{apacite}
+\usepackage[libertine]{newtxmath}
+\usepackage{fancybox}
+\usepackage{caption}
+\usepackage{upgreek}
+
+\newcommand{\bup}{\boldsymbol{\betaup}}
+
+%% Ensure styles of `blocks' (used in Definitions, Theorems etc.) follows the
+%% UVT-style theme:
+\setbeamercolor{block title}{fg = darkblue, bg = white}
+\setbeamercolor{block body}{use = block title, bg = block title.bg}
+
+%% Ensure TableOfContents is in UVT-style theme:
+\setbeamercolor{section in toc}{fg = darkblue}
+
+%% Don't number broken frames
+\setbeamertemplate{frametitle continuation}{}
+
+%% Don't label table captions:
+\captionsetup{labelformat = empty}
+
+\title{Multiple Imputation with Categorical Variables}
+\subtitle{Stats Camp 2018: Missing Data Analysis}
+\author{Kyle M. Lang}
+\institute{Department of Methodology \& Statistics\\Tilburg University}
+\date{19--21 October 2018}
+
+
+\begin{document}
+
+%------------------------------------------------------------------------------%
+
+<<setup, include=FALSE>>=
+set.seed(235711)
+
+library(knitr)
+library(ggplot2)
+library(MASS)
+library(mvtnorm)
+library(glmnet)
+library(xtable)
+library(pscl)
+library(LaplacesDemon)
+library(MLmetrics)
+library(SURF)
+library(mice)
+library(mitools)
+library(norm)
+library(MCMCpack)
+library(mgcv)
+
+source("../../../code/supportFunctions.R")
+dataDir <- "../../../data/"
+figDir  <- "figures/"
+
+opts_chunk$set(size = 'footnotesize', fig.align = 'center')
+knit_theme$set('edit-kwrite')
+
+lightBlue <- rgb(0,   137, 191, max = 255)
+midBlue   <- rgb(0,   131, 183, max = 255)
+darkBlue  <- rgb(0,   128, 179, max = 255)
+deepGold  <- rgb(184, 138, 45,  max = 255)
+lightGold <- rgb(195, 146, 48,  max = 255)
+@
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[t,plain]
+  
+  \titlepage
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Outline}
+
+  \begin{itemize}
+  \item Review of generalized linear models
+    \vb
+  \item Discuss MI for categorical variables
+  \end{itemize}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{General Linear Model}
+  
+  As we've seen, MI is basically just a slightly more complicated flavor of 
+  out-of-sample prediction using regression.
+  \vc
+  \begin{itemize}
+  \item So far, we've only considered imputation using linear regression models 
+    like the following:
+  \end{itemize}
+  \begin{align*}
+    Y &= \mathbf{X} \beta + \varepsilon\\
+    &= \beta_0 + \sum_{p = 1}^P \beta_p X_p + \varepsilon
+  \end{align*}
+  This type of model is known as the \emph{General Linear Model}.
+  \vc
+  \begin{itemize}
+  \item All flavors of linear regression are general linear models.
+    \vc
+    \begin{itemize}
+    \item ANOVA
+    \item ANCOVA
+    \item Multilevel linear regression models
+    \end{itemize}
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Components of the General Linear Model}
+ 
+  We can break our model into pieces:
+  \begin{align*}
+    \eta &= \mathbf{X} \beta\\
+    Y &= \eta + \varepsilon
+  \end{align*}
+  Because $\varepsilon \sim \text{N}(0, \sigma^2)$, we can also write:
+  \begin{align*}
+    Y \sim \text{N}(\eta, \sigma^2)
+  \end{align*}
+  In this representation:
+  \vc
+  \begin{itemize}
+  \item $\eta$ is the \emph{systematic component} of the model
+    \vc
+  \item The normal distribution, $\text{N}(\cdot, \cdot)$, is the model's 
+    \emph{random component}.
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Components of the General Linear Model}
+  
+  The purpose of general linear modeling (i.e., regression modeling) is to build
+  a model of the outcome's mean, $\mu_Y$.  
+  \vb
+  \begin{itemize}
+  \item In this case, $\mu_Y = \eta$.
+    \vc
+  \item The systematic component defines the mean of $Y$.
+  \end{itemize}
+  \vb 
+  The random component quantifies variability (i.e., error variance) around
+  $\mu_Y$.  
+  \vb
+  \begin{itemize}
+  \item In the general linear model, we assume that this error variance follows
+    a normal distribution.
+    \vc
+  \item Hence the normal random component.
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Generalized Linear Model}
+  
+  We can generalize the models we've been using in two important ways:
+  \vb
+  \begin{enumerate}
+  \item Allow for random components other than the normal distribution.
+    \vb
+  \item Allow for more complicated relations between $\mu_Y$ and $\eta$.
+    \vb
+    \begin{itemize}
+    \item Allow: $g(\mu_Y) = \eta$
+    \end{itemize}
+  \end{enumerate}
+  \vb
+  These extensions lead to the class of \emph{Generalized Linear Models} (GLMs).
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Components of the Generalized Linear Model}
+  
+  The random component in a GLM can be any distribution from the so-called 
+  \emph{exponential family}.
+  \vb
+  \begin{itemize}
+  \item The exponential family contains many popular distributions:
+    \vb
+    \begin{itemize}
+    \item Normal
+    \item Binomial
+    \item Poisson
+    \item Many others...
+    \end{itemize}
+  \end{itemize}
+  \vb
+  The systematic component of a GLM is exactly the same as it is in general 
+  linear models:
+  \begin{align*}
+    \eta = \mathbf{X} \beta = \beta_0 + \sum_{p = 1}^P \beta_p X_p
+  \end{align*}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Link Functions}
+  
+  In GLMs, $\eta$ does not directly describe $\mu_Y$.
+  \vc
+  \begin{itemize}
+  \item We first transform $\mu_Y$ via a \emph{link function}.
+    \vc
+  \item $g(\mu_Y) = \eta$
+  \end{itemize}
+  \vb
+  The link function allows GLMs for outcomes with restricted ranges without 
+  requiring any restrictions on the range of the $\{X_p\}$.
+  \vb
+  \begin{itemize}
+  \item For strictly positive $Y$, we can use a \emph{log link}: 
+    \begin{align*}
+      \ln(\mu_y) = \eta.
+    \end{align*}
+  \item The general linear model employs the \emph{identity link}: 
+    \begin{align*}
+      \mu_y = \eta.
+    \end{align*}
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Components of the Generalized Linear Model}
+  
+  Every GLM is built from three components:
+  \va
+  \begin{enumerate}
+  \item The systematic component, $\eta$.
+    \vc
+    \begin{itemize}
+    \item A linear function of the predictors, $\{X_p\}$.
+      \vc
+    \item Describes the association between $\mathbf{X}$ and $Y$.
+    \end{itemize}
+    \va
+  \item The link function, $g(\mu_Y)$.
+    \vc
+    \begin{itemize}
+    \item Transforms $\mu_Y$ so that it can take any value on the real line.
+    \end{itemize}
+    \va
+  \item The random component, $P(Y|g^{-1}(\eta))$
+    \vc
+    \begin{itemize}
+    \item The distribution of the observed $Y$.
+      \vc
+    \item Quantifies the error variance around $\eta$.
+    \end{itemize}
+  \end{enumerate}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{General Linear Model $\subset$ Generalized Linear Model}
+  
+  The general linear model is a special case of GLM.
+  \va  
+  \begin{enumerate}
+  \item Systematic component:
+    \begin{align*}
+      \eta = \mathbf{X} \beta
+    \end{align*}
+  \item Link function:
+    \begin{align*}
+      \mu_Y = \eta
+    \end{align*}
+  \item Random component:
+    \begin{align*}
+      Y \sim \text{N}(\eta, \sigma^2)
+    \end{align*}
+  \end{enumerate}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{}
+  
+  \begin{center}
+    \Huge{\textsc{Logistic Regression}}
+  \end{center}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Logistic Regression}
+  
+  So why do we care about the GLM when linear regression models have worked
+  thus far?  
+  \vc
+  \begin{itemize}
+  \item In a word: Classification.
+  \end{itemize}
+  \vb
+  In the classification task, we have a discrete, qualitative outcome.
+  \vb
+  \begin{itemize}
+  \item We will begin with the situation of two-level outcomes.
+    \vc
+    \begin{itemize}
+    \item Alive or Dead
+    \item Pass or Fail
+    \item Pay or Default
+    \end{itemize}
+  \end{itemize}
+  \vb
+  We want to build a model that predicts class membership based on some set of 
+  interesting features.
+  \vc
+  \begin{itemize}
+  \item To do so, we will use a very useful type of GLM: \emph{logistic 
+    regression}.
+  \end{itemize}
+  
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}{Classification Example}
+
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      Suppose we want to know the effect of study time on the probability of
+      passing an exam.  
+      \vb
+      \begin{itemize}
+      \item The probability of passing must be between 0 and 1.
+        \vc
+      \item We care about the probability of passing, but we only observe 
+        absolute success or failure.
+        \vc
+        \begin{itemize}
+        \item $Y \in \{1, 0\}$
+        \end{itemize}
+      \end{itemize}
+      
+      \end{column}
+    
+    \begin{column}{0.5\textwidth}
+      
+<<echo = FALSE>>=
+tmp1 <- data.frame(y = 1, x = rnorm(50, 2, 1.5))
+tmp2 <- data.frame(y = 0, x = rnorm(50, -2, 1.5))
+
+dat1 <- rbind(tmp1, tmp2)
+
+p1 <- gg0(x = dat1$x - min(dat1$x), y = dat1$y) +
+    xlab("Hours of Study") +
+    ylab("Probability of Passing")
+p1
+@ 
+
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Linear Regression for Binary Outcomes?}
+
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      What happens if we try to model these data with linear regression?  
+      \vb
+      \begin{itemize}
+      \item Hmm...notice any problems?
+      \end{itemize}
+      
+    \end{column}
+    
+    \begin{column}{0.5\textwidth}
+      
+<<echo = FALSE>>=
+p1 + geom_smooth(method = "lm", se = FALSE)
+@ 
+
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Logistic Regression Visualized}
+
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      We get a much better model using logistic regression.
+      \vb
+      \begin{itemize}
+      \item The link function ensures legal predicted values.
+        \vb
+      \item The sigmoidal curve implies fluctuation in the effectiveness of
+        extra study time.  
+        \vc
+        \begin{itemize}
+        \item More study time is most beneficial for students with around 6
+          hours of study. 
+        \end{itemize}
+      \end{itemize}
+      
+    \end{column}
+    
+    \begin{column}{0.5\textwidth}
+      
+<<echo = FALSE>>=
+tmp <- seq(floor(min(dat1$x)), ceiling(max(dat1$x)), length.out = 500)
+z   <- exp(tmp) / (1 + exp(tmp))
+
+dat2 <- data.frame(x2 = tmp - min(dat1$x), y2 = z)
+
+p1 + geom_line(aes(x = x2, y = y2), data = dat2, colour = "blue", size = 1)
+@ 
+
+\end{column}
+\end{columns}
+  
+\end{frame}
+
+\watermarkon %-----------------------------------------------------------------%
+
+\begin{frame}{Defining the Logistic Regression Model}
+  
+  In logistic regression problems, we are modeling binary data:
+  \vb
+  \begin{itemize}
+  \item Usual coding: $Y \in \{1 = \text{``Success''}, 0 = \text{``Failure''} \}$.
+  \end{itemize}
+  \vb 
+  The \emph{Binomial} distribution is a good way to represent this kind of data.
+  \vb
+  \begin{itemize}
+  \item The systematic component in our logistic regression model will be the 
+    binomial distribution.
+  \end{itemize}
+  \vb
+  The mean of the binomial distribution (with $N = 1$) is the ``success'' 
+  probability, $\pi = P(Y = 1)$.
+  \vb
+  \begin{itemize}
+  \item We are interested in modeling $\mu_Y = \pi$:
+    \begin{align*}
+      g(\pi) = \mathbf{X} \beta
+    \end{align*}
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Link Function for Logistic Regression}
+  
+  Because $\pi$ is bounded by 0 and 1, we cannot model it directly---we must 
+  apply an appropriate link function.
+  \vb
+  \begin{itemize}
+  \item Logistic regression uses the \emph{logit link}.
+    \vb
+    \begin{itemize}
+    \item Given $\pi$, we can define the \emph{odds} of success as:
+      \begin{align*}
+        O_s = \frac{\pi}{1 - \pi}
+      \end{align*}
+    \item Because $\pi \in [0, 1]$, we know that $O_s \geq 0$.
+      \vb
+    \item We take the natural log of the odds as the last step to fully map 
+      $\pi$ to the real line.
+      \begin{align*}
+        \text{logit}(\pi) = \ln \left(\frac{\pi}{1 - \pi}\right)
+      \end{align*}
+    \end{itemize}
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Fully Specified Logistic Regression Model}
+  
+  Our final logistic regression model is:
+  \begin{align*}
+    Y &\sim \text{Bin}(\pi, 1)\\
+    \text{logit}(\pi) &= \mathbf{X} \beta
+  \end{align*}
+  The fitted model can be represented as:
+  \begin{align*}
+    \text{logit}(\hat{\pi}) = \mathbf{X} \hat{\beta}
+  \end{align*}
+  
+<<echo = FALSE>>=
+out1 <- glm(y ~ x, data = dat1)
+
+b0 <- round(coef(out1)[1], 3)
+b1 <- round(coef(out1)[2], 3)
+
+b0e <- round(exp(coef(out1))[1], 3)
+b1e <- round(exp(coef(out1))[2], 3)
+@ 
+
+If we fit a logistic regression model to the test-passing data plotted above, we 
+get:
+\begin{align*}
+  \text{logit}(\hat{\pi}_{pass}) = \Sexpr{b0} + \Sexpr{b1} X_{study}
+\end{align*}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+\comment{%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}{Logistic Regression Example}
+  
+<<echo = FALSE>>=
+out1 <- glm(y ~ x, data = dat1)
+
+b0 <- round(coef(out1)[1], 3)
+b1 <- round(coef(out1)[2], 3)
+
+b0e <- round(exp(coef(out1))[1], 3)
+b1e <- round(exp(coef(out1))[2], 3)
+@ 
+
+If we fit a logistic regression model to the test-passing data plotted above, we 
+get:
+\begin{align*}
+  \text{logit}(\hat{\pi}_{pass}) = \Sexpr{b0} + \Sexpr{b1} X_{study}
+\end{align*}
+\vx{-12}
+\begin{itemize}
+\item A student who does not study at all has \Sexpr{b0} log odds of passing the
+  exam.  
+  \vb
+\item For each additional hour of study, a student's log odds of passing increase
+  by \Sexpr{b1} units.
+\end{itemize}
+\vb
+Log odds do not lend themselves to interpretation.
+\vb
+\begin{itemize}
+\item We can convert the effects back to an odds scale by exponentiation.
+  \vc
+  \begin{itemize}
+  \item $\hat{\beta}$ has log odds units, but $e^{\hat{\beta}}$ has odds units.
+  \end{itemize}
+\end{itemize}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Interpretations} 
+ 
+  Exponentiating the coefficients also converts the additive effects to 
+  multiplicative effects.
+  \vb
+  \begin{itemize}
+  \item $\ln(AB) = \ln(A) + \ln(B)$
+    \vb
+  \item We can interpret $\hat{\beta}$ as we would in linear regression:
+    \vc
+    \begin{itemize}
+    \item A unit change in $X_p$ produces an expected change of $\hat{\beta}_p$ 
+      units in $\text{logit}(\pi)$.
+    \end{itemize}
+    \vb
+  \item After exponentiation, however, unit changes in $X_p$ imply multiplicative 
+    changes in $O_s = \pi / (1 - \pi)$.
+    \vc
+    \begin{itemize}
+    \item A unit change in $X_p$ results in multiplying $O_s$  by 
+      $e^{\hat{\beta}_p}$.
+    \end{itemize}
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[allowframebreaks]{Interpretations}
+  
+  Exponentiating the coefficients in our toy test-passing example produces the 
+  following interpretations:
+  \vb
+  \begin{itemize}
+  \item A student who does not study is expected to pass the exam with odds of 
+    \Sexpr{b0e}.
+    \vc
+  \item For each additional hour a student studies, their odds of passing
+    increase by \Sexpr{b1e} \emph{times}.
+    \vc
+    \begin{itemize}
+    \item Odds of passing are \emph{multiplied} by \Sexpr{b1e} for each extra 
+      hour of study.
+    \end{itemize}
+  \end{itemize}
+    
+  \pagebreak
+  
+  Due to the confusing interpretations of the coefficients, we often focus
+  on the valance of the effects: 
+  \vb
+  \begin{itemize}
+  \item Additional study time is associated with increased odds of passing.
+    \vc
+  \item $\hat{\beta_p} > 0$ = ``Increased Success'',  $e^{\hat{\beta}_p} > 1$ = 
+    ``Increased Success''
+  \end{itemize}
+\end{frame}
+
+%------------------------------------------------------------------------------%
+}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}{Multiple Logistic Regression}
+  
+  The preceding example was a \emph{simple logistic regression}.
+  \vb
+  \begin{itemize}
+  \item Including multiple predictor variables in the systematic component leads 
+    to \emph{multiple logistic regression}.
+    \vb
+  \item The relative differences between simple logistic regression and multiple
+    logistic regression are the same as those between simple linear regression
+    and multiple linear regression.
+    \vc
+    \begin{itemize}
+    \item The only important complication is that the regression coefficients 
+      become partial effects.
+    \end{itemize}
+  \end{itemize}
+  
+\end{frame}
+  
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Multiple Logistic Regression Example}
+  
+<<echo = FALSE>>=
+diabetes <- readRDS(paste0(dataDir, "diabetes.rds"))
+
+diabetes$highGlu <- as.numeric(diabetes$glu > 100)
+
+out1 <- glm(highGlu ~ age + bmi + bp, data = diabetes, family = binomial())
+
+beta1  <- coef(out1)
+eBeta1 <- exp(beta1)
+
+b0 <- round(beta1[1], 3)
+b1 <- round(beta1[2], 3)
+b2 <- round(beta1[3], 3)
+b3 <- round(beta1[4], 3)
+
+eB0 <- round(eBeta1[1], 3)
+eB1 <- round(eBeta1[2], 3)
+eB2 <- round(eBeta1[3], 3)
+eB3 <- round(eBeta1[4], 3)
+@ 
+
+Suppose we want to predict the probability of a patient having ``high'' blood 
+glucose from their age, BMI, and average blood pressure.
+\vb
+\begin{itemize}
+\item We could do so with the following model:
+  \begin{align*}
+    \text{logit}(\pi_{hi.gluc}) = 
+    \beta_0 + \beta_1 X_{age} + \beta_2 X_{BMI} + \beta_3 X_{BP}
+  \end{align*}
+\item By fitting this model to the ``diabetes'' data we get:
+  \begin{align*}
+    \text{logit}(\hat{\pi}_{hi.gluc}) = 
+    \Sexpr{b0} + \Sexpr{b1} X_{age} + \Sexpr{b2} X_{BMI} + \Sexpr{b3} X_{BP}
+  \end{align*}
+%\item Exponentiating the coefficients produces:
+%  \begin{align*}
+%    \frac{\hat{\pi}_{hi.gluc}}{1 - \hat{\pi}_{hi.gluc}} = 
+%    \Sexpr{eB0} \times \Sexpr{eB1}^{X_{age.40}} \times \Sexpr{eB2}^{X_{BMI.25}} \times 
+%    \Sexpr{eB3}^{X_{BP.100}}
+%  \end{align*}
+\end{itemize}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+\comment{%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
+\begin{frame}{Exponentiating the Systematic Component}
+  
+  \begin{align*}
+    \text{logit}(\hat{\pi}_{hi.gluc}) &= \Sexpr{b0} + \Sexpr{b1} X_{age.40} + 
+    \Sexpr{b2} X_{BMI.25} + \Sexpr{b3} X_{BP.100}\\
+    \\
+    e^{\text{logit}(\hat{\pi}_{hi.gluc})} &= 
+    e^{\left(\Sexpr{b0} ~ + ~ \Sexpr{b1} X_{age.40} ~ + ~ \Sexpr{b2} X_{BMI.25} 
+      ~ + ~ \Sexpr{b3} X_{BP.100} \right)}\\
+    \\
+    \frac{\hat{\pi}_{hi.gluc}}{1 - \hat{\pi}_{hi.gluc}} &= 
+    e^{\Sexpr{b0}} \times e^{\Sexpr{b1} X_{age.40}} \times e^{\Sexpr{b2} X_{BMI.25}} \times 
+    e^{\Sexpr{b3} X_{BP.100}}\\
+    \\
+    &= \left(e^{\Sexpr{b0}}\right) \times \left(e^{\Sexpr{b1}}\right)^{X_{age.40}} \times 
+    \left(e^{\Sexpr{b2}}\right)^{X_{BMI.25}} \times 
+    \left(e^{\Sexpr{b3}}\right)^{X_{BP.100}}\\
+    \\
+    &= \Sexpr{eB0} \times \Sexpr{eB1}^{X_{age.40}} \times \Sexpr{eB2}^{X_{BMI.25}} 
+    \times \Sexpr{eB3}^{X_{BP.100}}
+  \end{align*}
+
+\end{frame}
+}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%------------------------------------------------------------------------------%
+
+\begin{frame}{}
+  
+  \begin{center}
+    \Huge{\textsc{Multinomial Logistic Regression}}
+  \end{center}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Multi-Class Outcomes}
+  
+  So, what do we do if our outcome takes more than two levels?
+  \begin{itemize}
+    \item Voting intention = \{Will vote, Won't vote, Not sure\}
+    \item Preferred caffeine source = \{Coffee, Tea, Energy drink, None\}
+    \item Current mood = \{Happy, Sad, Angry, Neutral\}
+  \end{itemize}
+  \vb
+  \pause
+  Using a nominal variable with $L$ response levels as a predictor requires 
+  creating $L - 1$ dummy codes.
+  \vb
+  \begin{itemize}
+  \item We could solve our problem by estimating $L - 1$ separate logistic 
+    regression models.
+  \item Do you see any problems with that approach?
+  \end{itemize}
+  \vb
+  \pause
+  We have a better way: \emph{Multinomial Logistic Regression}.
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Defining the Multinomial Logistic Regression Model}
+  
+  In multinomial logistic regression problems, we are modeling multi-class 
+  nominal data:
+  \vb
+  \begin{itemize}
+  \item Usual coding: $Y \in \{1, 2, \ldots, L\}$.
+  \end{itemize}
+  \vb 
+  The \emph{Multinomial Distribution}---a generalization of the binomial 
+  distribution---is a good way to represent this kind of data.
+  \vb
+  \begin{itemize}
+  \item The systematic component in our multinomial logistic regression model 
+    will be the multinomial distribution.
+  \end{itemize}
+  \vb
+  We are interested in modeling the $L - 1$ probabilities, $\pi_l = P(Y = l)$, 
+  of endorsing each response level instead of the \emph{baseline} level.
+  \begin{align*}
+    g(\pi_l) &= \beta_{0l} + \sum_{p = 1}^P \beta_{pl} X_p, ~~ l = 2, 3, \ldots, L%\\
+    % &= \mathbf{X}\bup, ~~ \text{with} ~~ \text{Dim}(\bup) = (P + 1) \times (L - 1)
+  \end{align*}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Full Multinomial Logistic Regression Model}
+  
+  Given $L$ unique response levels for $Y$, our final multinomial logistic 
+  regression model is:
+  \begin{align*}
+    Y &\sim \text{Multinom}(\Pi, \mathbf{1}), ~~ \Pi = \{\pi_2, \pi_3, \ldots, 
+    \pi_L\}\\
+    \text{logit}(\pi_l) &= \beta_{0l} + \sum_{p = 1}^P \beta_{pl} X_p, ~~ l = 2, 3,
+    \ldots, L
+  \end{align*}
+  The fitted model can be represented as:
+  \begin{align*}
+    \text{logit}(\hat{\pi}_l) = \hat{\beta}_{0l} + \sum_{p = 1}^P \hat{\beta}_{pl} 
+    X_p, ~~ l = 2, 3, \ldots, L
+  \end{align*}
+  Note that we, \emph{simultaneously}, estimate $L - 1$ separate sets of 
+  coefficients, $\{\beta_{0l}, \beta_{pl}\}$.   
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+<<echo = FALSE>>=
+glu3                                          <- rep(1, nrow(diabetes))
+glu3[diabetes$glu > 80 & diabetes$glu <= 100] <- 2
+glu3[diabetes$glu > 100]                      <- 3
+
+diabetes$glu3 <- factor(glu3, levels = 1 : 3, labels = c("low", "mid", "hi"))
+
+out2   <- nnet::multinom(glu3 ~ age + bmi + bp, data = diabetes, trace = FALSE)
+beta2  <- coef(out2)
+eBeta2 <- exp(beta2)
+
+b20 <- round(beta2[1, 1], 3)
+b21 <- round(beta2[1, 2], 3)
+b22 <- round(beta2[1, 3], 3)
+b23 <- round(beta2[1, 4], 3)
+
+b30 <- round(beta2[2, 1], 3)
+b31 <- round(beta2[2, 2], 3)
+b32 <- round(beta2[2, 3], 3)
+b33 <- round(beta2[2, 4], 3)
+
+eB20 <- round(eBeta2[1, 1], 3)
+eB21 <- round(eBeta2[1, 2], 3)
+eB22 <- round(eBeta2[1, 3], 3)
+eB23 <- round(eBeta2[1, 4], 3)
+
+eB30 <- round(eBeta2[2, 1], 3)
+eB31 <- round(eBeta2[2, 2], 3)
+eB32 <- round(eBeta2[2, 3], 3)
+eB33 <- round(eBeta2[2, 4], 3)
+@ 
+
+Suppose we want to predict the probability of a patient having ``high'' or 
+``moderate'' blood glucose, versus ``low'' blood glucose, from their age, BMI, 
+and average blood pressure.
+\vb
+\begin{itemize}
+\item We could do so with the following model:
+  \begin{align*}
+    \text{logit}(\pi_l) = 
+    \beta_{l0} + \beta_{l1} X_{age} + \beta_{l2} X_{BMI} + \beta_{l3} X_{BP}
+  \end{align*}
+\item By fitting this model to the ``diabetes'' data we get:
+  \begin{align*}
+    \text{logit}(\hat{\pi}_{hi.gluc}) &= 
+    \Sexpr{b30} + \Sexpr{b31} X_{age} + \Sexpr{b32} X_{BMI} + 
+    \Sexpr{b33} X_{BP}\\
+    \\
+    \text{logit}(\hat{\pi}_{mid.gluc}) &= 
+    \Sexpr{b20} + \Sexpr{b21} X_{age} + \Sexpr{b22} X_{BMI} + 
+    \Sexpr{b23} X_{BP}
+  \end{align*}
+\end{itemize}
+
+\comment{%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\pagebreak
+
+\begin{itemize}
+\item Exponentiating the coefficients produces:
+  \begin{align*}
+    \frac{\hat{\pi}_{hi.gluc}}{\hat{\pi}_{low.gluc}} &= 
+    \Sexpr{eB30} \times \Sexpr{eB31}^{X_{age.40}} \times \Sexpr{eB32}^{X_{BMI.25}} 
+    \times \Sexpr{eB33}^{X_{BP.100}}\\
+    \\
+    \frac{\hat{\pi}_{mid.gluc}}{\hat{\pi}_{low.gluc}} &= 
+    \Sexpr{eB20} \times \Sexpr{eB21}^{X_{age.40}} \times \Sexpr{eB22}^{X_{BMI.25}} 
+    \times \Sexpr{eB23}^{X_{BP.100}}
+  \end{align*}
+\end{itemize}
+}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{frame}
+
+%------------------------------------------------------------------------------%
+  
+\begin{frame}{}
+  
+  \begin{center}
+    \Huge{\textsc{Classification}}
+  \end{center}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Predictions from Logistic Regression}
+  
+  Given a fitted logistic regression model, we can get predictions for new 
+  observations of $\mathbf{X}$, $\mathbf{X}'$.
+  \vb
+  \begin{itemize}
+  \item Directly applying $\hat{\beta}$ to $\mathbf{X}'$ will produce 
+    predictions on the scale of $\eta$:
+    \begin{align*}
+      \hat{\eta}' = \mathbf{X}' \hat{\beta}
+    \end{align*}
+  \item By applying the inverse link function, $g^{-1}(\cdot)$, to $\hat{\eta}'$, 
+    we get predicted success probabilities:
+    \begin{align*}
+      \hat{\pi}' = g^{-1}(\hat{\eta}')
+    \end{align*}
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Predictions from Logistic Regression}
+  
+  In logistic regression, the inverse link function, $g^{-1}(\cdot)$, is the
+  \emph{logistic function}:
+  \begin{align*}
+    \text{logistic}(X) = \frac{e^X}{1 + e^X}
+  \end{align*}
+  So, we convert $\hat{\eta}'$ to $\hat{\pi}'$ by:
+  \begin{align*}
+    \hat{\pi}' &= \frac{e^{\hat{\eta}'}}{1 + e^{\hat{\eta}'}} = 
+    \frac{\exp \left( \mathbf{X}' \hat{\beta} \right) }{1 + \exp \left( \mathbf{X}' \hat{\beta} \right) }
+  \end{align*}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Classification with Logistic Regression}
+  
+  Once we have computed the predicted success probabilities, $\hat{\pi}'$, we 
+  can use them to classify new observations.
+  \vb
+  \begin{itemize}
+  \item By choosing a threshold on $\hat{\pi}'$, say $\hat{\pi}' = t$, we can 
+    classify the new observations as ``Successes'' or ``Failures'':
+    \begin{align*}
+      \hat{Y}' = \left\{ 
+      \begin{array}{ccc}
+        1 & if & \hat{\pi}' \geq t\\
+        0 & if & \hat{\pi}' < t\\
+      \end{array}
+      \right.
+    \end{align*}
+    
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[allowframebreaks]{Classification Example}
+  
+<<echo = FALSE>>=
+eta1 <- crossprod(c(1, 57, 28, 92), beta1)
+pi1  <- round(exp(eta1) / (1 + exp(eta1)), 3)
+eta1 <- round(eta1, 3)
+low  <- pi1 < 0.5
+@ 
+
+Say we want to classify a new patient into either the ``high glucose'' group 
+or the ``not high glucose'' group using the model fit above.
+\vb
+\begin{itemize}
+\item Assume this patient has the following characteristics:
+  \vb
+  \begin{itemize}
+  \item They are 57 years old
+    \vc
+  \item Their BMI is 28
+    \vc
+  \item Their average blood pressure is 92
+  \end{itemize}
+\end{itemize}
+\vb
+First we plug their predictor data into the fitted model to get their 
+model-implied $\eta$:
+\begin{align*}
+  \Sexpr{eta1} = \Sexpr{b0} + \Sexpr{b1} (57) + \Sexpr{b2} (28) + 
+  \Sexpr{b3} (92)
+\end{align*}
+
+\pagebreak
+
+Next we convert the predicted $\eta$ value into a model-implied success
+probability by applying the logistic function:
+\begin{align*}
+  \Sexpr{pi1} = \frac{e^{\Sexpr{eta1}}}{1 + e^{\Sexpr{eta1}}}
+\end{align*}\\
+\va
+Finally, to make the classification, assume a threshold of $\hat{\pi}' = 0.5$ as 
+the decision boundary.
+\vb
+\begin{itemize}
+\item Because $\Sexpr{pi1} \Sexpr{ifelse(low, "<", ">")} 0.5$ we would 
+  classify this patient into the ``\Sexpr{ifelse(low, "low", "high")} glucose'' 
+  group.
+\end{itemize}
+
+\end{frame}
+   
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Predictions from Multinomial Logistic Regression}
+  
+  Generating predictions from a multinomial logistic regression model is nearly 
+  identical to predicting with a logistic regression model.
+  \vb
+  \begin{itemize}
+  \item The only difference is that the multinomial logistic regression model 
+    will produce $L$ distinct estimates of $\hat{\eta}_l'$ and $\hat{\pi}_l'$:
+    \begin{align*}
+      \hat{\eta}_l' &= 
+      \begin{cases}
+        \hat{\beta}_{0l} + \sum_{p = 1}^P \hat{\beta}_{pl} X_p' & \text{if $l > 1$}\\
+        0 & \text{if $l = 1$}
+      \end{cases}\\[8pt]
+      \hat{\pi}_l' &= g^{-1}(\hat{\eta}_l')
+    \end{align*}
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Predictions from Multinomial Logistic Regression}
+  
+  In multinomial logistic regression, the inverse link function, $g^{-1}(\cdot)$, 
+  is the \emph{softmax function}:
+  \begin{align*}
+    \text{softmax}(X_l) = \frac{e^{X_l}}{\sum_{j = 1}^Le^{X_j}}
+  \end{align*}
+  So, we convert each $\hat{\eta}_l'$ to $\hat{\pi}_l'$ by:
+  \begin{align*}
+    \hat{\pi}_l' = \frac{e^{\hat{\eta}_l'}}{\sum_{j = 1}^L e^{\hat{\eta}_j'}} = 
+    \begin{cases}
+      \frac{\exp \left( 
+        \hat{\beta}_{0l} + \sum_{p = 1}^P \hat{\beta}_{pl} X_p' \right) }
+           {1 + \sum_{j = 2}^L \exp \left(
+             \hat{\beta}_{0j} + \sum_{p = 1}^P \hat{\beta}_{pj} X_p' 
+             \right) } & \text{if $l > 1$}\\
+           \\
+           \frac{1}
+                {1 + \sum_{j = 2}^L \exp \left(
+                  \hat{\beta}_{0j} + \sum_{p = 1}^P \hat{\beta}_{pj} X_p' 
+                  \right) } & \text{if $l = 1$}
+    \end{cases}
+  \end{align*}
+           
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Classification with Multinomial Logistic Regression}
+  
+  Once we have computed the $L$ predicted success probabilities, $\hat{\pi}_l'$, 
+  we can use them to classify new observations.
+  \vb
+  \begin{itemize}
+  \item Each observation is labeled with the response level associated with the 
+    largest $\hat{\pi}_l'$
+    \vb
+  \item For example:
+    \vb
+    \begin{itemize}
+    \item Given the response options $Y \in $
+      \{Coffee, Tea, Energy Drinks, None\}
+      \vb
+    \item And corresponding success probabilities $\hat{\pi}_l \in 
+      \{0.45, 0.2, 0.15, 0.2\}$
+      \vb
+    \item We would assign the observation to the ``Coffee'' group 
+    \end{itemize}
+  \end{itemize}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile, allowframebreaks]{Classification Example}
+  
+<<echo = FALSE>>=
+beta2           <- rbind(0, beta2)
+rownames(beta2) <- c("low", "mid", "hi")
+
+eta2 <- apply(beta2, 1, function(x) crossprod(c(1, 57, 28, 92), x))
+pi2  <- exp(eta2) / sum(exp(eta2))
+
+eta2 <- round(eta2, 3)
+pi2  <- round(pi2, 3)
+
+b10 <- round(beta2[1, 1], 3)
+b11 <- round(beta2[1, 2], 3)
+b12 <- round(beta2[1, 3], 3)
+b13 <- round(beta2[1, 4], 3)
+
+classNum  <- which.max(pi2)
+className <- names(classNum)
+@ 
+
+Let's re-classify our patient into either the ``high glucose'', ``moderate 
+glucose'', or ``low glucose'' group using the model fit above.
+\vb
+\begin{itemize}
+\item First we plug their predictor data into the fitted model to get their 
+  set of model-implied $\eta_l$ values:
+\end{itemize}
+\begin{align*}
+  \text{logit}\left(\frac{\pi_{low.gluc}}{\pi_{low.gluc}}\right) &= 
+  \Sexpr{b10} + \Sexpr{b11} (57) + \Sexpr{b12} (28) + \Sexpr{b13} (92) &= 
+  \mask{10.00} \Sexpr{eta2[1]}\\
+  \text{logit}\left(\frac{\pi_{mid.gluc}}{\pi_{low.gluc}}\right) &=
+  \Sexpr{b20} + \Sexpr{b21} (57) + \Sexpr{b22} (28) + \Sexpr{b23} (92) &= %~ &
+  \Sexpr{eta2[2]}\\
+  \text{logit}\left(\frac{\pi_{hi.gluc}}{\pi_{low.gluc}}\right) &=
+  \Sexpr{b30} + \Sexpr{b31} (57) + \Sexpr{b32} (28) + \Sexpr{b33} (92) &= %~ &
+  \Sexpr{eta2[3]}
+\end{align*}
+
+\pagebreak
+
+\begin{itemize}
+\item Next we apply the softmax function to convert the predicted $\eta_l$ 
+  values into model-implied success probabilities:
+\end{itemize}
+\begin{align*}
+  \hat{\pi}_{low.gluc} &=  
+  \frac{1}{1 + e^{\Sexpr{eta2[2]}} + e^{\Sexpr{eta2[3]}}} = 
+  \Sexpr{pi2[1]}\\
+  \hat{\pi}_{mid.gluc} &= 
+  \frac{e^{\Sexpr{eta2[2]}}}{1 + e^{\Sexpr{eta2[2]}} + e^{\Sexpr{eta2[3]}}} = 
+  \Sexpr{pi2[2]}\\
+  \hat{\pi}_{hi.gluc} &= 
+  \frac{e^{\Sexpr{eta2[3]}}}{1 + e^{\Sexpr{eta2[2]}} + e^{\Sexpr{eta2[3]}}} =
+  \Sexpr{pi2[3]}  
+\end{align*}
+\begin{itemize}
+\item Finally, to make the classification, we find the largest $\hat{\pi}_l'$:
+  \vb
+  \begin{itemize}
+  \item Because $\hat{\pi}_{\Sexpr{className}.gluc} = \Sexpr{pi2[classNum]}$ is the 
+    largest, we would classify this patient into the 
+    ``\Sexpr{c('low', 'moderate', 'high')[classNum]} glucose'' group.
+  \end{itemize}
+\end{itemize}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{From Classification to Imputation}
+  
+  We can replace the missing data in categorical variables with the 
+  classifications produced by Bayesian generalized linear models.
+  \vc
+  \begin{itemize}
+  \item We need to extend the frequentist models demonstrated above to allow 
+    distributions of the model parameters.
+    \vc
+  \item As with linear regression-based imputation, we need to account for 
+    uncertainty in the imputation model parameters.
+  \end{itemize}
+  \vb
+  \pause
+  When employing the FCS approach, different flavors of GLM can easily be mixed 
+  and matched as required by the particular set of incomplete variables.
+  \vc
+  \begin{itemize}
+  \item This flexibility is a primary reason why FCS is currently the preferred 
+    imputation framework.
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[allowframebreaks]{Alternatives to GLM?}
+  
+  An old recommendation called for imputing categorical items using 
+  normal-theory regression models and subsequently rounding the real-valued 
+  imputations to integer codes \citep{allison:2002, honakerKing:2010}.
+  \vc
+  \begin{itemize}
+  \item This approach tends to perform poorly \citep{langWu:2017}.
+    \vc
+  \item When dealing the \emph{ordinal} variables that will be analyzed as 
+    continuous, \emph{un-rounded} normal-theory imputations can work well 
+    \citep{wuEtAl:2015}.
+  \end{itemize}
+  
+  \pagebreak
+  
+  Predictive mean matching can work well for ordinal variables.
+  \begin{itemize}
+  \item To lesser extent for \emph{binary} nominal variables, too.
+  \end{itemize}
+  \vb
+  For multi-category nominal variables, we have to use GLM or some fancy-pants 
+  method.
+  \begin{itemize}
+  \item Tree-based methods
+  \item Machine learning algorithms
+  \item Rule-based donor methods
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+\comment{%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}{General MI Framework}
+
+  Most proper implementations of MI amounts to out-of-sample prediction using a 
+  Bayesian generalized linear model. So, specifying an MI model will usually 
+  entail three steps:
+  \vb
+  \begin{enumerate}
+  \item Choose a random component
+    \begin{itemize}
+    \item The distribution assumed for the missing data
+    \end{itemize}
+    \vb
+  \item Choose a systematic component
+    \begin{itemize}
+    \item The predictors of the imputation model
+    \end{itemize}
+    \vb
+  \item Choose a link function
+    \begin{itemize}
+    \item The transformation linking the systematic component to the mean
+      of the random component
+    \item Often chosen hand-in-hand with the random component
+    \end{itemize}
+  \end{enumerate}
+  \vc
+  Each step in this process carries its own challenges.
+
+\end{frame}
+}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%------------------------------------------------------------------------------%
+
+\begin{frame}[allowframebreaks]{References}
+  
+  \bibliographystyle{apacite}
+  \bibliography{../../../literature/bibtexFiles/statMethRefs.bib,../../../literature/bibtexFiles/dissRefsList.bib}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\end{document}

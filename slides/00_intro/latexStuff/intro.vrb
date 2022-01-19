@@ -1,0 +1,38 @@
+\frametitle{Good Methods (These \emph {almost} always work)}
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{## Estimate M correlations:}
+\hlstd{corList2} \hlkwb{<-}\hlkwd{lapply}\hlstd{(impList2,}
+                 \hlkwc{FUN} \hlstd{=} \hlkwa{function}\hlstd{(}\hlkwc{impDat}\hlstd{)}
+                     \hlkwd{cor}\hlstd{(impDat}\hlopt{$}\hlstd{x, impDat}\hlopt{$}\hlstd{y4)}
+                 \hlstd{)}
+
+\hlcom{## Pool estimates:}
+\hlkwd{mean}\hlstd{(}\hlkwd{unlist}\hlstd{(corList2))}
+\end{alltt}
+\begin{verbatim}
+## [1] 0.4064276
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+The MI-based parameter estimate is still biased.
+\begin{itemize}
+\item MI cannot correct bias in parameter estimates when data are MNAR.
+\end{itemize}
+
+\pagebreak
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
+
+{\centering \includegraphics[width=0.65\linewidth]{figure/unnamed-chunk-28-1}
+
+}
+
+
+
+\end{knitrout}
+

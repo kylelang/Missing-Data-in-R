@@ -1,0 +1,24 @@
+\frametitle{Predictive Mean Matching: Example}
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{## Use each dataset to estimate the analysis model:}
+\hlstd{fits2} \hlkwb{<-} \hlkwd{lapply}\hlstd{(impList2,}
+                \hlkwa{function}\hlstd{(}\hlkwc{dat}\hlstd{)} \hlkwd{lm}\hlstd{(z} \hlopt{~} \hlstd{x} \hlopt{+} \hlstd{y,} \hlkwc{data} \hlstd{= dat)}
+                \hlstd{)}
+
+\hlcom{## Pool the results:}
+\hlstd{pool2} \hlkwb{<-} \hlkwd{MIcombine}\hlstd{(fits2)}
+\hlkwd{summary}\hlstd{(pool2,} \hlkwc{digits} \hlstd{=} \hlnum{3}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+## Multiple imputation results:
+##       MIcombine.default(fits2)
+##             results     se  (lower  upper) missInfo
+## (Intercept)  0.0277 0.0323 -0.0357  0.0910      4 %
+## x            0.2805 0.0313  0.2191  0.3419      1 %
+## y           -0.0940 0.0330 -0.1589 -0.0292     32 %
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+

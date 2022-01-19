@@ -1,0 +1,42 @@
+\begin{Schunk}
+\begin{Sinput}
+ ## Simulate MNAR Missingness:
+ rVec3 <- pnorm(y, mean = mean(y), sd = sd(y)) < pm
+ mean(rVec3)
+\end{Sinput}
+\begin{Soutput}
+[1] 0.294
+\end{Soutput}
+\begin{Sinput}
+ y4 <- y
+ y4[rVec3] <- NA
+ cor(y4, x, use = "pairwise") # Hmm...looks pretty bad.
+\end{Sinput}
+\begin{Soutput}
+[1] 0.3708081
+\end{Soutput}
+\begin{Sinput}
+ ## Can MI help?
+ miceOut2 <- mice(data.frame(y4, x),
+                  m = 100,
+                  maxit = 1,
+                  method = c("norm", ""),
+                  printFlag = FALSE)
+ impList2 <- list()
+ for(m in 1 : miceOut2$m) {
+     impList2[[m]] <- complete(miceOut2, m)
+ }
+ corList2 <-lapply(impList2,
+                  FUN = function(impDat){
+                      cor(impDat$x, impDat$y4)
+                  }
+                  )
+ mean(unlist(corList2)) # Not really
+\end{Sinput}
+\begin{Soutput}
+[1] 0.3914519
+\end{Soutput}
+\begin{Sinput}
+ 
+\end{Sinput}
+\end{Schunk}

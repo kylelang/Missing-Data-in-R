@@ -1,0 +1,33 @@
+\begin{thebibliography}{}
+
+\bibitem [\protect \citeauthoryear {%
+Lang%
+, Salter%
+\BCBL {}\ \BBA {} Adams%
+}{%
+Lang%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2009}}%
+}]{%
+langEtAl:2009}
+\APACinsertmetastar {%
+langEtAl:2009}%
+\begin{APACrefauthors}%
+Lang, K\BPBI M.%
+, Salter, P\BPBI S.%
+\BCBL {}\ \BBA {} Adams, G.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2009}{April}{}.
+\newblock
+{\BBOQ}\APACrefatitle {What drives the relationship between conservatism and
+  racism? A mediation analysis} {What drives the relationship between
+  conservatism and racism? a mediation analysis}.{\BBCQ}
+\newblock
+\BIn{} \APACrefbtitle {Proceedings of the Annual Meeting of the {Southwestern
+  Psychological Association}.} {Proceedings of the annual meeting of the
+  {Southwestern Psychological Association}.}
+\PrintBackRefs{\CurrentBib}
+
+\end{thebibliography}

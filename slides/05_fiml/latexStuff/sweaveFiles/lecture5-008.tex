@@ -1,0 +1,41 @@
+\begin{Schunk}
+\begin{Sinput}
+ parms$pm <- 0.3
+ parms$auxVar <- "z"
+ parms$incompVars <- "y"
+ parms$marType <- "lower"
+ # Impose missing data on the toy data:
+ missData <- imposeMissing(simData, parms)
+ ## Use optimx() to numerically optimize the FIML objective:
+ fimlOpt <- optimx(startVec,
+                   fn = myFIML,
+                   inData = as.matrix(missData),
+                   method = "L-BFGS-B",
+                   lower = 0.0,
+                   control = list(maximize = TRUE,
+                       kkt = FALSE))
+\end{Sinput}
+\begin{Soutput}
+Maximizing -- use negfn and neggr
+\end{Soutput}
+\begin{Sinput}
+ ## Get the optimized mean vector and covariance matrix:
+ muHatFIML <- as.numeric(fimlOpt[1 : 3])
+ sigmaHatFIML <-
+     matrix(as.numeric(fimlOpt[4 : 12]), ncol = 3)
+ ## Look at the results:
+ muHatFIML
+\end{Sinput}
+\begin{Soutput}
+[1] 1.033963 1.945265 3.009926
+\end{Soutput}
+\begin{Sinput}
+ sigmaHatFIML
+\end{Sinput}
+\begin{Soutput}
+          [,1]      [,2]      [,3]
+[1,] 1.0125127 0.1896069 0.4953259
+[2,] 0.1896089 0.9016940 0.3807157
+[3,] 0.4953237 0.3807173 0.9519759
+\end{Soutput}
+\end{Schunk}

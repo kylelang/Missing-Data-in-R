@@ -1,0 +1,22 @@
+\begin{Schunk}
+\begin{Sinput}
+ ## Fit the analysis model to each imputation:
+ fitList <- lapply(impList,
+                   FUN = function(impData) {
+                       glm(y ~ x + z,
+                           data = as.data.frame(impData),
+                           family = binomial("probit"))
+                   })
+ ## Fit the analysis models to mice's imputed data:
+ fitList2 <- lapply(impList2,
+                    FUN = function(impData) {
+                        glm(y ~ x + z,
+                            data = as.data.frame(impData),
+                            family = binomial("probit"))
+                    })
+ ## Fit the complete data models:
+ glmOut <- glm(y ~ x + z,
+               data = as.data.frame(simData),
+               family = binomial("probit"))
+\end{Sinput}
+\end{Schunk}

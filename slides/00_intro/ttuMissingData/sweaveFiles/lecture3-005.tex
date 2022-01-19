@@ -1,0 +1,39 @@
+\begin{Schunk}
+\begin{Sinput}
+ ## Simulate MAR Missingness:
+ rVec2 <- pnorm(x, mean = mean(x), sd = sd(x)) < pm
+ mean(rVec2)
+\end{Sinput}
+\begin{Soutput}
+[1] 0.287
+\end{Soutput}
+\begin{Sinput}
+ y3 <- y
+ y3[rVec2] <- NA
+ cor(y3, x, use = "pairwise") # Not looking so good :(
+\end{Sinput}
+\begin{Soutput}
+[1] 0.3715953
+\end{Soutput}
+\begin{Sinput}
+ ## MI to the rescue:
+ miceOut1 <- mice(data.frame(y3, x),
+                  m = 100,
+                  maxit = 1,
+                  method = c("norm", ""),
+                  printFlag = FALSE)
+ impList1 <- list()
+ for(m in 1 : miceOut1$m) {
+     impList1[[m]] <- complete(miceOut1, m)
+ }
+ corList <-lapply(impList1,
+                  FUN = function(impDat){
+                      cor(impDat$x, impDat$y3)
+                  }
+                  )
+ mean(unlist(corList)) # Oh, much nicer :)
+\end{Sinput}
+\begin{Soutput}
+[1] 0.4835711
+\end{Soutput}
+\end{Schunk}

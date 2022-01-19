@@ -1,0 +1,99 @@
+%%% Beamer Style File to Reproduce Todd's
+%%% Stats Camp PowerPoint Template
+%%% Author:   Kyle M. Lang
+%%% Created:  2015-NOV-04
+%%% Modified: 2015-NOV-04
+
+%%% Provides: ttuStatsCamp.sty
+
+\RequirePackage{textpos}
+
+\usetheme{default}
+
+%% Set up colors:
+\definecolor{immapRed}{HTML}{B30600}
+\definecolor{immapGreen}{HTML}{3F4A13}
+
+\setbeamercolor{frametitle}{fg = white}
+\setbeamercolor{title}{fg = white}
+\setbeamercolor{subtitle}{fg = white}
+\setbeamercolor{author}{fg = white}
+\setbeamercolor{date}{fg = white}
+\setbeamercolor{institute}{fg = white}
+
+\setbeamercolor{itemize item}{fg = black}
+\setbeamercolor{itemize subitem}{fg = immapRed}
+\setbeamercolor{itemize subsubitem}{fg = immapRed}
+
+\setbeamercolor{enumerate item}{fg = immapRed}
+\setbeamercolor{enumerate subitem}{fg = immapRed}
+\setbeamercolor{enumerate subsubitem}{fg = immapRed}
+
+\setbeamercolor{caption name}{fg = immapRed}
+
+%% Set up fonts:
+\usefonttheme{serif}
+
+\setbeamerfont{title}{size = \Large}
+\setbeamerfont{frametitle}{size = \LARGE}
+\setbeamerfont{subtitle}{size = \small}
+\setbeamerfont{author}{size = \small}
+\setbeamerfont{titleExtras}{size = \footnotesize}
+
+%% Tweak some templates:
+\setbeamertemplate{navigation symbols}{} % remove navigation symbols
+\setbeamertemplate{itemize item}[circle] % use circular bullet points
+\setbeamertemplate{itemize subitem}[circle] % use circular bullet points
+\setbeamertemplate{itemize subsubitem}[triangle] % use circular bullet points
+
+\defbeamertemplate*{frametitle continuation}{custom}{}
+
+%% Construct a simplistic footline:
+\defbeamertemplate*{footline}{custom}{%
+  \hspace{20em}
+  \textbf{\color{immapRed}{immap.educ.ttu.edu}}
+  \hfill
+  \textbf{\color{immapRed}{\insertframenumber/\inserttotalframenumber}}
+  \vspace{2pt}
+  \hspace{2pt}%
+} 
+
+%% Define the default background:
+\defbeamertemplate*{background}{custom}{%
+  \includegraphics[width=\paperwidth,height=\paperheight]{images/immap_content_slide2}%
+}
+
+%% Define a custom title page:
+\defbeamertemplate*{title page}{custom}{%
+  \vspace{-24pt}
+  \usebeamercolor[fg]{title}{
+    \usebeamerfont{title}\textbf{\inserttitle}\par
+    \usebeamerfont{subtitle}\insertsubtitle\par
+    \medskip
+    \usebeamerfont{author}\insertauthor\par
+    \smallskip
+    \usebeamerfont{titleExtras}{%
+      \slshape
+      \insertinstitute\par
+      \medskip
+      \insertdate
+    }
+  }
+}
+
+%% Add a background to the titlepage:
+\addtobeamertemplate{title page}{
+  \begin{textblock*}{\paperwidth}(-2.6em, -7.7em) 
+    \includegraphics[width=\paperwidth, height=\paperheight]{images/immap_title_slide}
+\end{textblock*} }{}
+
+
+%% Ensure an empty space for the fixed frametitle region
+%% I.e., keep the body text from pushing into the frametitle area
+\setbeamertemplate{frametitle}{%
+  \nointerlineskip
+  \begin{beamercolorbox}[wd=\paperwidth, ht=42pt, leftskip=0.5cm]{frametitle}%
+    \usebeamerfont{frametitle}\usebeamercolor[fg]{frametitle}\insertframetitle\\
+    \vspace{12pt}
+  \end{beamercolorbox}%
+}

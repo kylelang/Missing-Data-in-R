@@ -1,0 +1,331 @@
+\documentclass{beamer}
+\usetheme{TTU}
+\usefonttheme{serif}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{mathptmx}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{setspace}
+\usepackage{esint}
+\usepackage[natbibapa]{apacite}
+\usepackage{color}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{bm}
+\usepackage{Sweavel}
+\usepackage{listings}
+
+\def\Sweavesize{\scriptsize}
+\def\Rcolor{\color{black}}
+%\def\Routcolor{\color{red}}
+\def\Rcommentcolor{\color{violet}}
+\def\Rbackground{\color[gray]{0.85}}
+\def\Routbackground{\color[gray]{0.85}}
+
+\lstset{tabsize=2, breaklines=true, style=Rstyle}
+
+
+
+\newcommand{\red}[0]{\textcolor{red}}
+%\newcommand{\violet}[0]{\textcolor{violet}}
+\newcommand{\green}[0]{\textcolor{green}}
+\newcommand{\blue}[0]{\textcolor{blue}}
+\newcommand{\comment}[1]{}
+
+\setbeamertemplate{frametitle continuation}{}% Don't number broken frames
+
+\title[Lecture 7]{Lecture 7: Imputation Diagnostics}
+\subtitle{EPSY 6349: Modern Missing Data Analysis}
+
+\author{Kyle M. Lang}
+
+\institute[TTU IMMAP]{
+  Institute for Measurement, Methodology, Analysis \& Policy\\
+  Texas Tech University\\
+  Lubbock, TX
+}
+
+\date{October 13, 2015}
+
+
+\begin{document}
+
+\setkeys{Gin}{width=\textwidth}
+  
+\input{sweaveFiles/lecture6-001}
+
+
+% Use a custom background template for the title slide
+{\usebackgroundtemplate{\rule{0pt}{3.4in}\hspace*{2.25in}
+    \makebox[0pt][r]{\includegraphics[natwidth=1000bp, natwidth=283bp,width=2in]{TTU_Logo.png}}}
+  
+  \begin{frame}[plain]
+    
+    \titlepage
+    
+  \end{frame}
+}% CLOSE Custom Background Template
+
+
+
+\begin{frame}{Outline}
+  
+  \begin{itemize}
+  \item Discuss imputation diagnostics
+    \vspace{12pt}
+    \begin{itemize}
+    \item Assessing imputation model convergence
+    \item Checking the imputations' plausibility
+    \end{itemize}
+    \vspace{12pt}
+  \item Look at graphical and numeric options for both
+  \end{itemize}
+  
+\end{frame}
+
+
+\begin{frame}{Today's Data}
+  
+  Today, our example data will be from a real study.\\
+  \vspace{12pt}
+  These data were analyzed by \citet{langEtAl:2009}.\\
+  \begin{itemize}
+    \item $N = 87$
+    \item $V = 33$
+      \begin{itemize}
+        \item Variables assessing: 
+          \begin{itemize}
+            \item Perceptions of and Definitions of Racism
+            \item Political Affiliation
+            \item Support for Affirmative Action Policies
+            \item Belief in meritocratic ideals
+          \end{itemize}
+      \end{itemize}
+      \vspace{6pt}
+    \item Almost no missing data
+      \begin{itemize}
+        \item I've artificially imposed $30\%$ MAR missing data on all
+          variables (expect political affiliation) using political
+          affiliation as the MAR predictor.
+      \end{itemize}
+  \end{itemize}
+  
+\end{frame}
+
+
+
+      
+\begin{frame}{Imputation Diagnostics}
+
+  After we run an MI routine, we need to make sure that the procedure
+  has performed as expected.\\
+  \vspace{12pt}
+  Problems can arise to two different places:
+  \begin{enumerate}
+    \item The imputation model may fail to converge.
+    \item The imputed values may not be plausible.
+  \end{enumerate}
+  \vspace{12pt} 
+  We need to examine our results to see if either of
+  these problems are present.
+  
+\end{frame}
+
+
+\begin{frame}{Imputation Model Convergence}
+  
+  The imputation model is almost always estimated through some form of
+  Gibbs sampling.
+  \vspace{6pt}
+  \begin{itemize}
+    \item Gibbs sampled parameters form a \emph{Markov Chain}.
+      \begin{itemize}
+        \item Each draw is dependent on only its immediate predecessor
+          in the chain.
+        \item $\theta^{(t)} | \theta^{(t - 1)} \perp \theta^{(t - j)}
+          ~ \forall j > 1$
+      \end{itemize}
+      \vspace{6pt}
+    \item Early elements of a Markov chain are similar to the starting
+      values
+      \begin{itemize}
+        \item Early Gibbs samples are poor approximations of the true
+          posterior.
+      \end{itemize}
+      \vspace{6pt}
+    \item We must let the sampler iterate for a while to allow the
+      estimates time to separate from their starting values
+      \begin{itemize}
+        \item We call these initial iterations ``burn-in'' or
+          ``warm-up'' iterations
+      \end{itemize}
+  \end{itemize}
+  
+\end{frame}
+
+
+\begin{frame}{Traceplots}
+  
+  Once converged, each sampled imputation model parameter should
+  ``bounce'' around an equilibrium point.
+  \begin{itemize}
+  \item The draws will never converge onto a single point
+  \item That would defeat the purpose of simulation-based inference
+  \end{itemize}
+  
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+\input{sweaveFiles/lecture6-002}
+\includegraphics{sweaveFiles/lecture6-002}
+
+\end{column}
+
+\begin{column}{0.5\textwidth}
+  
+\input{sweaveFiles/lecture6-003}
+\includegraphics{sweaveFiles/lecture6-003}
+
+\end{column}
+\end{columns}
+
+\end{frame}
+
+
+\begin{frame}{Potential Scale Reduction Factor}
+  
+  Suppose we have two independent Markov chains of the same
+  parameter.\\
+  \vspace{12pt} 
+  If these chains have converged, the average distance
+  between any two points on separate chains should be the same as the
+  average distance between two points on the same chain.
+  \vspace{6pt}
+  \begin{itemize}
+    \item The \emph{between-chain} variance should, asymptotically,
+      equal the \emph{within-chain} variance.
+  \end{itemize}
+  \vspace{6pt}
+  The \emph{Potential Scale Reduction Factor} $\widehat{R}$ quantifies this concept:
+  \begin{align*}
+    \widehat{R} = \frac{\hat{\sigma}^2_{between}}{\hat{\sigma}^2_{within}}
+  \end{align*}
+  
+  The $\widehat{R}$ will approach 1.0 at convergence.
+  \vspace{3pt}
+  \begin{itemize}
+    \item $\widehat{R} < $ 1.1 or 1.2 suggests acceptable convergence.
+  \end{itemize}
+  
+\end{frame}
+
+
+\begin{frame}{Example: Potential Scale Reduction Factor}
+   
+\input{sweaveFiles/lecture6-004}
+\includegraphics{sweaveFiles/lecture6-004}
+
+\end{frame}
+
+
+\begin{frame}{Example: Potential Scale Reduction Factor}
+  
+\input{sweaveFiles/lecture6-005}
+
+\end{frame}
+
+
+\begin{frame}[allowframebreaks]{More Imputation Model Convergence}
+  
+  A convergent imputation model will produce imputed values that
+  fluctuate around an equilibrium point. 
+  \vspace{6pt}
+  \begin{itemize}
+  \item Imputation model convergence can be assessed indirectly by
+    looking at plots of the item-level sufficient statistics for each
+    imputation.
+  \end{itemize}
+  \vspace{12pt}
+  This approach is automated for \textbf{mice} via \texttt{plot.mice()}.
+  \vspace{12pt}
+\input{sweaveFiles/lecture6-006}
+\includegraphics{sweaveFiles/lecture6-006}
+
+\end{frame}
+
+
+\begin{frame}{Imputed Value Plausibility}
+  
+  We want to ensure that the values imputed for the missing data are
+  sensible.
+  \vspace{6pt}
+  \begin{itemize}
+  \item Imputed values shouldn't be \emph{too} dissimilar to their
+    observed counterparts
+    \begin{itemize}
+    \item What constitutes \emph{too} much dissimilarity is
+      subjective and problem specific.
+    \end{itemize}
+  \end{itemize}
+  \vspace{6pt}
+  We can assess dissimilarity graphically or through summary statistics.
+  \vspace{6pt}
+  \begin{itemize}
+  \item Out-of-bounds values for the imputations are perfectly acceptable
+    \begin{itemize}
+    \item MI is \emph{NOT} designed to maintain the range 
+    \item We don't want wildly extreme values, though
+    \end{itemize}
+    \vspace{6pt}
+  \item The means of the observed and imputed components of each
+    variable shouldn't differ too much.
+    \begin{itemize}
+    \item Again, how much is \emph{too} much is subjective
+    \end{itemize}
+  \end{itemize}
+  
+\end{frame}
+
+
+\begin{frame}[allowframebreaks]{Numeric Imputation Checks}
+  
+\input{sweaveFiles/lecture6-007}
+
+\input{sweaveFiles/lecture6-008}
+
+\pagebreak
+
+\input{sweaveFiles/lecture6-009}
+
+\end{frame}
+
+
+
+\begin{frame}[allowframebreaks]{Graphical Imputation Checks}
+    
+  We can also construct plots of the imputed vs. observed values.\\
+  \vspace{12pt}
+  I tend to use two different flavors:
+  \begin{enumerate}
+    \item Scatterplots
+    \item Overlaid Density plots
+  \end{enumerate}
+  
+\input{sweaveFiles/lecture6-010}
+\includegraphics{sweaveFiles/lecture6-010}
+
+\input{sweaveFiles/lecture6-011}
+\includegraphics{sweaveFiles/lecture6-011}
+
+\end{frame}
+
+
+
+\begin{frame}{References}
+\bibliographystyle{apacite}
+\bibliography{/home/kylelang/data/literature/bibtexFiles/appliedRefs.bib}
+\end{frame}
+
+
+\end{document}
