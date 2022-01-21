@@ -1,0 +1,10 @@
+\begin{Schunk}
+\begin{Sinput}
+ ## Row i's contribution to the overall LL:
+ llVec[i] <- -0.5 * nVar * log(2 * pi) -
+     0.5 * log(det(sigmaHat)) -
+         0.5 * (inData[i, ] - muHat) %*%
+             solve(sigmaHat) %*%
+                 matrix(inData[i, ] - muHat)
+\end{Sinput}
+\end{Schunk}

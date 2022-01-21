@@ -1,0 +1,3 @@
+\beamer@sectionintoc {1}{Missing Data Descriptives}{7}{0}{1}
+\beamer@sectionintoc {2}{Missing Data Mechanisms}{16}{0}{2}
+\beamer@sectionintoc {3}{Missing Data Treatments}{31}{0}{3}
