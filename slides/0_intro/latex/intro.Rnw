@@ -16,6 +16,9 @@
 
 \captionsetup{labelformat = empty}
 
+\newcommand{\rmsc}[1]{\textrm{\textsc{#1}}}
+  
+
 \title{Missing Data Basics}
 \subtitle{Utrecht University Winter School: Missing Data in R}
 \author{Kyle M. Lang}
@@ -279,7 +282,10 @@ print(patTab3, booktabs = TRUE)
 
 \begin{frame}[allowframebreaks]{Nonresponse Rates}
   
-  \textsc{Percent/Proportion Missing}
+  \rmsc{Proportion Missing}
+  %\begin{align*}
+  %  PM_p = N^{-1} \sum_{n = 1}^N r_{np}
+  %\end{align*}
   \begin{itemize}
   \item The proportion of cells containing missing data
   \item Good early screening measure
@@ -288,33 +294,23 @@ print(patTab3, booktabs = TRUE)
   
   \va
   
-  \textsc{Attrition Rate}
+  \rmsc{Attrition Rate}
   \begin{itemize}
   \item The proportion of participants that drop-out of a study at each 
     measurement occasion
   \end{itemize}
   
-  \va
+  \pagebreak
   
-  \textsc{Percent/Proportion of Complete Cases}
+  \rmsc{Proportion of Complete Cases}
   \begin{itemize}
   \item The proportion of observations with no missing data
   \item Often reported but nearly useless quantity
   \end{itemize}
   
-  \pagebreak
-  
-  \textsc{Covariance Coverage}
-  \begin{itemize}
-  \item The proportion of cases available to estimate a given pairwise
-    relationship (e.g., a covariance between two variables)
-  \item Very important to have adequate coverage of the parameters you
-    want to estimate
-  \end{itemize}
-  
   \va
   
-  \textsc{Fraction of Missing Information}
+  \rmsc{Fraction of Missing Information}
   \begin{itemize}
   \item Associated with an estimated parameter, not with an incomplete variable
   \item Like an $R^2$ for the missing data
@@ -322,18 +318,63 @@ print(patTab3, booktabs = TRUE)
   \item Can only be computed after treating the missing data
   \end{itemize}
   
-  \pagebreak
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[allowframebreaks]{Coverage Measures}
   
-  \textsc{Influx}
+  \rmsc{Covariance Coverage}
+  \begin{align*}
+    CC_{jk} = N^{-1} \sum_{n = 1}^N r_{nj}r_{nk}
+  \end{align*}
   \begin{itemize}
-  \item Foo
+  \item The proportion of cases available to estimate a given pairwise
+    relationship (e.g., a covariance between two variables)
+  \item Very important to have adequate coverage of the parameters you
+    want to estimate
   \end{itemize}
   
+  \pagebreak
+  
+  \rmsc{Inbound Statistic}
+  \begin{align*}
+    I_{jk} = \frac{\sum_{n = 1}^N (1 - r_{nj})r_{nk}}{\sum_{n = 1}^N (1 - r_{nj})}
+  \end{align*}
+  \begin{itemize}
+  \item The proportion of missing cases in $Y_{j}$ for which $Y_{k}$ is observed
+  \end{itemize}
+ 
   \va
   
-  \textsc{Outflux}
+  \rmsc{Outbound Statistic}
+  \begin{align*}
+    O_{jk} = \frac{\sum_{n = 1}^N r_{nj}(1 - r_{nk})}{\sum_{n = 1}^N r_{nj}}
+  \end{align*}
   \begin{itemize}
-  \item Bar
+  \item The proportion of observed cases in $Y_{j}$ for which $Y_{k}$ is missing
+  \end{itemize}
+ 
+  \pagebreak
+  
+  \rmsc{Influx Coefficient}
+  \begin{align*}
+    I_j = \frac{\sum_{k = 1}^P \sum_{n = 1}^N (1 - r_{nj})r_{nk}}{\sum_{k = 1}^P \sum_{n = 1}^N r_{nk}}
+  \end{align*}
+  \begin{itemize}
+  \item The proportion of observed cells in $Y$ that exists in cases for which $Y_j$ is missing 
+  \item How well the missing values in $Y_j$ connect to the observed values in $Y_{-j}$
+  \end{itemize}
+  
+  \pagebreak
+  
+  \rmsc{Outflux Coefficient}
+  \begin{align*}
+    O_j = \frac{\sum_{k = 1}^P \sum_{n = 1}^N r_{nj}(1 - r_{nk})}{\sum_{k = 1}^P \sum_{n = 1}^N (1 - r_{nk})}
+  \end{align*}
+  \begin{itemize}
+  \item The proportion of missing cells in $Y$ that exists in cases for which $Y_j$ is observed
+  \item How well the observed values in $Y_j$ connect to the missing values in $Y_{-j}$
   \end{itemize}
   
 \end{frame}
@@ -583,7 +624,7 @@ ggplot(data = pDat, mapping = aes(x = x, y = y, color = g)) +
   \pause
   \va
   
-  \textsc{Question:} What happens if we ignore the predictor of missingness, but
+  \rmsc{Question:} What happens if we ignore the predictor of missingness, but
   that predictor is independent of our study variables?
   
   \pause
@@ -596,7 +637,7 @@ y5[rVec3] <- NA
 cor(y5, x, use = "pairwise")
 @ 
 
-\textsc{Answer:} We get back to MCAR :)
+\rmsc{Answer:} We get back to MCAR :)
 
 \end{frame}
 
