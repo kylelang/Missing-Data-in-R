@@ -34,8 +34,10 @@ library(ggplot2)
 library(mice)
 library(mvtnorm)
 library(xtable)
+library(pROC)
 
 source("../../../code/supportFunctions.R")
+source("../../../code/sim_missing/code/simMissingness.R")
 
 dataDir <- "../../../data/"
 
@@ -720,17 +722,19 @@ ggplot(data = pDat, mapping = aes(x = x, y = y, color = g)) +
       
 <<echo = FALSE, cache = TRUE, warning = FALSE>>=
 dat1 <- readRDS(paste0(dataDir, "diabetes.rds"))
-dat2 <- imposeMissData(data    = dat1,
-                       targets = list(mar = c("ldl", "glu"),
-                                      mcar = NA,
-                                      mnar = NA),
-                       preds   = "bmi",
-                       pm      = list(mar = 0.25),
-                       snr     = list(mar = 3),
-                       pattern = "high")$data
+                                        #rVec <- simLogisticMissingness0(pm      = 0.25,
+                                        #                                data    = dat1,
+                                        #                                preds   = "bmi",
+                                        #                                type    = "high",
+                                        #                                stdData = TRUE)$r
+rVec <- simSimpleMar(pm      = 0.25,
+                     data    = dat1,
+                     preds   = "bmi",
+                     type    = "high",
+                     stdData = TRUE)
 
-dat3 <- dat2[ , c("bmi", "glu")]
-rVec <- is.na(dat2$glu)
+dat2              <- dat1
+dat2[rVec, "glu"] <- NA
 
 p0 <- ggplot(data = dat1, mapping = aes(x = bmi, y = glu)) +
     geom_point() +
@@ -798,7 +802,7 @@ p1
     \begin{column}{0.5\textwidth}
       
 <<echo = FALSE, cache = TRUE, warning = FALSE>>=
-miceM <- mice(data      = dat3,
+miceM <- mice(data      = dat2[ , c("bmi", "glu")],
               m         = 1,
               maxit     = 1,
               method    = "mean",
@@ -837,9 +841,9 @@ p1 + geom_point(mapping = aes(y = datM$glu, x = datM$bmi), colour = "red")
     \begin{column}{0.5\textwidth}
       
 <<echo = FALSE, cache = TRUE, warning = FALSE>>=
-miceD <- mice(data      = dat3,
+miceD <- mice(data      = dat2[ , c("bmi", "glu")],
               m         = 1,
-              maxit     = 10,
+              maxit     = 1,
               method    = "norm.predict",
               printFlag = FALSE)
 
@@ -878,7 +882,7 @@ p1 + geom_point(mapping = aes(y = datD$glu, x = datD$bmi), colour = "red")
 <<echo = FALSE, cache = TRUE, warning = FALSE>>=
 miceD <- mice(data      = dat2,
               m         = 1,
-              maxit     = 10,
+              maxit     = 1,
               method    = "norm.predict",
               printFlag = FALSE)
 
@@ -978,7 +982,7 @@ p1 + geom_point(mapping = aes(y = datD$glu, x = datD$bmi), colour = "red")
     \begin{column}{0.5\textwidth}
       
 <<echo = FALSE, cache = TRUE, warning = FALSE>>=
-miceS <- mice(data      = dat3,
+miceS <- mice(data      = dat2[ , c("bmi", "glu")],
               m         = 1,
               maxit     = 10,
               method    = "norm.nob",

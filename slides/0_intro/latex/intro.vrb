@@ -13,7 +13,7 @@
 \hlkwd{mean}\hlstd{(}\hlkwd{unlist}\hlstd{(corList2))}
 \end{alltt}
 \begin{verbatim}
-[1] 0.4078712
+[1] 0.4089334
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
