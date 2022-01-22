@@ -17,7 +17,7 @@
 \captionsetup{labelformat = empty}
 
 \newcommand{\rmsc}[1]{\textrm{\textsc{#1}}}
-  
+
 
 \title{Missing Data Basics}
 \subtitle{Utrecht University Winter School: Missing Data in R}
@@ -41,6 +41,7 @@ library(pROC)
 library(dplyr)
 library(magrittr)
 library(naniar)
+library(gridExtra)
 
 source("../../../code/supportFunctions.R")
 source("../../../code/sim_missing/code/simMissingness.R")
@@ -80,7 +81,7 @@ knit_theme$set('edit-kwrite')
     \vc
   \item What's your math background?
   \end{enumerate}
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
@@ -92,15 +93,15 @@ knit_theme$set('edit-kwrite')
 %------------------------------------------------------------------------------%
 
 \begin{frame}{What are Missing Data?}
-  
-  Missing data are empty cells in a dataset where there should be observed 
+
+  Missing data are empty cells in a dataset where there should be observed
   values.
   \vc
   \begin{itemize}
-  \item The missing cells correspond to true population values, but we haven't 
+  \item The missing cells correspond to true population values, but we haven't
     observed those values.
   \end{itemize}
-  \vb 
+  \vb
   \pause
   Not every empty cell is a missing datum.
   \vc
@@ -113,13 +114,13 @@ knit_theme$set('edit-kwrite')
     \vc
   \item Empty blocks of data following ``gateway'' items
   \end{itemize}
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}{A Little Notation}
-  
+
   \begin{align*}
     Y &\coloneqq \text{An $N \times P$ Matrix of Arbitrary Data}\\[8pt]
     Y_{mis} &\coloneqq \text{The \emph{missing} part of $Y$}\\[8pt]
@@ -127,26 +128,26 @@ knit_theme$set('edit-kwrite')
     R &\coloneqq \text{An $N \times P$ response matrix}\\[8pt]
     M &\coloneqq \text{An $N \times P$ missingness matrix}
   \end{align*}
-  
+
   The $R$ and $M$ matrices are complementary.
   \begin{itemize}
-  \item $r_{np} = 1$ means $y_{np}$ is observed; $m_{np} = 1$ means $y_{np}$ is 
+  \item $r_{np} = 1$ means $y_{np}$ is observed; $m_{np} = 1$ means $y_{np}$ is
     missing.
-  \item $r_{np} = 0$ means $y_{np}$ is missing; $m_{np} = 0$ means $y_{np}$ is 
+  \item $r_{np} = 0$ means $y_{np}$ is missing; $m_{np} = 0$ means $y_{np}$ is
     observed.
   \item $M_p$ is the \emph{missingness} of $Y_p$.
   \end{itemize}
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
-    
+
 \sectionslide{Missing Data Descriptives}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Missing Data Pattern}
-  
+
 <<echo = FALSE>>=
 tmpTab <- matrix(c("x", "x", ".", ".",
                    "y", ".", "y", "."),
@@ -164,7 +165,7 @@ tmpTab <- matrix(c(rep("x", 3), ".", "x", rep(".", 3),
                  )
 
 patTab2 <- xtable(tmpTab, align = rep("c", 4), caption = "Patterns for $P = 3$")
-@ 
+@
 
 Missing data (or response) patterns represent unique combinations of observed
 and missing items.
@@ -174,116 +175,116 @@ and missing items.
 
 \begin{columns}
   \begin{column}{0.45\textwidth}
-    
+
 <<echo = FALSE, results = 'asis'>>=
 print(patTab1, booktabs = TRUE)
-@ 
-    
+@
+
   \end{column}
   \begin{column}{0.45\textwidth}
-\vx{-12}    
+\vx{-12}
 <<echo = FALSE, results = 'asis'>>=
 print(patTab2, booktabs = TRUE)
-@ 
-     
+@
+
     \end{column}
   \end{columns}
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Missing Data Pattern}
-  
- The concept of a ``missing data pattern'' can also be used to classify the 
+
+ The concept of a ``missing data pattern'' can also be used to classify the
   spatial arrangement of missing cells on a data set.\\
-  
+
   \vc
-  
+
   \begin{itemize}
   \item Univariate
     \begin{itemize}
       \item Missing data occur on only one variable
     \end{itemize}
-  
+
     \vb
-  
+
   \item Monotone
     \begin{itemize}
-    \item The proportion of complete elements, in both rows and columns, 
+    \item The proportion of complete elements, in both rows and columns,
       decreases when traversing the data set.
     \item The observed cells can be arranged into a ``staircase'' pattern.
     \end{itemize}
-  
+
     \vb
-  
+
   \item Arbitrary
     \begin{itemize}
     \item Missing values are ``randomly'' scattered throughout the data set.
     \end{itemize}
   \end{itemize}
-  
+
 \end{frame}
 
 \watermarkoff %----------------------------------------------------------------%
 
 \begin{frame}{Example Missing Data Patterns}
-  
+
 <<echo = FALSE>>=
-tmpTab <- matrix(c(rep("x", 10), 
+tmpTab <- matrix(c(rep("x", 10),
                    rep("y", 5), rep(".", 5),
-                   rep("z", 10)), 
+                   rep("z", 10)),
                  ncol = 3)
 colnames(tmpTab) <- c("X", "Y", "Z")
 
-patTab1 <- xtable(tmpTab, 
+patTab1 <- xtable(tmpTab,
                   align   = rep("c", 4),
                   caption = "Univariate Pattern")
 
-tmpTab2 <- matrix(c(rep("x", 9), rep(".", 1), 
+tmpTab2 <- matrix(c(rep("x", 9), rep(".", 1),
                     rep("y", 6), rep(".", 4),
-                    rep("z", 3), rep(".", 7)), 
+                    rep("z", 3), rep(".", 7)),
                   ncol = 3)
 colnames(tmpTab2) <- c("X", "Y", "Z")
 
-patTab2 <- xtable(tmpTab2, 
+patTab2 <- xtable(tmpTab2,
                   align   = rep("c", 4),
                   caption = "Monotone Pattern")
 
-tmpTab3 <- matrix(c(rep("x", 10), 
+tmpTab3 <- matrix(c(rep("x", 10),
                     rep("y", 10),
-                    rep("z", 10)), 
+                    rep("z", 10)),
                   ncol = 3)
 rMat <- matrix(as.logical(rbinom(30, 1, 0.3)), ncol = 3)
 tmpTab3[rMat] <- "."
 colnames(tmpTab3) <- c("X", "Y", "Z")
 
-patTab3 <- xtable(tmpTab3, 
+patTab3 <- xtable(tmpTab3,
                   align   = rep("c", 4),
                   caption = "Arbitrary Pattern")
-@ 
+@
 
 \begin{columns}[T]
   \begin{column}{0.33\textwidth}
-    
+
 <<echo = FALSE, results = 'asis'>>=
 print(patTab1, booktabs = TRUE)
-@ 
+@
 
 \end{column}
 \begin{column}{0.33\textwidth}
-  
+
 <<echo = FALSE, results = 'asis'>>=
 print(patTab2, booktabs = TRUE)
 @
-  
+
 \end{column}
 \begin{column}{0.33\textwidth}
-  
+
 <<echo = FALSE, results = 'asis'>>=
 print(patTab3, booktabs = TRUE)
-@ 
-  
+@
+
 \end{column}
 \end{columns}
 
@@ -292,7 +293,7 @@ print(patTab3, booktabs = TRUE)
 \watermarkon %-----------------------------------------------------------------%
 
 \begin{frame}[allowframebreaks]{Nonresponse Rates}
-  
+
   \rmsc{Proportion Missing}
   %\begin{align*}
   %  PM_p = N^{-1} \sum_{n = 1}^N r_{np}
@@ -302,25 +303,25 @@ print(patTab3, booktabs = TRUE)
   \item Good early screening measure
   \item Should be computed for each variable, not for the entire dataset
   \end{itemize}
-  
+
   \va
-  
+
   \rmsc{Attrition Rate}
   \begin{itemize}
-  \item The proportion of participants that drop-out of a study at each 
+  \item The proportion of participants that drop-out of a study at each
     measurement occasion
   \end{itemize}
-  
+
   \pagebreak
-  
+
   \rmsc{Proportion of Complete Cases}
   \begin{itemize}
   \item The proportion of observations with no missing data
   \item Often reported but nearly useless quantity
   \end{itemize}
-  
+
   \va
-  
+
   \rmsc{Fraction of Missing Information}
   \begin{itemize}
   \item Associated with an estimated parameter, not with an incomplete variable
@@ -328,13 +329,13 @@ print(patTab3, booktabs = TRUE)
   \item Most important diagnostic value for missing data problems
   \item Can only be computed after treating the missing data
   \end{itemize}
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}[allowframebreaks]{Coverage Measures}
-  
+
   \rmsc{Covariance Coverage}
   \begin{align*}
     CC_{jk} = N^{-1} \sum_{n = 1}^N r_{nj}r_{nk}
@@ -345,9 +346,9 @@ print(patTab3, booktabs = TRUE)
   \item Very important to have adequate coverage of the parameters you
     want to estimate
   \end{itemize}
-  
+
   \pagebreak
-  
+
   \rmsc{Inbound Statistic}
   \begin{align*}
     I_{jk} = \frac{\sum_{n = 1}^N (1 - r_{nj})r_{nk}}{\sum_{n = 1}^N (1 - r_{nj})}
@@ -355,9 +356,9 @@ print(patTab3, booktabs = TRUE)
   \begin{itemize}
   \item The proportion of missing cases in $Y_{j}$ for which $Y_{k}$ is observed
   \end{itemize}
- 
+
   \va
-  
+
   \rmsc{Outbound Statistic}
   \begin{align*}
     O_{jk} = \frac{\sum_{n = 1}^N r_{nj}(1 - r_{nk})}{\sum_{n = 1}^N r_{nj}}
@@ -365,42 +366,42 @@ print(patTab3, booktabs = TRUE)
   \begin{itemize}
   \item The proportion of observed cases in $Y_{j}$ for which $Y_{k}$ is missing
   \end{itemize}
- 
+
   \pagebreak
-  
+
   \rmsc{Influx Coefficient}
   \begin{align*}
     I_j = \frac{\sum_{k = 1}^P \sum_{n = 1}^N (1 - r_{nj})r_{nk}}{\sum_{k = 1}^P \sum_{n = 1}^N r_{nk}}
   \end{align*}
   \begin{itemize}
-  \item The proportion of observed cells in $Y$ that exists in cases for which 
-    $Y_j$ is missing 
-  \item How well the missing values in $Y_j$ connect to the observed values in 
+  \item The proportion of observed cells in $Y$ that exists in cases for which
+    $Y_j$ is missing
+  \item How well the missing values in $Y_j$ connect to the observed values in
     $Y_{-j}$
   \end{itemize}
-  
+
   \pagebreak
-  
+
   \rmsc{Outflux Coefficient}
   \begin{align*}
     O_j = \frac{\sum_{k = 1}^P \sum_{n = 1}^N r_{nj}(1 - r_{nk})}{\sum_{k = 1}^P \sum_{n = 1}^N (1 - r_{nk})}
   \end{align*}
   \begin{itemize}
-  \item The proportion of missing cells in $Y$ that exists in cases for which 
+  \item The proportion of missing cells in $Y$ that exists in cases for which
     $Y_j$ is observed
-  \item How well the observed values in $Y_j$ connect to the missing values in 
+  \item How well the observed values in $Y_j$ connect to the missing values in
     $Y_{-j}$
   \end{itemize}
-  
+
 \end{frame}
 
 \watermarkoff %----------------------------------------------------------------%
 
 \begin{frame}{Examples}
-  
+
   \begin{columns}
     \begin{column}{0.61\textwidth}
-      
+
       \begin{enumerate}
       \item What is the coverage for $cov(X, Y)$?
         \vb
@@ -412,15 +413,15 @@ print(patTab3, booktabs = TRUE)
         \vb
       \item What is the influx coefficient for $W$?
       \end{enumerate}
-      
+
     \end{column}
     \begin{column}{0.39\textwidth}
-      
+
 <<echo = FALSE, results = 'asis'>>=
-tmpTab4 <- matrix(c(rep("w", 10), 
+tmpTab4 <- matrix(c(rep("w", 10),
                     rep("x", 5), rep(".", 5),
                     rep("y", 10),
-                    rep(".", 5), rep("z", 5)), 
+                    rep(".", 5), rep("z", 5)),
                  ncol = 4)
 colnames(tmpTab4) <- c("W", "X", "Y", "Z")
 
@@ -430,16 +431,16 @@ print(patTab4, booktabs = TRUE)
 
 \end{column}
 \end{columns}
- 
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Examples}
-  
+
   \begin{columns}
     \begin{column}{0.6\textwidth}
-      
+
       \begin{enumerate}
         \item What is the percent missing at T2?
           \vb
@@ -453,15 +454,15 @@ print(patTab4, booktabs = TRUE)
           \vb
         \item What is the outflux coefficient $O_2$?
       \end{enumerate}
-      
+
     \end{column}
     \begin{column}{0.4\textwidth}
-      
+
 <<echo = FALSE, results = 'asis'>>=
-tmpTab5 <- matrix(c(rep("x1", 10), 
+tmpTab5 <- matrix(c(rep("x1", 10),
                     rep("x2", 7), rep(".", 3),
                     rep("x3", 5), rep(".", 5),
-                    rep("x4", 3), rep(".", 7)), 
+                    rep("x4", 3), rep(".", 7)),
                  ncol = 4)
 colnames(tmpTab5) <- c("T1", "T2", "T3", "T4")
 
@@ -492,36 +493,36 @@ print(patTab5, booktabs = TRUE)
   %\begin{align*}
   %  P(R | Y_{mis}, Y_{obs}) = P(R)
   %\end{align*}
-  
+
   Missing at Random (MAR)
   \begin{itemize}
   \item $P(R | Y_{mis}, Y_{obs}) = P(R | Y_{obs})$
     \vc
-  \item Missingness is related to only the \emph{observed} parts of study 
+  \item Missingness is related to only the \emph{observed} parts of study
       variables.
   \end{itemize}
   \vb
   %\begin{align*}
   %  P(R | Y_{mis}, Y_{obs}) = P(R | Y_{obs})
   %\end{align*}
-  
+
   Missing not at Random (MNAR)
   \begin{itemize}
   \item $P(R | Y_{mis}, Y_{obs}) \neq P(R | Y_{obs})$
     \vc
-  \item Missingness is related to the \emph{unobserved} parts of study 
+  \item Missingness is related to the \emph{unobserved} parts of study
     variables.
   \end{itemize}
   %\begin{align*}
   %  P(R | Y_{mis}, Y_{obs}) \neq P(R | Y_{obs})
   %\end{align*}
-  
+
 \end{frame}
 
 \watermarkoff %----------------------------------------------------------------%
 
 \begin{frame}[fragile]{Simulate Some Toy Data}
-  
+
 <<>>=
 nObs <- 5000 # Sample Size
 pm   <- 0.3  # Proportion Missing
@@ -537,14 +538,14 @@ y0 <- tmp[ , 2]
 z0 <- tmp[ , 3]
 
 cor(y0, x0) # Check correlation between X and Y
-@ 
+@
 
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile, allowframebreaks]{MCAR Example}
-  
+
 <<>>=
 ## Simulate MCAR Missingness:
 mVec <- sample(1 : length(y0), size = pm * length(y0))
@@ -553,7 +554,7 @@ yMcar       <- y0
 yMcar[mVec] <- NA
 
 cor(yMcar, x0, use = "pairwise") # Look at correlation
-@ 
+@
 
 \pagebreak
 
@@ -576,14 +577,14 @@ ggplot(data = pDat, mapping = aes(x = x, y = y, color = g)) +
     xlab("Value of Y") +
     scale_color_manual(values = c("blue", "red")) +
     theme(legend.position = c(0.8, 0.95), legend.title = element_blank())
-@ 
+@
 
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile, allowframebreaks]{MAR Example}
-  
+
 <<>>=
 ## Simulate MAR Missingness:
 mVec <- x0 < quantile(x0, probs = pm)
@@ -593,7 +594,7 @@ yMar       <- y0
 yMar[mVec] <- NA
 
 cor(yMar, x0, use = "pairwise") # Not looking so good :(
-@ 
+@
 
 \pagebreak
 
@@ -623,7 +624,7 @@ marP
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile, allowframebreaks]{MNAR Example}
-  
+
 <<>>=
 ## Simulate MNAR Missingness:
 mVec <- y0 < quantile(y0, probs = pm)
@@ -633,7 +634,7 @@ yMnar       <- y0
 yMnar[mVec] <- NA
 
 cor(yMnar, x0, use = "pairwise") # Hmm...looks pretty bad.
-@ 
+@
 
 \pagebreak
 
@@ -655,25 +656,25 @@ ggplot(data = pDat, mapping = aes(x = x, y = y, color = g)) +
     xlab("Value of Y") +
     scale_color_manual(values = c("blue", "red")) +
     theme(legend.position = c(0.8, 0.95), legend.title = element_blank())
-@ 
+@
 
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile]{Crucial Nuance}
-  
-  In our previous MAR example, ignoring the predictor of missingness actually 
+
+  In our previous MAR example, ignoring the predictor of missingness actually
   produces \emph{Indirect MNAR}.\\
-  
+
   \pause
   \va
-  
+
   \rmsc{Question:} What happens if we ignore the predictor of missingness, but
   that predictor is independent of our study variables?
-  
+
   \pause
-  
+
 <<>>=
 mVec <- z0 < quantile(z0, probs = pm)
 
@@ -681,7 +682,7 @@ y       <- y0
 y[mVec] <- NA
 
 cor(y, x0, use = "pairwise")
-@ 
+@
 
 \rmsc{Answer:} We get back to MCAR :)
 
@@ -690,22 +691,22 @@ cor(y, x0, use = "pairwise")
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Crucial Nuance}
-  
-  The missing data mechanisms are not simply characteristics of an incomplete 
+
+  The missing data mechanisms are not simply characteristics of an incomplete
   dataset; we also need to account for the analysis.
   \vb
   \begin{columns}
     \begin{column}{0.5\textwidth}
-      
+
 <<echo = FALSE, out.width = "100%", message = FALSE>>=
-marP + scale_color_manual(values = c("blue", "red"), 
+marP + scale_color_manual(values = c("blue", "red"),
                           labels = c("Complete", "Indirect MNAR")
                           )
-@ 
+@
 
 \end{column}
 \begin{column}{0.5\textwidth}
-  
+
 <<echo = FALSE, out.width = "100%">>=
 yDen <- density(y, na.rm = TRUE)
 
@@ -725,7 +726,7 @@ ggplot(data = pDat, mapping = aes(x = x, y = y, color = g)) +
     scale_color_manual(values = c("blue", "red")) +
     theme(legend.position = c(0.8, 0.95), legend.title = element_blank())
 @
-  
+
 \end{column}
 \end{columns}
 
@@ -734,59 +735,59 @@ ggplot(data = pDat, mapping = aes(x = x, y = y, color = g)) +
 \watermarkon %-----------------------------------------------------------------%
 
 \begin{frame}[allowframebreaks]{Testing the Missing Data Mechanism}
-  
+
   We cannot fully test the MAR or MNAR assumptions.
   \begin{itemize}
   \item To do so would require knowing the values of the missing data.
     \vc
-  \item We can find observed predictors of missingness, but we can never know 
+  \item We can find observed predictors of missingness, but we can never know
     that we have them all.
     \vc
   \item In practice, MAR and MNAR live on the ends of a continuum.
     \begin{itemize}
-    \item Our missing data problem exists at some unknown point along this 
+    \item Our missing data problem exists at some unknown point along this
       continuum.
       \vc
     \item We can do a lot to nudge our problem towards the MAR side.
     \end{itemize}
   \end{itemize}
-   
+
   \pagebreak
-  
+
   We can test the MCAR assumption.
   \begin{itemize}
-  \item With MCAR, the missing data and the observed data should have the same 
+  \item With MCAR, the missing data and the observed data should have the same
     distribution.
     \vc
-  \item We can test for MCAR by testing the distributions of \emph{auxiliary 
+  \item We can test for MCAR by testing the distributions of \emph{auxiliary
     variables}, $\mathbf{Z}$.
     \begin{itemize}
-    \item Use a t-test to compare the subset of $Z_p$ that corresponds to 
+    \item Use a t-test to compare the subset of $Z_p$ that corresponds to
       $Y_{mis}$ to the subset corresponding to $Y_{obs}$.
       \vc
     \item The \citet{little:1988} MCAR test is a multivariate version of this.
     \end{itemize}
   \end{itemize}
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile]{Example}
-  
+
   Create some toy datasets from the variables we generated above.
 
 <<>>=
-mcarData <- data.frame(y = yMcar, x = x0, z = z0, 
+mcarData <- data.frame(y = yMcar, x = x0, z = z0,
                        m = as.numeric(is.na(yMcar))
                        )
-marData  <- data.frame(y = yMar, x = x0, z = z0, 
+marData  <- data.frame(y = yMar, x = x0, z = z0,
                        m = as.numeric(is.na(yMar))
                        )
-mnarData <- data.frame(y = yMnar, x = x0, z = z0, 
+mnarData <- data.frame(y = yMnar, x = x0, z = z0,
                        m = as.numeric(is.na(yMnar))
                        )
-@ 
+@
 
 \end{frame}
 
@@ -795,10 +796,10 @@ mnarData <- data.frame(y = yMnar, x = x0, z = z0,
 \begin{frame}[fragile]{T-Test Example}
 
   Test for dependence between $X$ and $M_Y$ in MCAR data.
-  
+
 <<>>=
 mcarData %$% t.test(x ~ m) %>% wrap()
-@ 
+@
 
 \end{frame}
 
@@ -810,7 +811,7 @@ mcarData %$% t.test(x ~ m) %>% wrap()
 
 <<>>=
 mcarData %$% t.test(z ~ m) %>% wrap()
-@ 
+@
 
 \end{frame}
 
@@ -822,30 +823,30 @@ mcarData %$% t.test(z ~ m) %>% wrap()
 
 <<>>=
 marData %$% t.test(x ~ m) %>% wrap()
-@ 
+@
 
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile]{T-Test Example}
-  
+
   Test for dependence between $Z$ and $M_Y$ in MAR data.
 
 <<>>=
 marData %$% t.test(z ~ m) %>% wrap()
-@ 
+@
 
 \end{frame}
 
 %------------------------------------------------------------------------------%
 \begin{frame}[fragile]{T-Test Example}
-  
+
   Test for dependence between $X$ and $M_Y$ in MNAR data.
 
 <<>>=
 mnarData %$% t.test(x ~ m) %>% wrap()
-@ 
+@
 
 \end{frame}
 
@@ -857,7 +858,7 @@ mnarData %$% t.test(x ~ m) %>% wrap()
 
 <<>>=
 mnarData %$% t.test(z ~ m) %>% wrap()
-@ 
+@
 
 \end{frame}
 
@@ -866,10 +867,10 @@ mnarData %$% t.test(z ~ m) %>% wrap()
 \begin{frame}[fragile]{\citet{little:1988} MCAR Test Example}
 
   Use the \citet{little:1988} MCAR test on MCAR data.
-  
+
 <<>>=
 mcarData %>% select(-m) %>% mcar_test()
-@ 
+@
 
 \end{frame}
 
@@ -878,10 +879,10 @@ mcarData %>% select(-m) %>% mcar_test()
 \begin{frame}[fragile]{\citet{little:1988} MCAR Test Example}
 
 Use the \citet{little:1988} MCAR test on MAR data.
-  
+
 <<>>=
 marData %>% select(-m) %>% mcar_test()
-@ 
+@
 
 \end{frame}
 
@@ -890,17 +891,17 @@ marData %>% select(-m) %>% mcar_test()
 \begin{frame}[fragile]{\citet{little:1988} MCAR Test Example}
 
 Use the \citet{little:1988} MCAR test on MNAR data.
-  
+
 <<>>=
 mnarData %>% select(-m) %>% mcar_test()
-@ 
+@
 
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile]{Logistic Regression Example}
- 
+
 <<cache = TRUE>>=
 ## Read in some data:
 diabetes <- readRDS(paste0(dataDir, "diabetes.rds"))
@@ -913,8 +914,8 @@ diabetes$m <- simLogisticMissingness0(data    = diabetes,
                                       stdData = TRUE)$r
 
 ## Predict the missingness using logistic regression:
-fit <- diabetes %>% 
-    select(-glu) %>% 
+fit <- diabetes %>%
+    select(-glu) %>%
     glm(m ~ ., data = ., family = "binomial")
 @
 
@@ -923,11 +924,11 @@ fit <- diabetes %>%
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile]{Logistic Regression Example}
-  
+
 <<>>=
 partSummary(fit, 3)
 @
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
@@ -937,7 +938,7 @@ partSummary(fit, 3)
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Bad Methods (These almost never work)}
-   
+
   Listwise Deletion (Complete Case Analysis)
   \begin{itemize}
   \item Use only complete observations for the analysis
@@ -948,25 +949,25 @@ partSummary(fit, 3)
   \end{itemize}
 
   \va
-  
+
   Pairwise Deletion (Available Case Analysis)
   \begin{itemize}
   \item Use only complete pairs of observations for analysis
     \begin{itemize}
     \item Different samples sizes for different parameter estimates
-    \item Can cause computational issues 
+    \item Can cause computational issues
     \end{itemize}
   \end{itemize}
-  
+
 \end{frame}
 
 \watermarkoff %----------------------------------------------------------------%
 
 \begin{frame}{Bad Methods (These almost never work)}
-  
+
   \begin{columns}
     \begin{column}{0.5\textwidth}
-      
+
       (Unconditional) Mean Substitution
       \begin{itemize}
       \item Replace $Y_{mis}$ with $\bar{Y}_{obs}$
@@ -975,15 +976,15 @@ partSummary(fit, 3)
         \item Attenuates measures of linear association
         \end{itemize}
       \end{itemize}
-      
+
     \end{column}
     \begin{column}{0.5\textwidth}
 
       \only<1>{
-        
+
 <<echo = FALSE, cache = TRUE, warning = FALSE>>=
 dat1 <- readRDS(paste0(dataDir, "diabetes.rds"))
-                                       
+
 mVec <- simSimpleMar(pm      = 0.25,
                      data    = dat1,
                      preds   = "bmi",
@@ -1001,22 +1002,22 @@ p0 <- ggplot(data = dat1, mapping = aes(x = bmi, y = glu)) +
     ylab("Blood Glucose")
 
 p0
-@ 
+@
 
 }
       \only<2>{
-  
+
 <<echo = FALSE, cache = TRUE, warning = FALSE>>=
 p1 <- p0 +
     geom_point(mapping = aes(y = dat2$glu, x = dat2$bmi), colour = "blue")
 
 p1
-@ 
+@
 
 }
-      
+
       \only<3>{
-        
+
 <<echo = FALSE, cache = TRUE, warning = FALSE>>=
 miceM <- mice(data      = dat2[ , c("bmi", "glu")],
               m         = 1,
@@ -1028,22 +1029,22 @@ datM0 <- datM <- complete(miceM, 1)
 datM[!mVec, ] <- NA
 
 p2 <- p1 + geom_point(data    = datM,
-                      mapping = aes(y = glu, x = bmi), 
+                      mapping = aes(y = glu, x = bmi),
                       colour  = "red")
 p2
-@ 
+@
 
 }
-  
+
       \only<4>{
-        
+
 <<echo = FALSE, cache = TRUE>>=
-p2 + geom_smooth(data    = dat1, 
+p2 + geom_smooth(data    = dat1,
                  mapping = aes(y = glu, x = bmi),
                  method  = "lm",
                  color   = "black",
                  se      = FALSE) +
-    geom_smooth(data    = datM0, 
+    geom_smooth(data    = datM0,
                 mapping = aes(y = glu, x = bmi),
                 method  = "lm",
                 color   = "red",
@@ -1051,7 +1052,7 @@ p2 + geom_smooth(data    = dat1,
 @
 
 }
-      
+
 \end{column}
 \end{columns}
 
@@ -1059,27 +1060,27 @@ p2 + geom_smooth(data    = dat1,
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}{Bad Methods (These almost never work)} 
+\begin{frame}{Bad Methods (These almost never work)}
 
   \begin{columns}
     \begin{column}{0.5\textwidth}
-      
+
       Deterministic Regression Imputation\\
       (Conditional Mean Substitution)
       \begin{itemize}
-      \item Replace $Y_{mis}$ with $\widehat{Y}_{mis}$ from some regression 
+      \item Replace $Y_{mis}$ with $\widehat{Y}_{mis}$ from some regression
         equation
         \begin{itemize}
         \item Positively biases regression slopes and correlations
         \item Inflates measures of linear association
         \end{itemize}
       \end{itemize}
-      
+
     \end{column}
     \begin{column}{0.5\textwidth}
-      
+
       \only<1>{
-        
+
 <<echo = FALSE, cache = TRUE, warning = FALSE>>=
 miceD <- mice(data      = dat2[ , c("bmi", "glu")],
               m         = 1,
@@ -1094,18 +1095,18 @@ p2 <- p1 + geom_point(data = datD,
                       mapping = aes(y = glu, x = bmi),
                       colour = "red")
 p2
-@ 
+@
 
 }
       \only<2>{
-        
+
 <<echo = FALSE, cache = TRUE>>=
-p2 + geom_smooth(data    = dat1, 
+p2 + geom_smooth(data    = dat1,
                  mapping = aes(y = glu, x = bmi),
                  method  = "lm",
                  color   = "black",
                  se      = FALSE) +
-    geom_smooth(data    = datD0, 
+    geom_smooth(data    = datD0,
                 mapping = aes(y = glu, x = bmi),
                 method  = "lm",
                 color   = "red",
@@ -1113,7 +1114,7 @@ p2 + geom_smooth(data    = dat1,
 @
 
 }
-      
+
 \end{column}
 \end{columns}
 
@@ -1121,27 +1122,27 @@ p2 + geom_smooth(data    = dat1,
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}{Bad Methods (These almost never work)} 
+\begin{frame}{Bad Methods (These almost never work)}
 
   \begin{columns}
     \begin{column}{0.5\textwidth}
-      
+
       Deterministic Regression Imputation\\
       (Conditional Mean Substitution)
       \begin{itemize}
-      \item Replace $Y_{mis}$ with $\widehat{Y}_{mis}$ from some regression 
+      \item Replace $Y_{mis}$ with $\widehat{Y}_{mis}$ from some regression
         equation
         \begin{itemize}
         \item Positively biases regression slopes and correlations
         \item Inflates measures of linear association
         \end{itemize}
       \end{itemize}
-      
+
     \end{column}
     \begin{column}{0.5\textwidth}
-    
+
       \only<1>{
-        
+
 <<echo = FALSE, cache = TRUE, warning = FALSE>>=
 miceD <- mice(data      = dat2,
               m         = 1,
@@ -1153,21 +1154,21 @@ datD0 <- datD <- complete(miceD, 1)
 datD[!mVec, ] <- NA
 
 p2 <- p1 + geom_point(data = datD,
-                      mapping = aes(y = glu, x = bmi), 
+                      mapping = aes(y = glu, x = bmi),
                       colour = "red")
 p2
-@ 
+@
 
 }
       \only<2>{
-              
+
 <<echo = FALSE, cache = TRUE>>=
-p2 + geom_smooth(data    = dat1, 
+p2 + geom_smooth(data    = dat1,
                  mapping = aes(y = glu, x = bmi),
                  method  = "lm",
                  color   = "black",
                  se      = FALSE) +
-    geom_smooth(data    = datD0, 
+    geom_smooth(data    = datD0,
                 mapping = aes(y = glu, x = bmi),
                 method  = "lm",
                 color   = "red",
@@ -1175,7 +1176,7 @@ p2 + geom_smooth(data    = dat1,
 @
 
 }
- 
+
 \end{column}
 \end{columns}
 
@@ -1184,18 +1185,18 @@ p2 + geom_smooth(data    = dat1,
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Bad Methods (These almost never work)}
-  
+
   \begin{center}
     \ovalbox{General Issues with Deletion-Based Methods}
   \end{center}
-  
+
   \begin{itemize}
   \item Biased parameter estimates unless data are MCAR
   \item Generalizability issues
   \end{itemize}
-  
+
   \va
-  
+
   \begin{center}
     \ovalbox{General Issues with Simple Single Imputation Methods}
   \end{center}
@@ -1204,13 +1205,13 @@ p2 + geom_smooth(data    = dat1,
   \item Biased parameter estimates even when data are MCAR
   \item Attenuates variability in any treated variables
   \end{itemize}
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Bad Methods (These almost never work)}
-  
+
   Averaging Available Items (Person-Mean Imputation)
   \begin{itemize}
   \item Compute aggregate scores using only available values
@@ -1219,9 +1220,9 @@ p2 + geom_smooth(data    = dat1,
     \item Each item must contributes equally to the aggregate score
     \end{itemize}
   \end{itemize}
-  
+
   \vb
-  
+
   Last Observation Carried Forward (LOCF)
   \begin{itemize}
   \item Replace post-dropout values with the most recent observed value
@@ -1230,22 +1231,109 @@ p2 + geom_smooth(data    = dat1,
     \item Attenuates estimates of growth/development
     \end{itemize}
   \end{itemize}
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}{LOCF Viz}
+\begin{frame}{LOCF}
+
+<<echo = FALSE, cache = TRUE>>=
+## Simulate some longitudinal data with random slopes:
+n1 <- 5
+n2 <- 50
+
+s     <- 1.0
+gamma <- c(1.5, 1.25)
+tau   <- matrix(c(1.0, -0.3, -0.3, 1.0), 2, 2)
+
+U    <- rmvnorm(n2, gamma, tau)
+time <- matrix(1:n1 - 1)
+tmp  <- U[ , 1] + U[ , 2] %*% t(time)
+
+dat1 <- dat2 <- dat3 <-
+    data.frame(y = as.numeric(tmp) + rnorm(n1 * n2, 0, s),
+               t = rep(0:(n1 - 1), each = n2),
+               id = rep(1:n2, n1)
+               ) %>%
+    arrange(id)
+
+## Apply random attrition:
+dat2$y <- dat1 %$% tapply(y, id, attrit, pComp = 0.25) %>% unlist()
+
+## Treat attrition with LOCF:
+dat3$y <- dat2 %$% tapply(y, id, locf) %>% unlist()
+
+## Create some missingness indicators for plotting purposes:
+dat3$m  <- is.na(dat2$y)
+dat3$m2 <- dat3 %$% tapply(m,
+                           id,
+                           function(x) {
+                               tmp <- (which(x) - 1)[1]
+                               x[tmp] <- TRUE
+                               x
+                           }
+                           ) %>% unlist()
+
+p0 <- ggplot(data = dat1, mapping = aes(y = y, x = t)) +
+    ylab("Y") +
+    xlab("Time")
+
+p1 <- p0 + scale_color_manual(values = c("black", "red")) +
+    theme(legend.position = "none") +
+    ylim(range(dat1$y))
+@ 
+
+\only<1>{
   
+<<echo = FALSE, cache = TRUE, fig.asp = 0.5>>=
+grid.arrange(
+p0 + geom_line(aes(group = id), alpha = 0.3) + geom_point(),
+
+    p0 + 
+    geom_line(data = dat2, mapping = aes(group = id), alpha = 0.3) +
+    geom_point(data = dat2) +
+    ylim(range(dat1$y)),
+    
+    ncol = 2)
+@
+
+}
+
+\only<2>{
+  
+<<echo = FALSE, cache = TRUE, fig.asp = 0.5>>=
+grid.arrange(
+p1 + geom_line(data = dat3, aes(group = id, color = m2), alpha = 0.3) +
+geom_point(data = dat3, aes(color = m)),
+
+p1 + geom_line(data = dat3, aes(group = id, color = m2), alpha = 0.3) +
+geom_point(data = dat3, aes(color = m)) +
+    geom_smooth(data = dat3,
+                method = "lm",
+                se = FALSE,
+                color = "red",
+                size = 1.5) +
+    geom_smooth(data = dat1,
+                method = "lm",
+                se = FALSE,
+                color = "black",
+                size = 1.5),
+
+    ncol = 2)
+@
+
+}
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}{OK Methods (These work in some situations)}
-  
+
   \begin{columns}
     \begin{column}{0.5\textwidth}
-      
+
       Stochastic Regression Imputation
       \vc
       \begin{itemize}
@@ -1261,12 +1349,12 @@ p2 + geom_smooth(data    = dat1,
         \item Makes CIs and prediction intervals too narrow
         \end{itemize}
       \end{itemize}
-      
+
     \end{column}
     \begin{column}{0.5\textwidth}
 
       \only<1>{
-        
+
 <<echo = FALSE, cache = TRUE, warning = FALSE>>=
 miceS <- mice(data      = dat2[ , c("bmi", "glu")],
               m         = 1,
@@ -1278,21 +1366,21 @@ datS0 <- datS <- complete(miceS, 1)
 datS[!mVec, ] <- NA
 
 p2 <- p1 + geom_point(data = datS,
-                      mapping = aes(y = glu, x = bmi), 
+                      mapping = aes(y = glu, x = bmi),
                       colour = "red")
 p2
 @
 
 }
       \only<2>{
-                
+
 <<echo = FALSE, cache = TRUE>>=
-p2 + geom_smooth(data    = dat1, 
+p2 + geom_smooth(data    = dat1,
                  mapping = aes(y = glu, x = bmi),
                  method  = "lm",
                  color   = "black",
                  se      = FALSE) +
-    geom_smooth(data    = datD0, 
+    geom_smooth(data    = datD0,
                 mapping = aes(y = glu, x = bmi),
                 method  = "lm",
                 color   = "red",
@@ -1309,7 +1397,7 @@ p2 + geom_smooth(data    = dat1,
 \watermarkon %-----------------------------------------------------------------%
 
 \begin{frame}{OK Methods (These work in some situations)}
-  
+
   Nonresponse Weighting
   \vc
   \begin{itemize}
@@ -1323,26 +1411,26 @@ p2 + geom_smooth(data    = dat1,
     \item Doesn't make any sense with \emph{Item Nonresponse}
     \end{itemize}
   \end{itemize}
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Expectation Maximization}
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Good Methods (These almost always work)}
-  
+
   Multiple Imputation (MI)
   \vc
   \begin{itemize}
   \item Replace the missing values with $M$ plausible estimates
     \vc
     \begin{itemize}
-    \item Essentially, a repeated application of stochastic regression 
+    \item Essentially, a repeated application of stochastic regression
       imputation (with a particular type of regression model)
       \vc
     \item Produces unbiased parameter estimates and predictions
@@ -1354,12 +1442,12 @@ p2 + geom_smooth(data    = dat1,
     \item Computationally expensive
     \end{itemize}
   \end{itemize}
-  
+
 \end{frame}
 
 \watermarkoff %----------------------------------------------------------------%
 
-\begin{frame}[allowframebreaks, fragile]{Good Methods (These almost always 
+\begin{frame}[allowframebreaks, fragile]{Good Methods (These almost always
     work)}
 
   What happens when we apply MI to our previous MAR example?
@@ -1373,9 +1461,9 @@ miceOut1 <- mice(data      = data.frame(y3, x),
 
 ## Replace missing values with imputations:
 impList1 <- list()
-for(m in 1 : miceOut1$m) 
+for(m in 1 : miceOut1$m)
     impList1[[m]] <- complete(miceOut1, m)
-@ 
+@
 
 \pagebreak
 
@@ -1388,7 +1476,7 @@ corList <-lapply(impList1,
 
 ## Pool estimates:
 mean(unlist(corList))
-@ 
+@
 
 The MI-based parameter estimate looks good.
 \begin{itemize}
@@ -1410,8 +1498,8 @@ impRangeX <- range(unlist(lapply(impDen, FUN = function(den){den$x})))
 yLim <- range(c(yDen$y, impRangeY))
 xLim <- range(c(yDen$x, impRangeX))
 
-plot(yDen, 
-     ylim = yLim, 
+plot(yDen,
+     ylim = yLim,
      xlim = xLim,
      main = "Density Plot of Y",
      xlab = "Value of Y")
@@ -1436,7 +1524,7 @@ legend(x      = "topright",
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile]{Good Methods (These almost always work)}
-  
+
   What about applying MI to our MNAR example?
 <<>>=
 ## Estimate imputation model:
@@ -1448,15 +1536,15 @@ miceOut2 <- mice(data      = data.frame(y4, x),
 
 ## Replace missing values with imputations:
 impList2 <- list()
-for(m in 1 : miceOut2$m) 
+for(m in 1 : miceOut2$m)
     impList2[[m]] <- complete(miceOut2, m)
-@ 
+@
 
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}[allowframebreaks, fragile]{Good Methods (These \emph{almost} 
+\begin{frame}[allowframebreaks, fragile]{Good Methods (These \emph{almost}
     always work)}
 
 <<>>=
@@ -1468,7 +1556,7 @@ corList2 <-lapply(impList2,
 
 ## Pool estimates:
 mean(unlist(corList2))
-@ 
+@
 
 The MI-based parameter estimate is still biased.
 \begin{itemize}
@@ -1481,7 +1569,7 @@ The MI-based parameter estimate is still biased.
 y4Den <- density(y4, na.rm = TRUE)
 
 impDen <- list()
-for(m in 1 : 100) 
+for(m in 1 : 100)
     impDen[[m]] <- density(impList2[[m]]$y4)
 
 impRangeY <- range(unlist(lapply(impDen, FUN = function(den){den$y})))
@@ -1490,8 +1578,8 @@ impRangeX <- range(unlist(lapply(impDen, FUN = function(den){den$x})))
 yLim <- range(c(yDen$y, impRangeY))
 xLim <- range(c(yDen$x, impRangeX))
 
-plot(yDen, 
-     ylim = yLim, 
+plot(yDen,
+     ylim = yLim,
      xlim = xLim,
      main = "Density Plot of Y",
      xlab = "Value of Y")
@@ -1510,7 +1598,7 @@ legend(x      = "topright",
        lty    = 1,
        lwd    = 1,
        cex    = 0.75)
-@ 
+@
 
 \end{frame}
 
@@ -1534,13 +1622,13 @@ legend(x      = "topright",
     \item Computationally expensive
     \end{itemize}
   \end{itemize}
-  
+
   \pagebreak
-  
+
   Full Information Maximum Likelihood (FIML)
   \vc
-  \begin{itemize} 
-  \item Adjust the objective function to only consider the observed parts of the 
+  \begin{itemize}
+  \item Adjust the objective function to only consider the observed parts of the
     data
     \vc
     \begin{itemize}
@@ -1548,14 +1636,14 @@ legend(x      = "topright",
       \vc
     \item The predictors of nonresponse must be included in the model, somehow
       \vc
-    \item Unless you write your own optimization program, FIML is only available 
+    \item Unless you write your own optimization program, FIML is only available
       for certain types of models
       \vc
-    \item In linear regression models, FIML cannot treat missing data on 
+    \item In linear regression models, FIML cannot treat missing data on
       predictors (if the predictors are taken as fixed)
     \end{itemize}
   \end{itemize}
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%

@@ -17,9 +17,6 @@
 \makeatother
 
 \definecolor{fgcolor}{rgb}{0, 0, 0}
-\makeatletter
-\@ifundefined{AddToHook}{}{\AddToHook{package/xcolor/after}{\definecolor{fgcolor}{rgb}{0, 0, 0}}}
-\makeatother
 \newcommand{\hlnum}[1]{\textcolor[rgb]{0.69,0.494,0}{#1}}%
 \newcommand{\hlstr}[1]{\textcolor[rgb]{0.749,0.012,0.012}{#1}}%
 \newcommand{\hlcom}[1]{\textcolor[rgb]{0.514,0.506,0.514}{\textit{#1}}}%
@@ -54,14 +51,6 @@
 \definecolor{messagecolor}{rgb}{0, 0, 0}
 \definecolor{warningcolor}{rgb}{1, 0, 1}
 \definecolor{errorcolor}{rgb}{1, 0, 0}
-\makeatletter
-\@ifundefined{AddToHook}{}{\AddToHook{package/xcolor/after}{
-\definecolor{shadecolor}{rgb}{.97, .97, .97}
-\definecolor{messagecolor}{rgb}{0, 0, 0}
-\definecolor{warningcolor}{rgb}{1, 0, 1}
-\definecolor{errorcolor}{rgb}{1, 0, 0}
-}}
-\makeatother
 \newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
 
 \usepackage{alltt}
@@ -78,7 +67,7 @@
 \captionsetup{labelformat = empty}
 
 \newcommand{\rmsc}[1]{\textrm{\textsc{#1}}}
-  
+
 
 \title{Missing Data Basics}
 \subtitle{Utrecht University Winter School: Missing Data in R}
@@ -116,7 +105,7 @@
     \vc
   \item What's your math background?
   \end{enumerate}
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
@@ -128,15 +117,15 @@
 %------------------------------------------------------------------------------%
 
 \begin{frame}{What are Missing Data?}
-  
-  Missing data are empty cells in a dataset where there should be observed 
+
+  Missing data are empty cells in a dataset where there should be observed
   values.
   \vc
   \begin{itemize}
-  \item The missing cells correspond to true population values, but we haven't 
+  \item The missing cells correspond to true population values, but we haven't
     observed those values.
   \end{itemize}
-  \vb 
+  \vb
   \pause
   Not every empty cell is a missing datum.
   \vc
@@ -149,13 +138,13 @@
     \vc
   \item Empty blocks of data following ``gateway'' items
   \end{itemize}
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}{A Little Notation}
-  
+
   \begin{align*}
     Y &\coloneqq \text{An $N \times P$ Matrix of Arbitrary Data}\\[8pt]
     Y_{mis} &\coloneqq \text{The \emph{missing} part of $Y$}\\[8pt]
@@ -163,26 +152,26 @@
     R &\coloneqq \text{An $N \times P$ response matrix}\\[8pt]
     M &\coloneqq \text{An $N \times P$ missingness matrix}
   \end{align*}
-  
+
   The $R$ and $M$ matrices are complementary.
   \begin{itemize}
-  \item $r_{np} = 1$ means $y_{np}$ is observed; $m_{np} = 1$ means $y_{np}$ is 
+  \item $r_{np} = 1$ means $y_{np}$ is observed; $m_{np} = 1$ means $y_{np}$ is
     missing.
-  \item $r_{np} = 0$ means $y_{np}$ is missing; $m_{np} = 0$ means $y_{np}$ is 
+  \item $r_{np} = 0$ means $y_{np}$ is missing; $m_{np} = 0$ means $y_{np}$ is
     observed.
   \item $M_p$ is the \emph{missingness} of $Y_p$.
   \end{itemize}
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
-    
+
 \sectionslide{Missing Data Descriptives}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Missing Data Pattern}
-  
+
 
 
 Missing data (or response) patterns represent unique combinations of observed
@@ -193,9 +182,9 @@ and missing items.
 
 \begin{columns}
   \begin{column}{0.45\textwidth}
-    
-% latex table generated in R 4.1.2 by xtable 1.8-4 package
-% Sat Jan 22 15:42:16 2022
+
+% latex table generated in R 4.1.0 by xtable 1.8-4 package
+% Sat Jan 22 19:25:57 2022
 \begin{table}[ht]
 \centering
 \begin{tabular}{ccc}
@@ -211,12 +200,12 @@ and missing items.
 \caption{Patterns for $P = 2$} 
 \end{table}
 
-    
+
   \end{column}
   \begin{column}{0.45\textwidth}
-\vx{-12}    
-% latex table generated in R 4.1.2 by xtable 1.8-4 package
-% Sat Jan 22 15:42:16 2022
+\vx{-12}
+% latex table generated in R 4.1.0 by xtable 1.8-4 package
+% Sat Jan 22 19:25:57 2022
 \begin{table}[ht]
 \centering
 \begin{tabular}{cccc}
@@ -236,57 +225,57 @@ and missing items.
 \caption{Patterns for $P = 3$} 
 \end{table}
 
-     
+
     \end{column}
   \end{columns}
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Missing Data Pattern}
-  
- The concept of a ``missing data pattern'' can also be used to classify the 
+
+ The concept of a ``missing data pattern'' can also be used to classify the
   spatial arrangement of missing cells on a data set.\\
-  
+
   \vc
-  
+
   \begin{itemize}
   \item Univariate
     \begin{itemize}
       \item Missing data occur on only one variable
     \end{itemize}
-  
+
     \vb
-  
+
   \item Monotone
     \begin{itemize}
-    \item The proportion of complete elements, in both rows and columns, 
+    \item The proportion of complete elements, in both rows and columns,
       decreases when traversing the data set.
     \item The observed cells can be arranged into a ``staircase'' pattern.
     \end{itemize}
-  
+
     \vb
-  
+
   \item Arbitrary
     \begin{itemize}
     \item Missing values are ``randomly'' scattered throughout the data set.
     \end{itemize}
   \end{itemize}
-  
+
 \end{frame}
 
 \watermarkoff %----------------------------------------------------------------%
 
 \begin{frame}{Example Missing Data Patterns}
-  
+
 
 
 \begin{columns}[T]
   \begin{column}{0.33\textwidth}
-    
-% latex table generated in R 4.1.2 by xtable 1.8-4 package
-% Sat Jan 22 15:42:16 2022
+
+% latex table generated in R 4.1.0 by xtable 1.8-4 package
+% Sat Jan 22 19:25:57 2022
 \begin{table}[ht]
 \centering
 \begin{tabular}{cccc}
@@ -311,9 +300,9 @@ and missing items.
 
 \end{column}
 \begin{column}{0.33\textwidth}
-  
-% latex table generated in R 4.1.2 by xtable 1.8-4 package
-% Sat Jan 22 15:42:16 2022
+
+% latex table generated in R 4.1.0 by xtable 1.8-4 package
+% Sat Jan 22 19:25:57 2022
 \begin{table}[ht]
 \centering
 \begin{tabular}{cccc}
@@ -335,12 +324,12 @@ and missing items.
 \caption{Monotone Pattern} 
 \end{table}
 
-  
+
 \end{column}
 \begin{column}{0.33\textwidth}
-  
-% latex table generated in R 4.1.2 by xtable 1.8-4 package
-% Sat Jan 22 15:42:16 2022
+
+% latex table generated in R 4.1.0 by xtable 1.8-4 package
+% Sat Jan 22 19:25:57 2022
 \begin{table}[ht]
 \centering
 \begin{tabular}{cccc}
@@ -362,7 +351,7 @@ and missing items.
 \caption{Arbitrary Pattern} 
 \end{table}
 
-  
+
 \end{column}
 \end{columns}
 
@@ -371,7 +360,7 @@ and missing items.
 \watermarkon %-----------------------------------------------------------------%
 
 \begin{frame}[allowframebreaks]{Nonresponse Rates}
-  
+
   \rmsc{Proportion Missing}
   %\begin{align*}
   %  PM_p = N^{-1} \sum_{n = 1}^N r_{np}
@@ -381,25 +370,25 @@ and missing items.
   \item Good early screening measure
   \item Should be computed for each variable, not for the entire dataset
   \end{itemize}
-  
+
   \va
-  
+
   \rmsc{Attrition Rate}
   \begin{itemize}
-  \item The proportion of participants that drop-out of a study at each 
+  \item The proportion of participants that drop-out of a study at each
     measurement occasion
   \end{itemize}
-  
+
   \pagebreak
-  
+
   \rmsc{Proportion of Complete Cases}
   \begin{itemize}
   \item The proportion of observations with no missing data
   \item Often reported but nearly useless quantity
   \end{itemize}
-  
+
   \va
-  
+
   \rmsc{Fraction of Missing Information}
   \begin{itemize}
   \item Associated with an estimated parameter, not with an incomplete variable
@@ -407,13 +396,13 @@ and missing items.
   \item Most important diagnostic value for missing data problems
   \item Can only be computed after treating the missing data
   \end{itemize}
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}[allowframebreaks]{Coverage Measures}
-  
+
   \rmsc{Covariance Coverage}
   \begin{align*}
     CC_{jk} = N^{-1} \sum_{n = 1}^N r_{nj}r_{nk}
@@ -424,9 +413,9 @@ and missing items.
   \item Very important to have adequate coverage of the parameters you
     want to estimate
   \end{itemize}
-  
+
   \pagebreak
-  
+
   \rmsc{Inbound Statistic}
   \begin{align*}
     I_{jk} = \frac{\sum_{n = 1}^N (1 - r_{nj})r_{nk}}{\sum_{n = 1}^N (1 - r_{nj})}
@@ -434,9 +423,9 @@ and missing items.
   \begin{itemize}
   \item The proportion of missing cases in $Y_{j}$ for which $Y_{k}$ is observed
   \end{itemize}
- 
+
   \va
-  
+
   \rmsc{Outbound Statistic}
   \begin{align*}
     O_{jk} = \frac{\sum_{n = 1}^N r_{nj}(1 - r_{nk})}{\sum_{n = 1}^N r_{nj}}
@@ -444,42 +433,42 @@ and missing items.
   \begin{itemize}
   \item The proportion of observed cases in $Y_{j}$ for which $Y_{k}$ is missing
   \end{itemize}
- 
+
   \pagebreak
-  
+
   \rmsc{Influx Coefficient}
   \begin{align*}
     I_j = \frac{\sum_{k = 1}^P \sum_{n = 1}^N (1 - r_{nj})r_{nk}}{\sum_{k = 1}^P \sum_{n = 1}^N r_{nk}}
   \end{align*}
   \begin{itemize}
-  \item The proportion of observed cells in $Y$ that exists in cases for which 
-    $Y_j$ is missing 
-  \item How well the missing values in $Y_j$ connect to the observed values in 
+  \item The proportion of observed cells in $Y$ that exists in cases for which
+    $Y_j$ is missing
+  \item How well the missing values in $Y_j$ connect to the observed values in
     $Y_{-j}$
   \end{itemize}
-  
+
   \pagebreak
-  
+
   \rmsc{Outflux Coefficient}
   \begin{align*}
     O_j = \frac{\sum_{k = 1}^P \sum_{n = 1}^N r_{nj}(1 - r_{nk})}{\sum_{k = 1}^P \sum_{n = 1}^N (1 - r_{nk})}
   \end{align*}
   \begin{itemize}
-  \item The proportion of missing cells in $Y$ that exists in cases for which 
+  \item The proportion of missing cells in $Y$ that exists in cases for which
     $Y_j$ is observed
-  \item How well the observed values in $Y_j$ connect to the missing values in 
+  \item How well the observed values in $Y_j$ connect to the missing values in
     $Y_{-j}$
   \end{itemize}
-  
+
 \end{frame}
 
 \watermarkoff %----------------------------------------------------------------%
 
 \begin{frame}{Examples}
-  
+
   \begin{columns}
     \begin{column}{0.61\textwidth}
-      
+
       \begin{enumerate}
       \item What is the coverage for $cov(X, Y)$?
         \vb
@@ -491,12 +480,12 @@ and missing items.
         \vb
       \item What is the influx coefficient for $W$?
       \end{enumerate}
-      
+
     \end{column}
     \begin{column}{0.39\textwidth}
-      
-% latex table generated in R 4.1.2 by xtable 1.8-4 package
-% Sat Jan 22 15:42:16 2022
+
+% latex table generated in R 4.1.0 by xtable 1.8-4 package
+% Sat Jan 22 19:25:57 2022
 \begin{table}[ht]
 \centering
 \begin{tabular}{ccccc}
@@ -520,16 +509,16 @@ and missing items.
 
 \end{column}
 \end{columns}
- 
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Examples}
-  
+
   \begin{columns}
     \begin{column}{0.6\textwidth}
-      
+
       \begin{enumerate}
         \item What is the percent missing at T2?
           \vb
@@ -543,12 +532,12 @@ and missing items.
           \vb
         \item What is the outflux coefficient $O_2$?
       \end{enumerate}
-      
+
     \end{column}
     \begin{column}{0.4\textwidth}
-      
-% latex table generated in R 4.1.2 by xtable 1.8-4 package
-% Sat Jan 22 15:42:16 2022
+
+% latex table generated in R 4.1.0 by xtable 1.8-4 package
+% Sat Jan 22 19:25:57 2022
 \begin{table}[ht]
 \centering
 \begin{tabular}{ccccc}
@@ -593,36 +582,36 @@ and missing items.
   %\begin{align*}
   %  P(R | Y_{mis}, Y_{obs}) = P(R)
   %\end{align*}
-  
+
   Missing at Random (MAR)
   \begin{itemize}
   \item $P(R | Y_{mis}, Y_{obs}) = P(R | Y_{obs})$
     \vc
-  \item Missingness is related to only the \emph{observed} parts of study 
+  \item Missingness is related to only the \emph{observed} parts of study
       variables.
   \end{itemize}
   \vb
   %\begin{align*}
   %  P(R | Y_{mis}, Y_{obs}) = P(R | Y_{obs})
   %\end{align*}
-  
+
   Missing not at Random (MNAR)
   \begin{itemize}
   \item $P(R | Y_{mis}, Y_{obs}) \neq P(R | Y_{obs})$
     \vc
-  \item Missingness is related to the \emph{unobserved} parts of study 
+  \item Missingness is related to the \emph{unobserved} parts of study
     variables.
   \end{itemize}
   %\begin{align*}
   %  P(R | Y_{mis}, Y_{obs}) \neq P(R | Y_{obs})
   %\end{align*}
-  
+
 \end{frame}
 
 \watermarkoff %----------------------------------------------------------------%
 
 \begin{frame}[fragile]{Simulate Some Toy Data}
-  
+
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
 \begin{alltt}
@@ -652,7 +641,7 @@ and missing items.
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile, allowframebreaks]{MCAR Example}
-  
+
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
 \begin{alltt}
@@ -687,7 +676,7 @@ and missing items.
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile, allowframebreaks]{MAR Example}
-  
+
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
 \begin{alltt}
@@ -727,7 +716,7 @@ and missing items.
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile, allowframebreaks]{MNAR Example}
-  
+
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
 \begin{alltt}
@@ -767,18 +756,18 @@ and missing items.
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile]{Crucial Nuance}
-  
-  In our previous MAR example, ignoring the predictor of missingness actually 
+
+  In our previous MAR example, ignoring the predictor of missingness actually
   produces \emph{Indirect MNAR}.\\
-  
+
   \pause
   \va
-  
+
   \rmsc{Question:} What happens if we ignore the predictor of missingness, but
   that predictor is independent of our study variables?
-  
+
   \pause
-  
+
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
 \begin{alltt}
@@ -802,13 +791,13 @@ and missing items.
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Crucial Nuance}
-  
-  The missing data mechanisms are not simply characteristics of an incomplete 
+
+  The missing data mechanisms are not simply characteristics of an incomplete
   dataset; we also need to account for the analysis.
   \vb
   \begin{columns}
     \begin{column}{0.5\textwidth}
-      
+
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
 
@@ -821,7 +810,7 @@ and missing items.
 
 \end{column}
 \begin{column}{0.5\textwidth}
-  
+
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
 
@@ -831,7 +820,7 @@ and missing items.
 
 
 \end{knitrout}
-  
+
 \end{column}
 \end{columns}
 
@@ -840,46 +829,46 @@ and missing items.
 \watermarkon %-----------------------------------------------------------------%
 
 \begin{frame}[allowframebreaks]{Testing the Missing Data Mechanism}
-  
+
   We cannot fully test the MAR or MNAR assumptions.
   \begin{itemize}
   \item To do so would require knowing the values of the missing data.
     \vc
-  \item We can find observed predictors of missingness, but we can never know 
+  \item We can find observed predictors of missingness, but we can never know
     that we have them all.
     \vc
   \item In practice, MAR and MNAR live on the ends of a continuum.
     \begin{itemize}
-    \item Our missing data problem exists at some unknown point along this 
+    \item Our missing data problem exists at some unknown point along this
       continuum.
       \vc
     \item We can do a lot to nudge our problem towards the MAR side.
     \end{itemize}
   \end{itemize}
-   
+
   \pagebreak
-  
+
   We can test the MCAR assumption.
   \begin{itemize}
-  \item With MCAR, the missing data and the observed data should have the same 
+  \item With MCAR, the missing data and the observed data should have the same
     distribution.
     \vc
-  \item We can test for MCAR by testing the distributions of \emph{auxiliary 
+  \item We can test for MCAR by testing the distributions of \emph{auxiliary
     variables}, $\mathbf{Z}$.
     \begin{itemize}
-    \item Use a t-test to compare the subset of $Z_p$ that corresponds to 
+    \item Use a t-test to compare the subset of $Z_p$ that corresponds to
       $Y_{mis}$ to the subset corresponding to $Y_{obs}$.
       \vc
     \item The \citet{little:1988} MCAR test is a multivariate version of this.
     \end{itemize}
   \end{itemize}
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile]{Example}
-  
+
   Create some toy datasets from the variables we generated above.
 
 \begin{knitrout}\footnotesize
@@ -905,7 +894,7 @@ and missing items.
 \begin{frame}[fragile]{T-Test Example}
 
   Test for dependence between $X$ and $M_Y$ in MCAR data.
-  
+
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
 \begin{alltt}
@@ -993,7 +982,7 @@ mean in group 0 mean in group 1
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile]{T-Test Example}
-  
+
   Test for dependence between $Z$ and $M_Y$ in MAR data.
 
 \begin{knitrout}\footnotesize
@@ -1022,7 +1011,7 @@ mean in group 0 mean in group 1
 
 %------------------------------------------------------------------------------%
 \begin{frame}[fragile]{T-Test Example}
-  
+
   Test for dependence between $X$ and $M_Y$ in MNAR data.
 
 \begin{knitrout}\footnotesize
@@ -1084,7 +1073,7 @@ mean in group 0 mean in group 1
 \begin{frame}[fragile]{\citet{little:1988} MCAR Test Example}
 
   Use the \citet{little:1988} MCAR test on MCAR data.
-  
+
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
 \begin{alltt}
@@ -1106,7 +1095,7 @@ mean in group 0 mean in group 1
 \begin{frame}[fragile]{\citet{little:1988} MCAR Test Example}
 
 Use the \citet{little:1988} MCAR test on MAR data.
-  
+
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
 \begin{alltt}
@@ -1128,7 +1117,7 @@ Use the \citet{little:1988} MCAR test on MAR data.
 \begin{frame}[fragile]{\citet{little:1988} MCAR Test Example}
 
 Use the \citet{little:1988} MCAR test on MNAR data.
-  
+
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
 \begin{alltt}
@@ -1148,7 +1137,7 @@ Use the \citet{little:1988} MCAR test on MNAR data.
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile]{Logistic Regression Example}
- 
+
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
 \begin{alltt}
@@ -1175,7 +1164,7 @@ Use the \citet{little:1988} MCAR test on MNAR data.
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile]{Logistic Regression Example}
-  
+
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
 \begin{alltt}
@@ -1198,7 +1187,7 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
@@ -1208,7 +1197,7 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Bad Methods (These almost never work)}
-   
+
   Listwise Deletion (Complete Case Analysis)
   \begin{itemize}
   \item Use only complete observations for the analysis
@@ -1219,25 +1208,25 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
   \end{itemize}
 
   \va
-  
+
   Pairwise Deletion (Available Case Analysis)
   \begin{itemize}
   \item Use only complete pairs of observations for analysis
     \begin{itemize}
     \item Different samples sizes for different parameter estimates
-    \item Can cause computational issues 
+    \item Can cause computational issues
     \end{itemize}
   \end{itemize}
-  
+
 \end{frame}
 
 \watermarkoff %----------------------------------------------------------------%
 
 \begin{frame}{Bad Methods (These almost never work)}
-  
+
   \begin{columns}
     \begin{column}{0.5\textwidth}
-      
+
       (Unconditional) Mean Substitution
       \begin{itemize}
       \item Replace $Y_{mis}$ with $\bar{Y}_{obs}$
@@ -1246,12 +1235,12 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
         \item Attenuates measures of linear association
         \end{itemize}
       \end{itemize}
-      
+
     \end{column}
     \begin{column}{0.5\textwidth}
 
       \only<1>{
-        
+
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
 
@@ -1264,7 +1253,7 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 
 }
       \only<2>{
-  
+
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
 
@@ -1276,9 +1265,9 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 \end{knitrout}
 
 }
-      
+
       \only<3>{
-        
+
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
 
@@ -1290,9 +1279,9 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 \end{knitrout}
 
 }
-  
+
       \only<4>{
-        
+
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
 
@@ -1304,7 +1293,7 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 \end{knitrout}
 
 }
-      
+
 \end{column}
 \end{columns}
 
@@ -1312,27 +1301,27 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}{Bad Methods (These almost never work)} 
+\begin{frame}{Bad Methods (These almost never work)}
 
   \begin{columns}
     \begin{column}{0.5\textwidth}
-      
+
       Deterministic Regression Imputation\\
       (Conditional Mean Substitution)
       \begin{itemize}
-      \item Replace $Y_{mis}$ with $\widehat{Y}_{mis}$ from some regression 
+      \item Replace $Y_{mis}$ with $\widehat{Y}_{mis}$ from some regression
         equation
         \begin{itemize}
         \item Positively biases regression slopes and correlations
         \item Inflates measures of linear association
         \end{itemize}
       \end{itemize}
-      
+
     \end{column}
     \begin{column}{0.5\textwidth}
-      
+
       \only<1>{
-        
+
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
 
@@ -1345,7 +1334,7 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 
 }
       \only<2>{
-        
+
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
 
@@ -1357,7 +1346,7 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 \end{knitrout}
 
 }
-      
+
 \end{column}
 \end{columns}
 
@@ -1365,27 +1354,27 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}{Bad Methods (These almost never work)} 
+\begin{frame}{Bad Methods (These almost never work)}
 
   \begin{columns}
     \begin{column}{0.5\textwidth}
-      
+
       Deterministic Regression Imputation\\
       (Conditional Mean Substitution)
       \begin{itemize}
-      \item Replace $Y_{mis}$ with $\widehat{Y}_{mis}$ from some regression 
+      \item Replace $Y_{mis}$ with $\widehat{Y}_{mis}$ from some regression
         equation
         \begin{itemize}
         \item Positively biases regression slopes and correlations
         \item Inflates measures of linear association
         \end{itemize}
       \end{itemize}
-      
+
     \end{column}
     \begin{column}{0.5\textwidth}
-    
+
       \only<1>{
-        
+
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
 
@@ -1398,7 +1387,7 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 
 }
       \only<2>{
-              
+
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
 
@@ -1410,7 +1399,7 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 \end{knitrout}
 
 }
- 
+
 \end{column}
 \end{columns}
 
@@ -1419,18 +1408,18 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Bad Methods (These almost never work)}
-  
+
   \begin{center}
     \ovalbox{General Issues with Deletion-Based Methods}
   \end{center}
-  
+
   \begin{itemize}
   \item Biased parameter estimates unless data are MCAR
   \item Generalizability issues
   \end{itemize}
-  
+
   \va
-  
+
   \begin{center}
     \ovalbox{General Issues with Simple Single Imputation Methods}
   \end{center}
@@ -1439,13 +1428,13 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
   \item Biased parameter estimates even when data are MCAR
   \item Attenuates variability in any treated variables
   \end{itemize}
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Bad Methods (These almost never work)}
-  
+
   Averaging Available Items (Person-Mean Imputation)
   \begin{itemize}
   \item Compute aggregate scores using only available values
@@ -1454,9 +1443,9 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
     \item Each item must contributes equally to the aggregate score
     \end{itemize}
   \end{itemize}
-  
+
   \vb
-  
+
   Last Observation Carried Forward (LOCF)
   \begin{itemize}
   \item Replace post-dropout values with the most recent observed value
@@ -1465,22 +1454,52 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
     \item Attenuates estimates of growth/development
     \end{itemize}
   \end{itemize}
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}{LOCF Viz}
+\begin{frame}{LOCF}
+
+
+
+\only<1>{
   
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
+
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-41-1} 
+
+}
+
+
+\end{knitrout}
+
+}
+
+\only<2>{
+  
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
+
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-42-1} 
+
+}
+
+
+\end{knitrout}
+
+}
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}{OK Methods (These work in some situations)}
-  
+
   \begin{columns}
     \begin{column}{0.5\textwidth}
-      
+
       Stochastic Regression Imputation
       \vc
       \begin{itemize}
@@ -1496,16 +1515,27 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
         \item Makes CIs and prediction intervals too narrow
         \end{itemize}
       \end{itemize}
-      
+
     \end{column}
     \begin{column}{0.5\textwidth}
 
       \only<1>{
-        
-\begin{knitrout}\footnotesize
-\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
 
-{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-40-1} 
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{Error in `[.data.frame`(dat2, , c("{}bmi"{}, "{}glu"{})): undefined columns selected}}
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{Error in complete(miceS, 1): object 'miceS' not found}}
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{Error in datS[!mVec, ] <- NA: object 'datS' not found}}
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{Error in fortify(data): object 'datS' not found}}
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{Error: geom\_point requires the following missing aesthetics: x and y}}\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-43-1} 
 
 }
 
@@ -1514,11 +1544,14 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 
 }
       \only<2>{
-                
-\begin{knitrout}\footnotesize
-\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
 
-{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-41-1} 
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{Error in FUN(X[[i]], ...): object 'bmi' not found}}\end{kframe}
+
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-44-1} 
 
 }
 
@@ -1535,7 +1568,7 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 \watermarkon %-----------------------------------------------------------------%
 
 \begin{frame}{OK Methods (These work in some situations)}
-  
+
   Nonresponse Weighting
   \vc
   \begin{itemize}
@@ -1549,26 +1582,26 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
     \item Doesn't make any sense with \emph{Item Nonresponse}
     \end{itemize}
   \end{itemize}
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Expectation Maximization}
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Good Methods (These almost always work)}
-  
+
   Multiple Imputation (MI)
   \vc
   \begin{itemize}
   \item Replace the missing values with $M$ plausible estimates
     \vc
     \begin{itemize}
-    \item Essentially, a repeated application of stochastic regression 
+    \item Essentially, a repeated application of stochastic regression
       imputation (with a particular type of regression model)
       \vc
     \item Produces unbiased parameter estimates and predictions
@@ -1580,12 +1613,12 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
     \item Computationally expensive
     \end{itemize}
   \end{itemize}
-  
+
 \end{frame}
 
 \watermarkoff %----------------------------------------------------------------%
 
-\begin{frame}[allowframebreaks, fragile]{Good Methods (These almost always 
+\begin{frame}[allowframebreaks, fragile]{Good Methods (These almost always
     work)}
 
   What happens when we apply MI to our previous MAR example?
@@ -1649,7 +1682,7 @@ The MI-based parameter estimate looks good.
 
 {\ttfamily\noindent\bfseries\color{errorcolor}{Error in plot.window(...): need finite 'xlim' values}}\end{kframe}
 
-{\centering \includegraphics[width=0.65\linewidth]{figure/intro-unnamed-chunk-44-1} 
+{\centering \includegraphics[width=0.65\linewidth]{figure/intro-unnamed-chunk-47-1} 
 
 }
 
@@ -1664,7 +1697,7 @@ The MI-based parameter estimate looks good.
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile]{Good Methods (These almost always work)}
-  
+
   What about applying MI to our MNAR example?
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
@@ -1693,7 +1726,7 @@ The MI-based parameter estimate looks good.
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}[allowframebreaks, fragile]{Good Methods (These \emph{almost} 
+\begin{frame}[allowframebreaks, fragile]{Good Methods (These \emph{almost}
     always work)}
 
 \begin{knitrout}\footnotesize
@@ -1731,7 +1764,7 @@ The MI-based parameter estimate is still biased.
 
 {\ttfamily\noindent\bfseries\color{errorcolor}{Error in plot.window(...): need finite 'xlim' values}}\end{kframe}
 
-{\centering \includegraphics[width=0.65\linewidth]{figure/intro-unnamed-chunk-47-1} 
+{\centering \includegraphics[width=0.65\linewidth]{figure/intro-unnamed-chunk-50-1} 
 
 }
 
@@ -1765,13 +1798,13 @@ The MI-based parameter estimate is still biased.
     \item Computationally expensive
     \end{itemize}
   \end{itemize}
-  
+
   \pagebreak
-  
+
   Full Information Maximum Likelihood (FIML)
   \vc
-  \begin{itemize} 
-  \item Adjust the objective function to only consider the observed parts of the 
+  \begin{itemize}
+  \item Adjust the objective function to only consider the observed parts of the
     data
     \vc
     \begin{itemize}
@@ -1779,14 +1812,14 @@ The MI-based parameter estimate is still biased.
       \vc
     \item The predictors of nonresponse must be included in the model, somehow
       \vc
-    \item Unless you write your own optimization program, FIML is only available 
+    \item Unless you write your own optimization program, FIML is only available
       for certain types of models
       \vc
-    \item In linear regression models, FIML cannot treat missing data on 
+    \item In linear regression models, FIML cannot treat missing data on
       predictors (if the predictors are taken as fixed)
     \end{itemize}
   \end{itemize}
-  
+
 \end{frame}
 
 %------------------------------------------------------------------------------%

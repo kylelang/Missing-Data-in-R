@@ -35,7 +35,7 @@ The MI-based parameter estimate is still biased.
 
 {\ttfamily\noindent\bfseries\color{errorcolor}{Error in plot.window(...): need finite 'xlim' values}}\end{kframe}
 
-{\centering \includegraphics[width=0.65\linewidth]{figure/intro-unnamed-chunk-47-1}
+{\centering \includegraphics[width=0.65\linewidth]{figure/intro-unnamed-chunk-50-1}
 
 }
 
