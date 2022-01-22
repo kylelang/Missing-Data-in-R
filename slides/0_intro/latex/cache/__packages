@@ -4,3 +4,6 @@ mice
 mvtnorm
 xtable
 pROC
+dplyr
+magrittr
+naniar

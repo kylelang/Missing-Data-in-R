@@ -127,22 +127,6 @@
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}{A Little Notation}
-  
-  \begin{align*}
-    Y &\coloneqq \text{An $N \times P$ Matrix of Arbitrary Data}\\
-    \\
-    Y_{mis} &\coloneqq \text{The \emph{missing} part of $Y$}\\
-    \\
-    Y_{obs} &\coloneqq \text{The \emph{observed} part of $Y$}\\
-    \\
-    R &\coloneqq \text{An $N \times P$ pattern matrix encoding nonresponse}
-  \end{align*}
-  
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
 \begin{frame}{What are Missing Data?}
   
   Missing data are empty cells in a dataset where there should be observed 
@@ -169,6 +153,29 @@
 \end{frame}
 
 %------------------------------------------------------------------------------%
+
+\begin{frame}{A Little Notation}
+  
+  \begin{align*}
+    Y &\coloneqq \text{An $N \times P$ Matrix of Arbitrary Data}\\[8pt]
+    Y_{mis} &\coloneqq \text{The \emph{missing} part of $Y$}\\[8pt]
+    Y_{obs} &\coloneqq \text{The \emph{observed} part of $Y$}\\[8pt]
+    R &\coloneqq \text{An $N \times P$ response matrix}\\[8pt]
+    M &\coloneqq \text{An $N \times P$ missingness matrix}
+  \end{align*}
+  
+  The $R$ and $M$ matrices are complementary.
+  \begin{itemize}
+  \item $r_{np} = 1$ means $y_{np}$ is observed; $m_{np} = 1$ means $y_{np}$ is 
+    missing.
+  \item $r_{np} = 0$ means $y_{np}$ is missing; $m_{np} = 0$ means $y_{np}$ is 
+    observed.
+  \item $M_p$ is the \emph{missingness} of $Y_p$.
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
     
 \sectionslide{Missing Data Descriptives}
 
@@ -188,7 +195,7 @@ and missing items.
   \begin{column}{0.45\textwidth}
     
 % latex table generated in R 4.1.2 by xtable 1.8-4 package
-% Fri Jan 21 21:20:07 2022
+% Sat Jan 22 15:42:16 2022
 \begin{table}[ht]
 \centering
 \begin{tabular}{ccc}
@@ -209,7 +216,7 @@ and missing items.
   \begin{column}{0.45\textwidth}
 \vx{-12}    
 % latex table generated in R 4.1.2 by xtable 1.8-4 package
-% Fri Jan 21 21:20:07 2022
+% Sat Jan 22 15:42:16 2022
 \begin{table}[ht]
 \centering
 \begin{tabular}{cccc}
@@ -279,7 +286,7 @@ and missing items.
   \begin{column}{0.33\textwidth}
     
 % latex table generated in R 4.1.2 by xtable 1.8-4 package
-% Fri Jan 21 21:20:07 2022
+% Sat Jan 22 15:42:16 2022
 \begin{table}[ht]
 \centering
 \begin{tabular}{cccc}
@@ -306,7 +313,7 @@ and missing items.
 \begin{column}{0.33\textwidth}
   
 % latex table generated in R 4.1.2 by xtable 1.8-4 package
-% Fri Jan 21 21:20:07 2022
+% Sat Jan 22 15:42:16 2022
 \begin{table}[ht]
 \centering
 \begin{tabular}{cccc}
@@ -333,7 +340,7 @@ and missing items.
 \begin{column}{0.33\textwidth}
   
 % latex table generated in R 4.1.2 by xtable 1.8-4 package
-% Fri Jan 21 21:20:07 2022
+% Sat Jan 22 15:42:16 2022
 \begin{table}[ht]
 \centering
 \begin{tabular}{cccc}
@@ -445,8 +452,10 @@ and missing items.
     I_j = \frac{\sum_{k = 1}^P \sum_{n = 1}^N (1 - r_{nj})r_{nk}}{\sum_{k = 1}^P \sum_{n = 1}^N r_{nk}}
   \end{align*}
   \begin{itemize}
-  \item The proportion of observed cells in $Y$ that exists in cases for which $Y_j$ is missing 
-  \item How well the missing values in $Y_j$ connect to the observed values in $Y_{-j}$
+  \item The proportion of observed cells in $Y$ that exists in cases for which 
+    $Y_j$ is missing 
+  \item How well the missing values in $Y_j$ connect to the observed values in 
+    $Y_{-j}$
   \end{itemize}
   
   \pagebreak
@@ -456,32 +465,38 @@ and missing items.
     O_j = \frac{\sum_{k = 1}^P \sum_{n = 1}^N r_{nj}(1 - r_{nk})}{\sum_{k = 1}^P \sum_{n = 1}^N (1 - r_{nk})}
   \end{align*}
   \begin{itemize}
-  \item The proportion of missing cells in $Y$ that exists in cases for which $Y_j$ is observed
-  \item How well the observed values in $Y_j$ connect to the missing values in $Y_{-j}$
+  \item The proportion of missing cells in $Y$ that exists in cases for which 
+    $Y_j$ is observed
+  \item How well the observed values in $Y_j$ connect to the missing values in 
+    $Y_{-j}$
   \end{itemize}
   
 \end{frame}
 
 \watermarkoff %----------------------------------------------------------------%
 
-\begin{frame}{Covariance Coverage Examples}
+\begin{frame}{Examples}
   
   \begin{columns}
-    \begin{column}{0.5\textwidth}
+    \begin{column}{0.61\textwidth}
       
-      \begin{itemize}
+      \begin{enumerate}
       \item What is the coverage for $cov(X, Y)$?
-        \vc
+        \vb
       \item What is the coverage for $cov(W, Y)$?
-        \vc
-      \item What about $cov(X, Z)$?
-      \end{itemize}
+        \vb
+      \item What is the coverage for $cov(X, Z)$?
+        \vb
+      \item What is the outflux coefficient for $W$?
+        \vb
+      \item What is the influx coefficient for $W$?
+      \end{enumerate}
       
     \end{column}
-    \begin{column}{0.5\textwidth}
+    \begin{column}{0.39\textwidth}
       
 % latex table generated in R 4.1.2 by xtable 1.8-4 package
-% Fri Jan 21 21:20:07 2022
+% Sat Jan 22 15:42:16 2022
 \begin{table}[ht]
 \centering
 \begin{tabular}{ccccc}
@@ -510,22 +525,30 @@ and missing items.
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}{Nonresponse Rate Examples}
+\begin{frame}{Examples}
   
   \begin{columns}
-    \begin{column}{0.5\textwidth}
+    \begin{column}{0.6\textwidth}
       
-      \begin{itemize}
-        \item What is the percent missing at Time 2?
-          \vc
-        \item What is the attrition rate at Time 3?
-      \end{itemize}
+      \begin{enumerate}
+        \item What is the percent missing at T2?
+          \vb
+        \item What is the attrition rate at T3?
+          \vb
+        \item What is the inbound statistic $I_{32}$?
+          \vb
+        \item What is the outbound statistic $O_{42}$?
+          \vb
+        \item What is the influx coefficient $I_3$?
+          \vb
+        \item What is the outflux coefficient $O_2$?
+      \end{enumerate}
       
     \end{column}
-    \begin{column}{0.5\textwidth}
+    \begin{column}{0.4\textwidth}
       
 % latex table generated in R 4.1.2 by xtable 1.8-4 package
-% Fri Jan 21 21:20:07 2022
+% Sat Jan 22 15:42:16 2022
 \begin{table}[ht]
 \centering
 \begin{tabular}{ccccc}
@@ -560,18 +583,39 @@ and missing items.
 
 \begin{frame}{Missing Data Mechanisms}
 
-  MCAR:
-  \begin{align*}
-    P(R | Y_{mis}, Y_{obs}) = P(R)
-  \end{align*}
-  MAR:
-  \begin{align*}
-    P(R | Y_{mis}, Y_{obs}) = P(R | Y_{obs})
-  \end{align*}
-  MNAR:
-  \begin{align*}
-    P(R | Y_{mis}, Y_{obs}) \neq P(R | Y_{obs})
-  \end{align*}
+  Missing Completely at Random (MCAR)
+  \begin{itemize}
+  \item $P(R | Y_{mis}, Y_{obs}) = P(R)$
+    \vc
+  \item Missingness is unrelated to any study variables.
+  \end{itemize}
+  \vb
+  %\begin{align*}
+  %  P(R | Y_{mis}, Y_{obs}) = P(R)
+  %\end{align*}
+  
+  Missing at Random (MAR)
+  \begin{itemize}
+  \item $P(R | Y_{mis}, Y_{obs}) = P(R | Y_{obs})$
+    \vc
+  \item Missingness is related to only the \emph{observed} parts of study 
+      variables.
+  \end{itemize}
+  \vb
+  %\begin{align*}
+  %  P(R | Y_{mis}, Y_{obs}) = P(R | Y_{obs})
+  %\end{align*}
+  
+  Missing not at Random (MNAR)
+  \begin{itemize}
+  \item $P(R | Y_{mis}, Y_{obs}) \neq P(R | Y_{obs})$
+    \vc
+  \item Missingness is related to the \emph{unobserved} parts of study 
+    variables.
+  \end{itemize}
+  %\begin{align*}
+  %  P(R | Y_{mis}, Y_{obs}) \neq P(R | Y_{obs})
+  %\end{align*}
   
 \end{frame}
 
@@ -585,21 +629,20 @@ and missing items.
 \hlstd{nObs} \hlkwb{<-} \hlnum{5000} \hlcom{# Sample Size}
 \hlstd{pm}   \hlkwb{<-} \hlnum{0.3}  \hlcom{# Proportion Missing}
 
-\hlstd{sigma} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1.0}\hlstd{,} \hlnum{0.5}\hlstd{,} \hlnum{0.0}\hlstd{,}
-                  \hlnum{0.5}\hlstd{,} \hlnum{1.0}\hlstd{,} \hlnum{0.3}\hlstd{,}
-                  \hlnum{0.0}\hlstd{,} \hlnum{0.3}\hlstd{,} \hlnum{1.0}\hlstd{),}
+\hlstd{sigma} \hlkwb{<-} \hlkwd{matrix}\hlstd{(}\hlkwd{c}\hlstd{(}\hlnum{1.0}\hlstd{,} \hlnum{0.5}\hlstd{,} \hlnum{0.3}\hlstd{,}
+                  \hlnum{0.5}\hlstd{,} \hlnum{1.0}\hlstd{,} \hlnum{0.0}\hlstd{,}
+                  \hlnum{0.3}\hlstd{,} \hlnum{0.0}\hlstd{,} \hlnum{1.0}\hlstd{),}
                 \hlkwc{ncol} \hlstd{=} \hlnum{3}\hlstd{)}
-\hlstd{simDat} \hlkwb{<-} \hlkwd{as.data.frame}\hlstd{(}\hlkwd{rmvnorm}\hlstd{(nObs,} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{0}\hlstd{,} \hlnum{0}\hlstd{), sigma))}
-\hlkwd{colnames}\hlstd{(simDat)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"y"}\hlstd{,} \hlstr{"x"}\hlstd{,} \hlstr{"z"}\hlstd{)}
+\hlstd{tmp} \hlkwb{<-} \hlkwd{rmvnorm}\hlstd{(nObs,} \hlkwd{c}\hlstd{(}\hlnum{0}\hlstd{,} \hlnum{0}\hlstd{,} \hlnum{0}\hlstd{), sigma)}
 
-\hlstd{x} \hlkwb{<-} \hlstd{simDat}\hlopt{$}\hlstd{x}
-\hlstd{y} \hlkwb{<-} \hlstd{simDat}\hlopt{$}\hlstd{y}
-\hlstd{z} \hlkwb{<-} \hlstd{simDat}\hlopt{$}\hlstd{z}
+\hlstd{x0} \hlkwb{<-} \hlstd{tmp[ ,} \hlnum{1}\hlstd{]}
+\hlstd{y0} \hlkwb{<-} \hlstd{tmp[ ,} \hlnum{2}\hlstd{]}
+\hlstd{z0} \hlkwb{<-} \hlstd{tmp[ ,} \hlnum{3}\hlstd{]}
 
-\hlkwd{cor}\hlstd{(y, x)} \hlcom{# Check correlation between X and Y}
+\hlkwd{cor}\hlstd{(y0, x0)} \hlcom{# Check correlation between X and Y}
 \end{alltt}
 \begin{verbatim}
-[1] 0.5031885
+[1] 0.5001822
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -614,15 +657,15 @@ and missing items.
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
 \begin{alltt}
 \hlcom{## Simulate MCAR Missingness:}
-\hlstd{rVec1} \hlkwb{<-} \hlkwd{sample}\hlstd{(}\hlnum{1} \hlopt{:} \hlkwd{length}\hlstd{(y),} \hlkwc{size} \hlstd{= pm} \hlopt{*} \hlkwd{length}\hlstd{(y))}
+\hlstd{mVec} \hlkwb{<-} \hlkwd{sample}\hlstd{(}\hlnum{1} \hlopt{:} \hlkwd{length}\hlstd{(y0),} \hlkwc{size} \hlstd{= pm} \hlopt{*} \hlkwd{length}\hlstd{(y0))}
 
-\hlstd{y2} \hlkwb{<-} \hlstd{y}
-\hlstd{y2[rVec1]} \hlkwb{<-} \hlnum{NA}
+\hlstd{yMcar}       \hlkwb{<-} \hlstd{y0}
+\hlstd{yMcar[mVec]} \hlkwb{<-} \hlnum{NA}
 
-\hlkwd{cor}\hlstd{(y2, x,} \hlkwc{use} \hlstd{=} \hlstr{"pairwise"}\hlstd{)} \hlcom{# Look at correlation}
+\hlkwd{cor}\hlstd{(yMcar, x0,} \hlkwc{use} \hlstd{=} \hlstr{"pairwise"}\hlstd{)} \hlcom{# Look at correlation}
 \end{alltt}
 \begin{verbatim}
-[1] 0.5229792
+[1] 0.5197437
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -649,20 +692,20 @@ and missing items.
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
 \begin{alltt}
 \hlcom{## Simulate MAR Missingness:}
-\hlstd{rVec2} \hlkwb{<-} \hlstd{x} \hlopt{<} \hlkwd{quantile}\hlstd{(x,} \hlkwc{probs} \hlstd{= pm)}
-\hlkwd{mean}\hlstd{(rVec2)}
+\hlstd{mVec} \hlkwb{<-} \hlstd{x0} \hlopt{<} \hlkwd{quantile}\hlstd{(x0,} \hlkwc{probs} \hlstd{= pm)}
+\hlkwd{mean}\hlstd{(mVec)}
 \end{alltt}
 \begin{verbatim}
 [1] 0.3
 \end{verbatim}
 \begin{alltt}
-\hlstd{y3} \hlkwb{<-} \hlstd{y}
-\hlstd{y3[rVec2]} \hlkwb{<-} \hlnum{NA}
+\hlstd{yMar}       \hlkwb{<-} \hlstd{y0}
+\hlstd{yMar[mVec]} \hlkwb{<-} \hlnum{NA}
 
-\hlkwd{cor}\hlstd{(y3, x,} \hlkwc{use} \hlstd{=} \hlstr{"pairwise"}\hlstd{)} \hlcom{# Not looking so good :(}
+\hlkwd{cor}\hlstd{(yMar, x0,} \hlkwc{use} \hlstd{=} \hlstr{"pairwise"}\hlstd{)} \hlcom{# Not looking so good :(}
 \end{alltt}
 \begin{verbatim}
-[1] 0.3870092
+[1] 0.3825876
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -689,20 +732,20 @@ and missing items.
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
 \begin{alltt}
 \hlcom{## Simulate MNAR Missingness:}
-\hlstd{rVec3} \hlkwb{<-} \hlstd{y} \hlopt{<} \hlkwd{quantile}\hlstd{(y,} \hlkwc{probs} \hlstd{= pm)}
-\hlkwd{mean}\hlstd{(rVec3)}
+\hlstd{mVec} \hlkwb{<-} \hlstd{y0} \hlopt{<} \hlkwd{quantile}\hlstd{(y0,} \hlkwc{probs} \hlstd{= pm)}
+\hlkwd{mean}\hlstd{(mVec)}
 \end{alltt}
 \begin{verbatim}
 [1] 0.3
 \end{verbatim}
 \begin{alltt}
-\hlstd{y4} \hlkwb{<-} \hlstd{y}
-\hlstd{y4[rVec3]} \hlkwb{<-} \hlnum{NA}
+\hlstd{yMnar}       \hlkwb{<-} \hlstd{y0}
+\hlstd{yMnar[mVec]} \hlkwb{<-} \hlnum{NA}
 
-\hlkwd{cor}\hlstd{(y4, x,} \hlkwc{use} \hlstd{=} \hlstr{"pairwise"}\hlstd{)} \hlcom{# Hmm...looks pretty bad.}
+\hlkwd{cor}\hlstd{(yMnar, x0,} \hlkwc{use} \hlstd{=} \hlstr{"pairwise"}\hlstd{)} \hlcom{# Hmm...looks pretty bad.}
 \end{alltt}
 \begin{verbatim}
-[1] 0.3873756
+[1] 0.3901487
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -739,14 +782,15 @@ and missing items.
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{rVec3}     \hlkwb{<-} \hlstd{z} \hlopt{<} \hlkwd{quantile}\hlstd{(z,} \hlkwc{probs} \hlstd{= pm)}
-\hlstd{y5}        \hlkwb{<-} \hlstd{y}
-\hlstd{y5[rVec3]} \hlkwb{<-} \hlnum{NA}
+\hlstd{mVec} \hlkwb{<-} \hlstd{z0} \hlopt{<} \hlkwd{quantile}\hlstd{(z0,} \hlkwc{probs} \hlstd{= pm)}
 
-\hlkwd{cor}\hlstd{(y5, x,} \hlkwc{use} \hlstd{=} \hlstr{"pairwise"}\hlstd{)}
+\hlstd{y}       \hlkwb{<-} \hlstd{y0}
+\hlstd{y[mVec]} \hlkwb{<-} \hlnum{NA}
+
+\hlkwd{cor}\hlstd{(y, x0,} \hlkwc{use} \hlstd{=} \hlstr{"pairwise"}\hlstd{)}
 \end{alltt}
 \begin{verbatim}
-[1] 0.5161666
+[1] 0.5119953
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -795,20 +839,38 @@ and missing items.
 
 \watermarkon %-----------------------------------------------------------------%
 
-\begin{frame}{Testing the Missing Data Mechanism}
+\begin{frame}[allowframebreaks]{Testing the Missing Data Mechanism}
   
-  We cannot test for MAR or MNAR.
+  We cannot fully test the MAR or MNAR assumptions.
   \begin{itemize}
   \item To do so would require knowing the values of the missing data.
-  \end{itemize}
-  \vb
-  We can test for MCAR (sort of).
-  \begin{itemize}
-  \item With MCAR, the missing data and the observed data should have the same distribution.
-  \item We can test for MCAR by testing the distributions of \emph{auxiliary variables}, $Z$.
+    \vc
+  \item We can find observed predictors of missingness, but we can never know 
+    that we have them all.
+    \vc
+  \item In practice, MAR and MNAR live on the ends of a continuum.
     \begin{itemize}
-      \item Use a $t$-test to compare the subset of $Z$ that corresponds to 
-        $Y_{mis}$ to the subset corresponding to $Y_{obs}$.
+    \item Our missing data problem exists at some unknown point along this 
+      continuum.
+      \vc
+    \item We can do a lot to nudge our problem towards the MAR side.
+    \end{itemize}
+  \end{itemize}
+   
+  \pagebreak
+  
+  We can test the MCAR assumption.
+  \begin{itemize}
+  \item With MCAR, the missing data and the observed data should have the same 
+    distribution.
+    \vc
+  \item We can test for MCAR by testing the distributions of \emph{auxiliary 
+    variables}, $\mathbf{Z}$.
+    \begin{itemize}
+    \item Use a t-test to compare the subset of $Z_p$ that corresponds to 
+      $Y_{mis}$ to the subset corresponding to $Y_{obs}$.
+      \vc
+    \item The \citet{little:1988} MCAR test is a multivariate version of this.
     \end{itemize}
   \end{itemize}
   
@@ -816,7 +878,326 @@ and missing items.
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}{Little's MCAR Test}
+\begin{frame}[fragile]{Example}
+  
+  Create some toy datasets from the variables we generated above.
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{mcarData} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}\hlkwc{y} \hlstd{= yMcar,} \hlkwc{x} \hlstd{= x0,} \hlkwc{z} \hlstd{= z0,}
+                       \hlkwc{m} \hlstd{=} \hlkwd{as.numeric}\hlstd{(}\hlkwd{is.na}\hlstd{(yMcar))}
+                       \hlstd{)}
+\hlstd{marData}  \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}\hlkwc{y} \hlstd{= yMar,} \hlkwc{x} \hlstd{= x0,} \hlkwc{z} \hlstd{= z0,}
+                       \hlkwc{m} \hlstd{=} \hlkwd{as.numeric}\hlstd{(}\hlkwd{is.na}\hlstd{(yMar))}
+                       \hlstd{)}
+\hlstd{mnarData} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}\hlkwc{y} \hlstd{= yMnar,} \hlkwc{x} \hlstd{= x0,} \hlkwc{z} \hlstd{= z0,}
+                       \hlkwc{m} \hlstd{=} \hlkwd{as.numeric}\hlstd{(}\hlkwd{is.na}\hlstd{(yMnar))}
+                       \hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{T-Test Example}
+
+  Test for dependence between $X$ and $M_Y$ in MCAR data.
+  
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{mcarData} \hlopt{%$%} \hlkwd{t.test}\hlstd{(x} \hlopt{~} \hlstd{m)} \hlopt{%>%} \hlkwd{wrap}\hlstd{()}
+\end{alltt}
+\begin{verbatim}
+
+	Welch Two Sample t-test
+
+data:  x by m
+t = 0.68563, df = 2852.8, p-value = 0.493
+alternative hypothesis: true difference in means between 
+group 0 and group 1 is not equal to 0 
+95 percent confidence interval:
+ -0.03921499  0.08138543
+sample estimates:
+mean in group 0 mean in group 1 
+    0.013908816    -0.007176408 
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{T-Test Example}
+
+  Test for dependence between $Z$ and $M_Y$ in MCAR data.
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{mcarData} \hlopt{%$%} \hlkwd{t.test}\hlstd{(z} \hlopt{~} \hlstd{m)} \hlopt{%>%} \hlkwd{wrap}\hlstd{()}
+\end{alltt}
+\begin{verbatim}
+
+	Welch Two Sample t-test
+
+data:  z by m
+t = 0.38865, df = 2841.9, p-value = 0.6976
+alternative hypothesis: true difference in means between 
+group 0 and group 1 is not equal to 0 
+95 percent confidence interval:
+ -0.04848298  0.07245421
+sample estimates:
+mean in group 0 mean in group 1 
+    0.009151786    -0.002833825 
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{T-Test Example}
+
+  Test for dependence between $X$ and $M_Y$ in MAR data.
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{marData} \hlopt{%$%} \hlkwd{t.test}\hlstd{(x} \hlopt{~} \hlstd{m)} \hlopt{%>%} \hlkwd{wrap}\hlstd{()}
+\end{alltt}
+\begin{verbatim}
+
+	Welch Two Sample t-test
+
+data:  x by m
+t = 92.56, df = 3832.8, p-value < 2.2e-16
+alternative hypothesis: true difference in means between 
+group 0 and group 1 is not equal to 0 
+95 percent confidence interval:
+ 1.614203 1.684066
+sample estimates:
+mean in group 0 mean in group 1 
+      0.5023237      -1.1468112 
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{T-Test Example}
+  
+  Test for dependence between $Z$ and $M_Y$ in MAR data.
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{marData} \hlopt{%$%} \hlkwd{t.test}\hlstd{(z} \hlopt{~} \hlstd{m)} \hlopt{%>%} \hlkwd{wrap}\hlstd{()}
+\end{alltt}
+\begin{verbatim}
+
+	Welch Two Sample t-test
+
+data:  z by m
+t = 16.913, df = 2832.1, p-value < 2.2e-16
+alternative hypothesis: true difference in means between 
+group 0 and group 1 is not equal to 0 
+95 percent confidence interval:
+ 0.4491108 0.5669049
+sample estimates:
+mean in group 0 mean in group 1 
+      0.1579585      -0.3500494 
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+\begin{frame}[fragile]{T-Test Example}
+  
+  Test for dependence between $X$ and $M_Y$ in MNAR data.
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{mnarData} \hlopt{%$%} \hlkwd{t.test}\hlstd{(x} \hlopt{~} \hlstd{m)} \hlopt{%>%} \hlkwd{wrap}\hlstd{()}
+\end{alltt}
+\begin{verbatim}
+
+	Welch Two Sample t-test
+
+data:  x by m
+t = 28.251, df = 2926.7, p-value < 2.2e-16
+alternative hypothesis: true difference in means between 
+group 0 and group 1 is not equal to 0 
+95 percent confidence interval:
+ 0.7439001 0.8548632
+sample estimates:
+mean in group 0 mean in group 1 
+      0.2473977      -0.5519839 
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{T-Test Example}
+
+  Test for dependence between $Z$ and $M_Y$ in MNAR data.
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{mnarData} \hlopt{%$%} \hlkwd{t.test}\hlstd{(z} \hlopt{~} \hlstd{m)} \hlopt{%>%} \hlkwd{wrap}\hlstd{()}
+\end{alltt}
+\begin{verbatim}
+
+	Welch Two Sample t-test
+
+data:  z by m
+t = -0.33313, df = 2778.5, p-value = 0.7391
+alternative hypothesis: true difference in means between 
+group 0 and group 1 is not equal to 0 
+95 percent confidence interval:
+ -0.07145430  0.05070098
+sample estimates:
+mean in group 0 mean in group 1 
+    0.002443105     0.012819764 
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{\citet{little:1988} MCAR Test Example}
+
+  Use the \citet{little:1988} MCAR test on MCAR data.
+  
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{mcarData} \hlopt{%>%} \hlkwd{select}\hlstd{(}\hlopt{-}\hlstd{m)} \hlopt{%>%} \hlkwd{mcar_test}\hlstd{()}
+\end{alltt}
+\begin{verbatim}
+# A tibble: 1 x 4
+  statistic    df p.value missing.patterns
+      <dbl> <dbl>   <dbl>            <int>
+1     0.504     2   0.777                2
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{\citet{little:1988} MCAR Test Example}
+
+Use the \citet{little:1988} MCAR test on MAR data.
+  
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{marData} \hlopt{%>%} \hlkwd{select}\hlstd{(}\hlopt{-}\hlstd{m)} \hlopt{%>%} \hlkwd{mcar_test}\hlstd{()}
+\end{alltt}
+\begin{verbatim}
+# A tibble: 1 x 4
+  statistic    df p.value missing.patterns
+      <dbl> <dbl>   <dbl>            <int>
+1     2862.     2       0                2
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{\citet{little:1988} MCAR Test Example}
+
+Use the \citet{little:1988} MCAR test on MNAR data.
+  
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{mnarData} \hlopt{%>%} \hlkwd{select}\hlstd{(}\hlopt{-}\hlstd{m)} \hlopt{%>%} \hlkwd{mcar_test}\hlstd{()}
+\end{alltt}
+\begin{verbatim}
+# A tibble: 1 x 4
+  statistic    df p.value missing.patterns
+      <dbl> <dbl>   <dbl>            <int>
+1      746.     2       0                2
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Logistic Regression Example}
+ 
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{## Read in some data:}
+\hlstd{diabetes} \hlkwb{<-} \hlkwd{readRDS}\hlstd{(}\hlkwd{paste0}\hlstd{(dataDir,} \hlstr{"diabetes.rds"}\hlstd{))}
+
+\hlcom{## Generate MAR missingness:}
+\hlstd{diabetes}\hlopt{$}\hlstd{m} \hlkwb{<-} \hlkwd{simLogisticMissingness0}\hlstd{(}\hlkwc{data}    \hlstd{= diabetes,}
+                                      \hlkwc{pm}      \hlstd{=} \hlnum{0.25}\hlstd{,}
+                                      \hlkwc{preds}   \hlstd{=} \hlkwd{c}\hlstd{(}\hlstr{"bmi"}\hlstd{,} \hlstr{"tc"}\hlstd{),}
+                                      \hlkwc{type}    \hlstd{=} \hlstr{"high"}\hlstd{,}
+                                      \hlkwc{stdData} \hlstd{=} \hlnum{TRUE}\hlstd{)}\hlopt{$}\hlstd{r}
+
+\hlcom{## Predict the missingness using logistic regression:}
+\hlstd{fit} \hlkwb{<-} \hlstd{diabetes} \hlopt{%>%}
+    \hlkwd{select}\hlstd{(}\hlopt{-}\hlstd{glu)} \hlopt{%>%}
+    \hlkwd{glm}\hlstd{(m} \hlopt{~} \hlstd{.,} \hlkwc{data} \hlstd{= .,} \hlkwc{family} \hlstd{=} \hlstr{"binomial"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Logistic Regression Example}
+  
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{partSummary}\hlstd{(fit,} \hlnum{3}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+Coefficients:
+              Estimate Std. Error z value Pr(>|z|)
+(Intercept) -1.459e+01  4.031e+00  -3.619 0.000296
+age          1.205e-02  1.141e-02   1.056 0.290782
+bmi          2.269e-01  4.054e-02   5.596 2.19e-08
+bp          -1.213e-02  1.147e-02  -1.057 0.290292
+tc           2.949e-02  2.897e-02   1.018 0.308696
+ldl          2.703e-03  2.625e-02   0.103 0.917986
+hdl         -5.961e-05  3.990e-02  -0.001 0.998808
+tch         -3.160e-01  2.889e-01  -1.094 0.274049
+ltg          5.588e-01  8.952e-01   0.624 0.532537
+progress     2.501e-03  2.380e-03   1.051 0.293237
+sexmale      4.336e-02  2.978e-01   0.146 0.884234
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
   
 \end{frame}
 
@@ -868,85 +1249,62 @@ and missing items.
       
     \end{column}
     \begin{column}{0.5\textwidth}
-      
+
+      \only<1>{
+        
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
 
-{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-20-1} 
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-32-1} 
 
 }
 
 
 \end{knitrout}
 
-\end{column}
-\end{columns}
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}{Bad Methods (These almost never work)}
+}
+      \only<2>{
   
-  \begin{columns}
-    \begin{column}{0.5\textwidth}
-      
-      (Unconditional) Mean Substitution
-      \begin{itemize}
-      \item Replace $Y_{mis}$ with $\bar{Y}_{obs}$
-        \begin{itemize}
-        \item Negatively biases regression slopes and correlations
-        \item Attenuates measures of linear association
-        \end{itemize}
-      \end{itemize}
-      
-    \end{column}
-    \begin{column}{0.5\textwidth}
-      
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
 
-{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-21-1} 
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-33-1} 
 
 }
 
 
 \end{knitrout}
 
-\end{column}
-\end{columns}
+}
+      
+      \only<3>{
+        
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
 
-\end{frame}
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-34-1} 
 
-%------------------------------------------------------------------------------%
+}
 
-\begin{frame}{Bad Methods (These almost never work)}
+
+\end{knitrout}
+
+}
   
-  \begin{columns}
-    \begin{column}{0.5\textwidth}
-      
-      (Unconditional) Mean Substitution
-      \begin{itemize}
-      \item Replace $Y_{mis}$ with $\bar{Y}_{obs}$
-        \begin{itemize}
-        \item Negatively biases regression slopes and correlations
-        \item Attenuates measures of linear association
-        \end{itemize}
-      \end{itemize}
-      
-    \end{column}
-    \begin{column}{0.5\textwidth}
-      
+      \only<4>{
+        
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
 
-{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-22-1} 
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-35-1} 
 
 }
 
 
 \end{knitrout}
 
+}
+      
 \end{column}
 \end{columns}
 
@@ -973,16 +1331,33 @@ and missing items.
     \end{column}
     \begin{column}{0.5\textwidth}
       
+      \only<1>{
+        
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
 
-{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-23-1} 
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-36-1} 
 
 }
 
 
 \end{knitrout}
 
+}
+      \only<2>{
+        
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
+
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-37-1} 
+
+}
+
+
+\end{knitrout}
+
+}
+      
 \end{column}
 \end{columns}
 
@@ -1008,17 +1383,34 @@ and missing items.
       
     \end{column}
     \begin{column}{0.5\textwidth}
-      
+    
+      \only<1>{
+        
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
 
-{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-24-1} 
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-38-1} 
 
 }
 
 
 \end{knitrout}
 
+}
+      \only<2>{
+              
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
+
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-39-1} 
+
+}
+
+
+\end{knitrout}
+
+}
+ 
 \end{column}
 \end{columns}
 
@@ -1107,16 +1499,33 @@ and missing items.
       
     \end{column}
     \begin{column}{0.5\textwidth}
-      
+
+      \only<1>{
+        
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
 
-{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-25-1} 
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-40-1} 
 
 }
 
 
 \end{knitrout}
+
+}
+      \only<2>{
+                
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
+
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-41-1} 
+
+}
+
+
+\end{knitrout}
+
+}
 
 \end{column}
 \end{columns}
@@ -1189,13 +1598,18 @@ and missing items.
                  \hlkwc{maxit}     \hlstd{=} \hlnum{1}\hlstd{,}
                  \hlkwc{method}    \hlstd{=} \hlkwd{c}\hlstd{(}\hlstr{"norm"}\hlstd{,} \hlstr{""}\hlstd{),}
                  \hlkwc{printFlag} \hlstd{=} \hlnum{FALSE}\hlstd{)}
+\end{alltt}
 
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{Error in data.frame(y3, x): object 'y3' not found}}\begin{alltt}
 \hlcom{## Replace missing values with imputations:}
 \hlstd{impList1} \hlkwb{<-} \hlkwd{list}\hlstd{()}
 \hlkwa{for}\hlstd{(m} \hlkwa{in} \hlnum{1} \hlopt{:} \hlstd{miceOut1}\hlopt{$}\hlstd{m)}
     \hlstd{impList1[[m]]} \hlkwb{<-} \hlkwd{complete}\hlstd{(miceOut1, m)}
 \end{alltt}
-\end{kframe}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{Error in eval(expr, envir, enclos): object 'miceOut1' not found}}\end{kframe}
 \end{knitrout}
 
 \pagebreak
@@ -1213,7 +1627,7 @@ and missing items.
 \hlkwd{mean}\hlstd{(}\hlkwd{unlist}\hlstd{(corList))}
 \end{alltt}
 \begin{verbatim}
-[1] 0.5108325
+[1] NA
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -1226,13 +1640,23 @@ The MI-based parameter estimate looks good.
 \pagebreak
 
 \begin{knitrout}\footnotesize
-\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
 
-{\centering \includegraphics[width=0.65\linewidth]{figure/intro-unnamed-chunk-28-1} 
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{Error in density.default(y): 'x' contains missing values}}
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{Error in impList1[[m]]: subscript out of bounds}}
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{Error in plot.window(...): need finite 'xlim' values}}\end{kframe}
+
+{\centering \includegraphics[width=0.65\linewidth]{figure/intro-unnamed-chunk-44-1} 
 
 }
 
 
+\begin{kframe}
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{Error in impList1[[m]]: subscript out of bounds}}\end{kframe}
 \end{knitrout}
 
 \end{frame}
@@ -1251,13 +1675,18 @@ The MI-based parameter estimate looks good.
                  \hlkwc{maxit}     \hlstd{=} \hlnum{1}\hlstd{,}
                  \hlkwc{method}    \hlstd{=} \hlkwd{c}\hlstd{(}\hlstr{"norm"}\hlstd{,} \hlstr{""}\hlstd{),}
                  \hlkwc{printFlag} \hlstd{=} \hlnum{FALSE}\hlstd{)}
+\end{alltt}
 
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{Error in data.frame(y4, x): object 'y4' not found}}\begin{alltt}
 \hlcom{## Replace missing values with imputations:}
 \hlstd{impList2} \hlkwb{<-} \hlkwd{list}\hlstd{()}
 \hlkwa{for}\hlstd{(m} \hlkwa{in} \hlnum{1} \hlopt{:} \hlstd{miceOut2}\hlopt{$}\hlstd{m)}
     \hlstd{impList2[[m]]} \hlkwb{<-} \hlkwd{complete}\hlstd{(miceOut2, m)}
 \end{alltt}
-\end{kframe}
+
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{Error in eval(expr, envir, enclos): object 'miceOut2' not found}}\end{kframe}
 \end{knitrout}
 
 \end{frame}
@@ -1280,7 +1709,7 @@ The MI-based parameter estimate looks good.
 \hlkwd{mean}\hlstd{(}\hlkwd{unlist}\hlstd{(corList2))}
 \end{alltt}
 \begin{verbatim}
-[1] 0.4089334
+[1] NA
 \end{verbatim}
 \end{kframe}
 \end{knitrout}
@@ -1293,13 +1722,25 @@ The MI-based parameter estimate is still biased.
 \pagebreak
 
 \begin{knitrout}\footnotesize
-\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
 
-{\centering \includegraphics[width=0.65\linewidth]{figure/intro-unnamed-chunk-31-1} 
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{Error in density(y4, na.rm = TRUE): object 'y4' not found}}
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{Error in impList2[[m]]: subscript out of bounds}}
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{Error in plot.window(...): need finite 'xlim' values}}\end{kframe}
+
+{\centering \includegraphics[width=0.65\linewidth]{figure/intro-unnamed-chunk-47-1} 
 
 }
 
 
+\begin{kframe}
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{Error in impList2[[m]]: subscript out of bounds}}
+
+{\ttfamily\noindent\bfseries\color{errorcolor}{Error in lines(y4Den, col = "{}red"{}, lwd = 2): object 'y4Den' not found}}\end{kframe}
 \end{knitrout}
 
 \end{frame}
