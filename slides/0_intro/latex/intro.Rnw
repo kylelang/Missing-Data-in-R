@@ -1,7 +1,7 @@
 %%% Title:    Missing Data in R: Introduction
 %%% Author:   Kyle M. Lang
 %%% Created:  2015-11-06
-%%% Modified: 2022-01-21
+%%% Modified: 2022-01-23
 
 \documentclass{beamer}
 \usetheme{Utrecht}
@@ -42,6 +42,8 @@ library(dplyr)
 library(magrittr)
 library(naniar)
 library(gridExtra)
+library(ggpubr)
+library(lme4)
 
 source("../../../code/supportFunctions.R")
 source("../../../code/sim_missing/code/simMissingness.R")
@@ -904,17 +906,17 @@ mnarData %>% select(-m) %>% mcar_test()
 
 <<cache = TRUE>>=
 ## Read in some data:
-diabetes <- readRDS(paste0(dataDir, "diabetes.rds"))
+diabetes1 <- readRDS(paste0(dataDir, "diabetes.rds"))
 
 ## Generate MAR missingness:
-diabetes$m <- simLogisticMissingness0(data    = diabetes,
-                                      pm      = 0.25,
-                                      preds   = c("bmi", "tc"),
-                                      type    = "high",
-                                      stdData = TRUE)$r
+diabetes1$m <- simLogisticMissingness0(data    = diabetes1,
+                                       pm      = 0.25,
+                                       preds   = c("bmi", "tc"),
+                                       type    = "high",
+                                       stdData = TRUE)$r
 
 ## Predict the missingness using logistic regression:
-fit <- diabetes %>%
+fit <- diabetes1 %>%
     select(-glu) %>%
     glm(m ~ ., data = ., family = "binomial")
 @
@@ -963,6 +965,59 @@ partSummary(fit, 3)
 
 \watermarkoff %----------------------------------------------------------------%
 
+\begin{frame}[fragile]{Example}
+ 
+<<>>=
+diabetes2              <- diabetes1
+mVec                   <- with(diabetes2, bmi > quantile(bmi, 0.75))
+diabetes2[mVec, "glu"] <- NA
+
+diabetes1 %>% select(bmi, glu, bp) %>% cor()
+diabetes2 %>% select(bmi, glu, bp) %>% cor(use = "pairwise")
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+<<>>=
+mean(diabetes1$glu)
+mean(diabetes2$glu, na.rm = TRUE)
+var(diabetes1$glu)
+var(diabetes2$glu, na.rm = TRUE)
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+<<>>=
+s1 <- lm(glu ~ bmi + bp + age, data = diabetes1) %>% summary()
+s2 <- lm(glu ~ bmi + bp + age, data = diabetes2) %>% summary()
+
+s1$r.squared
+s2$r.squared
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+<<>>=
+s1$coef
+s2$coef
+@
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
 \begin{frame}{Bad Methods (These almost never work)}
 
   \begin{columns}
@@ -982,19 +1037,19 @@ partSummary(fit, 3)
 
       \only<1>{
 
-<<echo = FALSE, cache = TRUE, warning = FALSE>>=
-dat1 <- readRDS(paste0(dataDir, "diabetes.rds"))
+<<echo = FALSE, cache = TRUE>>=
+                                        #dat1 <- readRDS(paste0(dataDir, "diabetes.rds"))
+          
+                                        #mVec <- simSimpleMar(pm      = 0.25,
+                                        #                     data    = dat1,
+                                        #                     preds   = "bmi",
+                                        #                     type    = "high",
+                                        #                     stdData = TRUE)
 
-mVec <- simSimpleMar(pm      = 0.25,
-                     data    = dat1,
-                     preds   = "bmi",
-                     type    = "high",
-                     stdData = TRUE)
+                                        #dat2              <- dat1
+                                        #dat2[mVec, "glu"] <- NA
 
-dat2              <- dat1
-dat2[mVec, "glu"] <- NA
-
-p0 <- ggplot(data = dat1, mapping = aes(x = bmi, y = glu)) +
+p0 <- ggplot(data = diabetes1, mapping = aes(x = bmi, y = glu)) +
     geom_point() +
     theme_classic() +
     theme(text = element_text(family = "Courier", size = 16)) +
@@ -1007,9 +1062,11 @@ p0
 }
       \only<2>{
 
-<<echo = FALSE, cache = TRUE, warning = FALSE>>=
+<<echo = FALSE, cache = TRUE>>=
 p1 <- p0 +
-    geom_point(mapping = aes(y = dat2$glu, x = dat2$bmi), colour = "blue")
+    geom_point(data = diabetes2, 
+               mapping = aes(y = glu, x = bmi), 
+               colour = "blue")
 
 p1
 @
@@ -1018,8 +1075,8 @@ p1
 
       \only<3>{
 
-<<echo = FALSE, cache = TRUE, warning = FALSE>>=
-miceM <- mice(data      = dat2[ , c("bmi", "glu")],
+<<echo = FALSE, cache = TRUE>>=
+miceM <- mice(data      = diabetes2[ , c("bmi", "glu")],
               m         = 1,
               maxit     = 1,
               method    = "mean",
@@ -1039,7 +1096,7 @@ p2
       \only<4>{
 
 <<echo = FALSE, cache = TRUE>>=
-p2 + geom_smooth(data    = dat1,
+p2 + geom_smooth(data    = diabetes1,
                  mapping = aes(y = glu, x = bmi),
                  method  = "lm",
                  color   = "black",
@@ -1060,6 +1117,58 @@ p2 + geom_smooth(data    = dat1,
 
 %------------------------------------------------------------------------------%
 
+\begin{frame}[fragile]{Example}
+ 
+<<>>=
+diabetes3              <- diabetes2
+diabetes3[mVec, "glu"] <- mean(diabetes3$glu, na.rm = TRUE)
+
+diabetes1 %>% select(bmi, glu, bp) %>% cor()
+diabetes3 %>% select(bmi, glu, bp) %>% cor(use = "pairwise")
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+<<>>=
+mean(diabetes1$glu)
+mean(diabetes3$glu, na.rm = TRUE)
+var(diabetes1$glu)
+var(diabetes3$glu, na.rm = TRUE)
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+<<>>=
+s1 <- lm(glu ~ bmi + bp + age, data = diabetes1) %>% summary()
+s3 <- lm(glu ~ bmi + bp + age, data = diabetes3) %>% summary()
+
+s1$r.squared
+s3$r.squared
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+<<>>=
+s1$coef
+s3$coef
+@
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
 \begin{frame}{Bad Methods (These almost never work)}
 
   \begin{columns}
@@ -1081,8 +1190,8 @@ p2 + geom_smooth(data    = dat1,
 
       \only<1>{
 
-<<echo = FALSE, cache = TRUE, warning = FALSE>>=
-miceD <- mice(data      = dat2[ , c("bmi", "glu")],
+<<echo = FALSE, cache = TRUE>>=
+miceD <- mice(data      = diabetes2[ , c("bmi", "glu")],
               m         = 1,
               maxit     = 1,
               method    = "norm.predict",
@@ -1101,7 +1210,7 @@ p2
       \only<2>{
 
 <<echo = FALSE, cache = TRUE>>=
-p2 + geom_smooth(data    = dat1,
+p2 + geom_smooth(data    = diabetes1,
                  mapping = aes(y = glu, x = bmi),
                  method  = "lm",
                  color   = "black",
@@ -1143,8 +1252,8 @@ p2 + geom_smooth(data    = dat1,
 
       \only<1>{
 
-<<echo = FALSE, cache = TRUE, warning = FALSE>>=
-miceD <- mice(data      = dat2,
+<<echo = FALSE, cache = TRUE>>=
+miceD <- mice(data      = diabetes2,
               m         = 1,
               maxit     = 1,
               method    = "norm.predict",
@@ -1163,7 +1272,7 @@ p2
       \only<2>{
 
 <<echo = FALSE, cache = TRUE>>=
-p2 + geom_smooth(data    = dat1,
+p2 + geom_smooth(data    = diabetes1,
                  mapping = aes(y = glu, x = bmi),
                  method  = "lm",
                  color   = "black",
@@ -1180,6 +1289,70 @@ p2 + geom_smooth(data    = dat1,
 \end{column}
 \end{columns}
 
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+ 
+<<>>=
+diabetes3 <- mice(data      = diabetes2, 
+                  m         = 1, 
+                  maxit     = 1,
+                  printFlag = FALSE,
+                  method    = "norm.predict") %>% 
+    complete(1)
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+<<>>=
+diabetes1 %>% select(bmi, glu, bp) %>% cor()
+diabetes3 %>% select(bmi, glu, bp) %>% cor(use = "pairwise")
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+<<>>=
+mean(diabetes1$glu)
+mean(diabetes3$glu, na.rm = TRUE)
+var(diabetes1$glu)
+var(diabetes3$glu, na.rm = TRUE)
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+<<>>=
+s1 <- lm(glu ~ bmi + bp + age, data = diabetes1) %>% summary()
+s3 <- lm(glu ~ bmi + bp + age, data = diabetes3) %>% summary()
+
+s1$r.squared
+s3$r.squared
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+<<>>=
+s1$coef
+s3$coef
+@
+  
 \end{frame}
 
 %------------------------------------------------------------------------------%
@@ -1277,7 +1450,11 @@ dat3$m2 <- dat3 %$% tapply(m,
 
 p0 <- ggplot(data = dat1, mapping = aes(y = y, x = t)) +
     ylab("Y") +
-    xlab("Time")
+    xlab("Time") +
+    theme(plot.title = element_text(family = "serif", 
+                                    face = "bold", 
+                                    hjust = 0.5)
+          )
 
 p1 <- p0 + scale_color_manual(values = c("black", "red")) +
     theme(legend.position = "none") +
@@ -1287,15 +1464,19 @@ p1 <- p0 + scale_color_manual(values = c("black", "red")) +
 \only<1>{
   
 <<echo = FALSE, cache = TRUE, fig.asp = 0.5>>=
-grid.arrange(
-p0 + geom_line(aes(group = id), alpha = 0.3) + geom_point(),
-
+ggarrange(
+    p0 + 
+    geom_line(aes(group = id), alpha = 0.3) + geom_point() +
+    ggtitle("Fully Observed Data"),
+    
     p0 + 
     geom_line(data = dat2, mapping = aes(group = id), alpha = 0.3) +
     geom_point(data = dat2) +
-    ylim(range(dat1$y)),
+    ylim(range(dat1$y)) +
+    ggtitle("Data with Attrition"),
     
-    ncol = 2)
+    ncol = 2
+)
 @
 
 }
@@ -1303,28 +1484,91 @@ p0 + geom_line(aes(group = id), alpha = 0.3) + geom_point(),
 \only<2>{
   
 <<echo = FALSE, cache = TRUE, fig.asp = 0.5>>=
-grid.arrange(
-p1 + geom_line(data = dat3, aes(group = id, color = m2), alpha = 0.3) +
-geom_point(data = dat3, aes(color = m)),
-
-p1 + geom_line(data = dat3, aes(group = id, color = m2), alpha = 0.3) +
-geom_point(data = dat3, aes(color = m)) +
+ggarrange(
+    p1 + 
+    geom_line(data = dat3, aes(group = id, color = m2), alpha = 0.3) +
+    geom_point(data = dat3, aes(color = m)) +
+    ggtitle("Data Treated with LOCF"),
+    
+    p1 + 
+    geom_line(data = dat3, aes(group = id, color = m2), alpha = 0.1) +
+    geom_point(data = dat3, aes(color = m), alpha = 0.1) +
     geom_smooth(data = dat3,
                 method = "lm",
                 se = FALSE,
                 color = "red",
-                size = 1.5) +
+                size = 1) +
     geom_smooth(data = dat1,
                 method = "lm",
                 se = FALSE,
                 color = "black",
-                size = 1.5),
-
-    ncol = 2)
+                size = 1) +
+    ggtitle("Correct vs. Imputed Trends"),
+    
+    ncol = 2
+)
 @
 
 }
 
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+ 
+<<>>=
+## Fit some multilevel regression models
+fit1 <- lmer(y ~ t + (t | id), data = dat1) # Full data
+fit2 <- lmer(y ~ t + (t | id), data = dat3) # LOCF data
+@ 
+
+<<echo = FALSE, fig.asp = 0.5>>=
+rf1 <- ranef(fit1)[[1]]
+rf2 <- ranef(fit2)[[1]]
+
+rf <- data.frame(Data = rep(c("Full", "LOCF"), each = nrow(rf1)),
+                 x = c(rf1$t, rf2$t)
+                 )
+
+ff1 <- coef(fit1)[[1]]
+ff2 <- coef(fit2)[[1]]
+
+ff <- data.frame(Data = rep(c("Full", "LOCF"), each = nrow(ff1)),
+                 x = c(ff1$t, ff2$t)
+                 )
+
+ggarrange(
+    ggplot(data = rf, mapping = aes(x = x, color = Data)) + 
+    geom_density() +
+    ylab("Density") +
+    xlab("Random Effect") +
+    ggtitle("Distributions of Random Effects") +
+    scale_color_manual(values = c("black", "red")) +
+    theme_classic() +
+    theme(plot.title = element_text(family = "serif", 
+                                    face = "bold", 
+                                    hjust = 0.5)
+          ),
+    
+    ggplot(data = ff, mapping = aes(x = x, color = Data)) + 
+    geom_density() +
+    ylab("Density") +
+    xlab("Fixed Effect") +
+    ggtitle("Distributions of Fixed Effects") +
+    scale_color_manual(values = c("black", "red")) +
+    theme_classic() +
+    theme(plot.title = element_text(family = "serif", 
+                                    face = "bold", 
+                                    hjust = 0.5)
+          ),
+    
+    ncol = 2,
+    common.legend = TRUE,
+    legend = "right"
+)
+@
+  
 \end{frame}
 
 %------------------------------------------------------------------------------%

@@ -1,4 +1,3 @@
-base
 knitr
 ggplot2
 mice
@@ -9,3 +8,6 @@ dplyr
 magrittr
 naniar
 gridExtra
+ggpubr
+Matrix
+lme4

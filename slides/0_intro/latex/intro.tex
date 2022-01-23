@@ -1,7 +1,7 @@
 %%% Title:    Missing Data in R: Introduction
 %%% Author:   Kyle M. Lang
 %%% Created:  2015-11-06
-%%% Modified: 2022-01-21
+%%% Modified: 2022-01-23
 
 \documentclass{beamer}\usepackage[]{graphicx}\usepackage[]{color}
 % maxwidth is the original width if it is less than linewidth
@@ -17,6 +17,9 @@
 \makeatother
 
 \definecolor{fgcolor}{rgb}{0, 0, 0}
+\makeatletter
+\@ifundefined{AddToHook}{}{\AddToHook{package/xcolor/after}{\definecolor{fgcolor}{rgb}{0, 0, 0}}}
+\makeatother
 \newcommand{\hlnum}[1]{\textcolor[rgb]{0.69,0.494,0}{#1}}%
 \newcommand{\hlstr}[1]{\textcolor[rgb]{0.749,0.012,0.012}{#1}}%
 \newcommand{\hlcom}[1]{\textcolor[rgb]{0.514,0.506,0.514}{\textit{#1}}}%
@@ -51,6 +54,14 @@
 \definecolor{messagecolor}{rgb}{0, 0, 0}
 \definecolor{warningcolor}{rgb}{1, 0, 1}
 \definecolor{errorcolor}{rgb}{1, 0, 0}
+\makeatletter
+\@ifundefined{AddToHook}{}{\AddToHook{package/xcolor/after}{
+\definecolor{shadecolor}{rgb}{.97, .97, .97}
+\definecolor{messagecolor}{rgb}{0, 0, 0}
+\definecolor{warningcolor}{rgb}{1, 0, 1}
+\definecolor{errorcolor}{rgb}{1, 0, 0}
+}}
+\makeatother
 \newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
 
 \usepackage{alltt}
@@ -183,8 +194,8 @@ and missing items.
 \begin{columns}
   \begin{column}{0.45\textwidth}
 
-% latex table generated in R 4.1.0 by xtable 1.8-4 package
-% Sat Jan 22 19:25:57 2022
+% latex table generated in R 4.1.2 by xtable 1.8-4 package
+% Sun Jan 23 13:30:40 2022
 \begin{table}[ht]
 \centering
 \begin{tabular}{ccc}
@@ -204,8 +215,8 @@ and missing items.
   \end{column}
   \begin{column}{0.45\textwidth}
 \vx{-12}
-% latex table generated in R 4.1.0 by xtable 1.8-4 package
-% Sat Jan 22 19:25:57 2022
+% latex table generated in R 4.1.2 by xtable 1.8-4 package
+% Sun Jan 23 13:30:40 2022
 \begin{table}[ht]
 \centering
 \begin{tabular}{cccc}
@@ -274,8 +285,8 @@ and missing items.
 \begin{columns}[T]
   \begin{column}{0.33\textwidth}
 
-% latex table generated in R 4.1.0 by xtable 1.8-4 package
-% Sat Jan 22 19:25:57 2022
+% latex table generated in R 4.1.2 by xtable 1.8-4 package
+% Sun Jan 23 13:30:40 2022
 \begin{table}[ht]
 \centering
 \begin{tabular}{cccc}
@@ -301,8 +312,8 @@ and missing items.
 \end{column}
 \begin{column}{0.33\textwidth}
 
-% latex table generated in R 4.1.0 by xtable 1.8-4 package
-% Sat Jan 22 19:25:57 2022
+% latex table generated in R 4.1.2 by xtable 1.8-4 package
+% Sun Jan 23 13:30:40 2022
 \begin{table}[ht]
 \centering
 \begin{tabular}{cccc}
@@ -328,8 +339,8 @@ and missing items.
 \end{column}
 \begin{column}{0.33\textwidth}
 
-% latex table generated in R 4.1.0 by xtable 1.8-4 package
-% Sat Jan 22 19:25:57 2022
+% latex table generated in R 4.1.2 by xtable 1.8-4 package
+% Sun Jan 23 13:30:40 2022
 \begin{table}[ht]
 \centering
 \begin{tabular}{cccc}
@@ -484,8 +495,8 @@ and missing items.
     \end{column}
     \begin{column}{0.39\textwidth}
 
-% latex table generated in R 4.1.0 by xtable 1.8-4 package
-% Sat Jan 22 19:25:57 2022
+% latex table generated in R 4.1.2 by xtable 1.8-4 package
+% Sun Jan 23 13:30:40 2022
 \begin{table}[ht]
 \centering
 \begin{tabular}{ccccc}
@@ -536,8 +547,8 @@ and missing items.
     \end{column}
     \begin{column}{0.4\textwidth}
 
-% latex table generated in R 4.1.0 by xtable 1.8-4 package
-% Sat Jan 22 19:25:57 2022
+% latex table generated in R 4.1.2 by xtable 1.8-4 package
+% Sun Jan 23 13:30:40 2022
 \begin{table}[ht]
 \centering
 \begin{tabular}{ccccc}
@@ -1142,17 +1153,17 @@ Use the \citet{little:1988} MCAR test on MNAR data.
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
 \begin{alltt}
 \hlcom{## Read in some data:}
-\hlstd{diabetes} \hlkwb{<-} \hlkwd{readRDS}\hlstd{(}\hlkwd{paste0}\hlstd{(dataDir,} \hlstr{"diabetes.rds"}\hlstd{))}
+\hlstd{diabetes1} \hlkwb{<-} \hlkwd{readRDS}\hlstd{(}\hlkwd{paste0}\hlstd{(dataDir,} \hlstr{"diabetes.rds"}\hlstd{))}
 
 \hlcom{## Generate MAR missingness:}
-\hlstd{diabetes}\hlopt{$}\hlstd{m} \hlkwb{<-} \hlkwd{simLogisticMissingness0}\hlstd{(}\hlkwc{data}    \hlstd{= diabetes,}
-                                      \hlkwc{pm}      \hlstd{=} \hlnum{0.25}\hlstd{,}
-                                      \hlkwc{preds}   \hlstd{=} \hlkwd{c}\hlstd{(}\hlstr{"bmi"}\hlstd{,} \hlstr{"tc"}\hlstd{),}
-                                      \hlkwc{type}    \hlstd{=} \hlstr{"high"}\hlstd{,}
-                                      \hlkwc{stdData} \hlstd{=} \hlnum{TRUE}\hlstd{)}\hlopt{$}\hlstd{r}
+\hlstd{diabetes1}\hlopt{$}\hlstd{m} \hlkwb{<-} \hlkwd{simLogisticMissingness0}\hlstd{(}\hlkwc{data}    \hlstd{= diabetes1,}
+                                       \hlkwc{pm}      \hlstd{=} \hlnum{0.25}\hlstd{,}
+                                       \hlkwc{preds}   \hlstd{=} \hlkwd{c}\hlstd{(}\hlstr{"bmi"}\hlstd{,} \hlstr{"tc"}\hlstd{),}
+                                       \hlkwc{type}    \hlstd{=} \hlstr{"high"}\hlstd{,}
+                                       \hlkwc{stdData} \hlstd{=} \hlnum{TRUE}\hlstd{)}\hlopt{$}\hlstd{r}
 
 \hlcom{## Predict the missingness using logistic regression:}
-\hlstd{fit} \hlkwb{<-} \hlstd{diabetes} \hlopt{%>%}
+\hlstd{fit} \hlkwb{<-} \hlstd{diabetes1} \hlopt{%>%}
     \hlkwd{select}\hlstd{(}\hlopt{-}\hlstd{glu)} \hlopt{%>%}
     \hlkwd{glm}\hlstd{(m} \hlopt{~} \hlstd{.,} \hlkwc{data} \hlstd{= .,} \hlkwc{family} \hlstd{=} \hlstr{"binomial"}\hlstd{)}
 \end{alltt}
@@ -1222,6 +1233,131 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 
 \watermarkoff %----------------------------------------------------------------%
 
+\begin{frame}[fragile]{Example}
+ 
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{diabetes2}              \hlkwb{<-} \hlstd{diabetes1}
+\hlstd{mVec}                   \hlkwb{<-} \hlkwd{with}\hlstd{(diabetes2, bmi} \hlopt{>} \hlkwd{quantile}\hlstd{(bmi,} \hlnum{0.75}\hlstd{))}
+\hlstd{diabetes2[mVec,} \hlstr{"glu"}\hlstd{]} \hlkwb{<-} \hlnum{NA}
+
+\hlstd{diabetes1} \hlopt{%>%} \hlkwd{select}\hlstd{(bmi, glu, bp)} \hlopt{%>%} \hlkwd{cor}\hlstd{()}
+\end{alltt}
+\begin{verbatim}
+          bmi     glu        bp
+bmi 1.0000000 0.38868 0.3954109
+glu 0.3886800 1.00000 0.3904300
+bp  0.3954109 0.39043 1.0000000
+\end{verbatim}
+\begin{alltt}
+\hlstd{diabetes2} \hlopt{%>%} \hlkwd{select}\hlstd{(bmi, glu, bp)} \hlopt{%>%} \hlkwd{cor}\hlstd{(}\hlkwc{use} \hlstd{=} \hlstr{"pairwise"}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+          bmi       glu        bp
+bmi 1.0000000 0.2975319 0.3954109
+glu 0.2975319 1.0000000 0.3704984
+bp  0.3954109 0.3704984 1.0000000
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{mean}\hlstd{(diabetes1}\hlopt{$}\hlstd{glu)}
+\end{alltt}
+\begin{verbatim}
+[1] 91.26018
+\end{verbatim}
+\begin{alltt}
+\hlkwd{mean}\hlstd{(diabetes2}\hlopt{$}\hlstd{glu,} \hlkwc{na.rm} \hlstd{=} \hlnum{TRUE}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+[1] 89.22054
+\end{verbatim}
+\begin{alltt}
+\hlkwd{var}\hlstd{(diabetes1}\hlopt{$}\hlstd{glu)}
+\end{alltt}
+\begin{verbatim}
+[1] 132.1657
+\end{verbatim}
+\begin{alltt}
+\hlkwd{var}\hlstd{(diabetes2}\hlopt{$}\hlstd{glu,} \hlkwc{na.rm} \hlstd{=} \hlnum{TRUE}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+[1] 115.3664
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{s1} \hlkwb{<-} \hlkwd{lm}\hlstd{(glu} \hlopt{~} \hlstd{bmi} \hlopt{+} \hlstd{bp} \hlopt{+} \hlstd{age,} \hlkwc{data} \hlstd{= diabetes1)} \hlopt{%>%} \hlkwd{summary}\hlstd{()}
+\hlstd{s2} \hlkwb{<-} \hlkwd{lm}\hlstd{(glu} \hlopt{~} \hlstd{bmi} \hlopt{+} \hlstd{bp} \hlopt{+} \hlstd{age,} \hlkwc{data} \hlstd{= diabetes2)} \hlopt{%>%} \hlkwd{summary}\hlstd{()}
+
+\hlstd{s1}\hlopt{$}\hlstd{r.squared}
+\end{alltt}
+\begin{verbatim}
+[1] 0.2450996
+\end{verbatim}
+\begin{alltt}
+\hlstd{s2}\hlopt{$}\hlstd{r.squared}
+\end{alltt}
+\begin{verbatim}
+[1] 0.1961665
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{s1}\hlopt{$}\hlstd{coef}
+\end{alltt}
+\begin{verbatim}
+              Estimate Std. Error   t value     Pr(>|t|)
+(Intercept) 47.6809340 3.76076018 12.678536 1.351038e-31
+bmi          0.6940756 0.11782779  5.890594 7.676778e-09
+bp           0.1876015 0.03926201  4.778194 2.417752e-06
+age          0.1549222 0.03871817  4.001279 7.396263e-05
+\end{verbatim}
+\begin{alltt}
+\hlstd{s2}\hlopt{$}\hlstd{coef}
+\end{alltt}
+\begin{verbatim}
+              Estimate Std. Error  t value     Pr(>|t|)
+(Intercept) 49.0459414 5.31380634 9.229908 3.480783e-18
+bmi          0.5640824 0.22056194 2.557479 1.099414e-02
+bp           0.2044661 0.04682681 4.366432 1.696873e-05
+age          0.1566830 0.04404327 3.557480 4.297963e-04
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
 \begin{frame}{Bad Methods (These almost never work)}
 
   \begin{columns}
@@ -1233,87 +1369,6 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
         \begin{itemize}
         \item Negatively biases regression slopes and correlations
         \item Attenuates measures of linear association
-        \end{itemize}
-      \end{itemize}
-
-    \end{column}
-    \begin{column}{0.5\textwidth}
-
-      \only<1>{
-
-\begin{knitrout}\footnotesize
-\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
-
-{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-32-1} 
-
-}
-
-
-\end{knitrout}
-
-}
-      \only<2>{
-
-\begin{knitrout}\footnotesize
-\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
-
-{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-33-1} 
-
-}
-
-
-\end{knitrout}
-
-}
-
-      \only<3>{
-
-\begin{knitrout}\footnotesize
-\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
-
-{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-34-1} 
-
-}
-
-
-\end{knitrout}
-
-}
-
-      \only<4>{
-
-\begin{knitrout}\footnotesize
-\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
-
-{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-35-1} 
-
-}
-
-
-\end{knitrout}
-
-}
-
-\end{column}
-\end{columns}
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}{Bad Methods (These almost never work)}
-
-  \begin{columns}
-    \begin{column}{0.5\textwidth}
-
-      Deterministic Regression Imputation\\
-      (Conditional Mean Substitution)
-      \begin{itemize}
-      \item Replace $Y_{mis}$ with $\widehat{Y}_{mis}$ from some regression
-        equation
-        \begin{itemize}
-        \item Positively biases regression slopes and correlations
-        \item Inflates measures of linear association
         \end{itemize}
       \end{itemize}
 
@@ -1347,6 +1402,211 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 
 }
 
+      \only<3>{
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
+
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-38-1} 
+
+}
+
+
+\end{knitrout}
+
+}
+
+      \only<4>{
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
+
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-39-1} 
+
+}
+
+
+\end{knitrout}
+
+}
+
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+ 
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{diabetes3}              \hlkwb{<-} \hlstd{diabetes2}
+\hlstd{diabetes3[mVec,} \hlstr{"glu"}\hlstd{]} \hlkwb{<-} \hlkwd{mean}\hlstd{(diabetes3}\hlopt{$}\hlstd{glu,} \hlkwc{na.rm} \hlstd{=} \hlnum{TRUE}\hlstd{)}
+
+\hlstd{diabetes1} \hlopt{%>%} \hlkwd{select}\hlstd{(bmi, glu, bp)} \hlopt{%>%} \hlkwd{cor}\hlstd{()}
+\end{alltt}
+\begin{verbatim}
+          bmi     glu        bp
+bmi 1.0000000 0.38868 0.3954109
+glu 0.3886800 1.00000 0.3904300
+bp  0.3954109 0.39043 1.0000000
+\end{verbatim}
+\begin{alltt}
+\hlstd{diabetes3} \hlopt{%>%} \hlkwd{select}\hlstd{(bmi, glu, bp)} \hlopt{%>%} \hlkwd{cor}\hlstd{(}\hlkwc{use} \hlstd{=} \hlstr{"pairwise"}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+          bmi       glu        bp
+bmi 1.0000000 0.1559857 0.3954109
+glu 0.1559857 1.0000000 0.2977934
+bp  0.3954109 0.2977934 1.0000000
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{mean}\hlstd{(diabetes1}\hlopt{$}\hlstd{glu)}
+\end{alltt}
+\begin{verbatim}
+[1] 91.26018
+\end{verbatim}
+\begin{alltt}
+\hlkwd{mean}\hlstd{(diabetes3}\hlopt{$}\hlstd{glu,} \hlkwc{na.rm} \hlstd{=} \hlnum{TRUE}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+[1] 89.22054
+\end{verbatim}
+\begin{alltt}
+\hlkwd{var}\hlstd{(diabetes1}\hlopt{$}\hlstd{glu)}
+\end{alltt}
+\begin{verbatim}
+[1] 132.1657
+\end{verbatim}
+\begin{alltt}
+\hlkwd{var}\hlstd{(diabetes3}\hlopt{$}\hlstd{glu,} \hlkwc{na.rm} \hlstd{=} \hlnum{TRUE}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+[1] 86.32857
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{s1} \hlkwb{<-} \hlkwd{lm}\hlstd{(glu} \hlopt{~} \hlstd{bmi} \hlopt{+} \hlstd{bp} \hlopt{+} \hlstd{age,} \hlkwc{data} \hlstd{= diabetes1)} \hlopt{%>%} \hlkwd{summary}\hlstd{()}
+\hlstd{s3} \hlkwb{<-} \hlkwd{lm}\hlstd{(glu} \hlopt{~} \hlstd{bmi} \hlopt{+} \hlstd{bp} \hlopt{+} \hlstd{age,} \hlkwc{data} \hlstd{= diabetes3)} \hlopt{%>%} \hlkwd{summary}\hlstd{()}
+
+\hlstd{s1}\hlopt{$}\hlstd{r.squared}
+\end{alltt}
+\begin{verbatim}
+[1] 0.2450996
+\end{verbatim}
+\begin{alltt}
+\hlstd{s3}\hlopt{$}\hlstd{r.squared}
+\end{alltt}
+\begin{verbatim}
+[1] 0.129467
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{s1}\hlopt{$}\hlstd{coef}
+\end{alltt}
+\begin{verbatim}
+              Estimate Std. Error   t value     Pr(>|t|)
+(Intercept) 47.6809340 3.76076018 12.678536 1.351038e-31
+bmi          0.6940756 0.11782779  5.890594 7.676778e-09
+bp           0.1876015 0.03926201  4.778194 2.417752e-06
+age          0.1549222 0.03871817  4.001279 7.396263e-05
+\end{verbatim}
+\begin{alltt}
+\hlstd{s3}\hlopt{$}\hlstd{coef}
+\end{alltt}
+\begin{verbatim}
+              Estimate Std. Error    t value     Pr(>|t|)
+(Intercept) 66.5635389 3.26393350 20.3936566 1.740555e-65
+bmi          0.0678313 0.10226179  0.6633104 5.074807e-01
+bp           0.1441241 0.03407518  4.2295911 2.852264e-05
+age          0.1489544 0.03360319  4.4327477 1.177497e-05
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Bad Methods (These almost never work)}
+
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+
+      Deterministic Regression Imputation\\
+      (Conditional Mean Substitution)
+      \begin{itemize}
+      \item Replace $Y_{mis}$ with $\widehat{Y}_{mis}$ from some regression
+        equation
+        \begin{itemize}
+        \item Positively biases regression slopes and correlations
+        \item Inflates measures of linear association
+        \end{itemize}
+      \end{itemize}
+
+    \end{column}
+    \begin{column}{0.5\textwidth}
+
+      \only<1>{
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
+
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-44-1} 
+
+}
+
+
+\end{knitrout}
+
+}
+      \only<2>{
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
+
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-45-1} 
+
+}
+
+
+\end{knitrout}
+
+}
+
 \end{column}
 \end{columns}
 
@@ -1378,7 +1638,7 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
 
-{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-38-1} 
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-46-1} 
 
 }
 
@@ -1391,7 +1651,7 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
 
-{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-39-1} 
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-47-1} 
 
 }
 
@@ -1403,6 +1663,146 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 \end{column}
 \end{columns}
 
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+ 
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{diabetes3} \hlkwb{<-} \hlkwd{mice}\hlstd{(}\hlkwc{data}      \hlstd{= diabetes2,}
+                  \hlkwc{m}         \hlstd{=} \hlnum{1}\hlstd{,}
+                  \hlkwc{maxit}     \hlstd{=} \hlnum{1}\hlstd{,}
+                  \hlkwc{printFlag} \hlstd{=} \hlnum{FALSE}\hlstd{,}
+                  \hlkwc{method}    \hlstd{=} \hlstr{"norm.predict"}\hlstd{)} \hlopt{%>%}
+    \hlkwd{complete}\hlstd{(}\hlnum{1}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{diabetes1} \hlopt{%>%} \hlkwd{select}\hlstd{(bmi, glu, bp)} \hlopt{%>%} \hlkwd{cor}\hlstd{()}
+\end{alltt}
+\begin{verbatim}
+          bmi     glu        bp
+bmi 1.0000000 0.38868 0.3954109
+glu 0.3886800 1.00000 0.3904300
+bp  0.3954109 0.39043 1.0000000
+\end{verbatim}
+\begin{alltt}
+\hlstd{diabetes3} \hlopt{%>%} \hlkwd{select}\hlstd{(bmi, glu, bp)} \hlopt{%>%} \hlkwd{cor}\hlstd{(}\hlkwc{use} \hlstd{=} \hlstr{"pairwise"}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+          bmi       glu        bp
+bmi 1.0000000 0.3503889 0.3954109
+glu 0.3503889 1.0000000 0.4370585
+bp  0.3954109 0.4370585 1.0000000
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{mean}\hlstd{(diabetes1}\hlopt{$}\hlstd{glu)}
+\end{alltt}
+\begin{verbatim}
+[1] 91.26018
+\end{verbatim}
+\begin{alltt}
+\hlkwd{mean}\hlstd{(diabetes3}\hlopt{$}\hlstd{glu,} \hlkwc{na.rm} \hlstd{=} \hlnum{TRUE}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+[1] 90.55788
+\end{verbatim}
+\begin{alltt}
+\hlkwd{var}\hlstd{(diabetes1}\hlopt{$}\hlstd{glu)}
+\end{alltt}
+\begin{verbatim}
+[1] 132.1657
+\end{verbatim}
+\begin{alltt}
+\hlkwd{var}\hlstd{(diabetes3}\hlopt{$}\hlstd{glu,} \hlkwc{na.rm} \hlstd{=} \hlnum{TRUE}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+[1] 97.26632
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{s1} \hlkwb{<-} \hlkwd{lm}\hlstd{(glu} \hlopt{~} \hlstd{bmi} \hlopt{+} \hlstd{bp} \hlopt{+} \hlstd{age,} \hlkwc{data} \hlstd{= diabetes1)} \hlopt{%>%} \hlkwd{summary}\hlstd{()}
+\hlstd{s3} \hlkwb{<-} \hlkwd{lm}\hlstd{(glu} \hlopt{~} \hlstd{bmi} \hlopt{+} \hlstd{bp} \hlopt{+} \hlstd{age,} \hlkwc{data} \hlstd{= diabetes3)} \hlopt{%>%} \hlkwd{summary}\hlstd{()}
+
+\hlstd{s1}\hlopt{$}\hlstd{r.squared}
+\end{alltt}
+\begin{verbatim}
+[1] 0.2450996
+\end{verbatim}
+\begin{alltt}
+\hlstd{s3}\hlopt{$}\hlstd{r.squared}
+\end{alltt}
+\begin{verbatim}
+[1] 0.2658383
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{s1}\hlopt{$}\hlstd{coef}
+\end{alltt}
+\begin{verbatim}
+              Estimate Std. Error   t value     Pr(>|t|)
+(Intercept) 47.6809340 3.76076018 12.678536 1.351038e-31
+bmi          0.6940756 0.11782779  5.890594 7.676778e-09
+bp           0.1876015 0.03926201  4.778194 2.417752e-06
+age          0.1549222 0.03871817  4.001279 7.396263e-05
+\end{verbatim}
+\begin{alltt}
+\hlstd{s3}\hlopt{$}\hlstd{coef}
+\end{alltt}
+\begin{verbatim}
+              Estimate Std. Error   t value     Pr(>|t|)
+(Intercept) 51.8447907 3.18162144 16.295085 5.234699e-47
+bmi          0.4412842 0.09968288  4.426881 1.208555e-05
+bp           0.2066892 0.03321585  6.222608 1.144377e-09
+age          0.1548155 0.03275576  4.726359 3.085359e-06
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+  
 \end{frame}
 
 %------------------------------------------------------------------------------%
@@ -1468,7 +1868,7 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
 
-{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-41-1} 
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-54-1} 
 
 }
 
@@ -1482,7 +1882,7 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 \begin{knitrout}\footnotesize
 \definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
 
-{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-42-1} 
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-55-1} 
 
 }
 
@@ -1491,6 +1891,32 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 
 }
 
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+ 
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{## Fit some multilevel regression models}
+\hlstd{fit1} \hlkwb{<-} \hlkwd{lmer}\hlstd{(y} \hlopt{~} \hlstd{t} \hlopt{+} \hlstd{(t} \hlopt{|} \hlstd{id),} \hlkwc{data} \hlstd{= dat1)} \hlcom{# Full data}
+\hlstd{fit2} \hlkwb{<-} \hlkwd{lmer}\hlstd{(y} \hlopt{~} \hlstd{t} \hlopt{+} \hlstd{(t} \hlopt{|} \hlstd{id),} \hlkwc{data} \hlstd{= dat3)} \hlcom{# LOCF data}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}
+
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-57-1} 
+
+}
+
+
+\end{knitrout}
+  
 \end{frame}
 
 %------------------------------------------------------------------------------%
@@ -1531,11 +1957,9 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 
 {\ttfamily\noindent\bfseries\color{errorcolor}{Error in datS[!mVec, ] <- NA: object 'datS' not found}}
 
-{\ttfamily\noindent\bfseries\color{errorcolor}{Error in fortify(data): object 'datS' not found}}
+{\ttfamily\noindent\bfseries\color{errorcolor}{Error in fortify(data): object 'datS' not found}}\end{kframe}
 
-{\ttfamily\noindent\bfseries\color{errorcolor}{Error: geom\_point requires the following missing aesthetics: x and y}}\end{kframe}
-
-{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-43-1} 
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-58-1} 
 
 }
 
@@ -1551,7 +1975,7 @@ sexmale      4.336e-02  2.978e-01   0.146 0.884234
 
 {\ttfamily\noindent\bfseries\color{errorcolor}{Error in FUN(X[[i]], ...): object 'bmi' not found}}\end{kframe}
 
-{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-44-1} 
+{\centering \includegraphics[width=\maxwidth]{figure/intro-unnamed-chunk-59-1} 
 
 }
 
@@ -1682,7 +2106,7 @@ The MI-based parameter estimate looks good.
 
 {\ttfamily\noindent\bfseries\color{errorcolor}{Error in plot.window(...): need finite 'xlim' values}}\end{kframe}
 
-{\centering \includegraphics[width=0.65\linewidth]{figure/intro-unnamed-chunk-47-1} 
+{\centering \includegraphics[width=0.65\linewidth]{figure/intro-unnamed-chunk-62-1} 
 
 }
 
@@ -1764,7 +2188,7 @@ The MI-based parameter estimate is still biased.
 
 {\ttfamily\noindent\bfseries\color{errorcolor}{Error in plot.window(...): need finite 'xlim' values}}\end{kframe}
 
-{\centering \includegraphics[width=0.65\linewidth]{figure/intro-unnamed-chunk-50-1} 
+{\centering \includegraphics[width=0.65\linewidth]{figure/intro-unnamed-chunk-65-1} 
 
 }
 
