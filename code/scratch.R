@@ -79,24 +79,38 @@ locf <- function(x) {
 dat3$y <- dat2 %$% tapply(y, id, locf) %>% unlist()
 dat3$m <- is.na(dat2$y)
 
-dat2 %$% tapply(m
+dat3$m2 <- dat3 %$% tapply(m,
+                           id,
+                           function(x) {
+                               tmp <- (which(x) - 1)[1]
+                               x[tmp] <- TRUE
+                               x
+                           }
+                           ) %>% unlist()
+
 p0 <- ggplot(data = dat1, mapping = aes(y = y, x = t)) +
     ylab("Y") +
     xlab("Time")
 
 p0 + geom_point() + geom_line(aes(group = id))
-p0
 
 p0 + geom_point(data = dat2) +
-    geom_line(data = dat2, mapping = aes(y = y, x = t, group = id))
-p0
+    geom_line(data = dat2, mapping = aes(group = id)) +
+    ylim(range(dat1$y))
 
-p0 <- ggplot(data = dat3, mapping = aes(y = y, x = t, color = m)) +
-    geom_point() +
-    geom_line(aes(group = id)) +
-    scale_color_manual(values = c("black", "red"))
-p0
 
+p1 <- p0 + geom_point(data = dat3, aes(color = m)) +
+    scale_color_manual(values = c("black", "red")) +
+    theme(legend.position = "none") +
+    ylim(range(dat1$y))
+p1 + geom_line(data = dat3, aes(group = id, color = m2))
+
+p1 + geom_line(data = dat3, aes(group = id, color = m2), alpha = 0.2)
+
+p1 + geom_smooth(data = dat3, method = "lm", se = FALSE, color = "red", size = 2) +
+    geom_smooth(data = dat1, method = "lm", se = FALSE, color = "black", size = 2)
+
+=
 dat3
 
 p0 + geom_smooth(aes(y = y, x = t), method = "lm", se = FALSE)

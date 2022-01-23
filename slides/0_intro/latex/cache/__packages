@@ -7,7 +7,7 @@ pROC
 dplyr
 magrittr
 naniar
-gridExtra
 ggpubr
 Matrix
 lme4
+lavaan
