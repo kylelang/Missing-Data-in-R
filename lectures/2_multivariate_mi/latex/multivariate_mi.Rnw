@@ -17,7 +17,7 @@
 \captionsetup{labelformat = empty}
 
 \newcommand{\rmsc}[1]{\textrm{\textsc{#1}}}
-
+\newcommand{\pkg}[1]{\textbf{#1}}
 
 \title{Multivariate Multiple Imputation}
 \subtitle{Utrecht University Winter School: Missing Data in R}
@@ -46,6 +46,9 @@ library(ggpubr)
 #library(lavaan)
 library(LaplacesDemon)
 library(mitools)
+library(mgcv)
+library(MCMCpack)
+library(norm)
 
 source("../../../code/supportFunctions.R")
 source("../../../code/sim_missing/code/simMissingness.R")
@@ -56,7 +59,7 @@ figDir  <- "figures/"
 options(width = 60)
 opts_chunk$set(size = "footnotesize",
                fig.align = "center",
-               fig.path = "figure/univariate_mi-",
+               fig.path = "figure/multivariate_mi-",
                message = FALSE,
                warning = FALSE,
                comment = "")
@@ -159,6 +162,26 @@ knit_theme$set('edit-kwrite')
 
 \begin{frame}{Software Implementations}
   
+  In R, MI via JM is available from several packages.
+  \begin{itemize}
+  \item \pkg{Amelia} \citep{amelia}
+    \begin{itemize}
+    \item Bootstrapped EM algorithm
+    \end{itemize}
+    \vc
+  \item \pkg{norm} \citep{norm}
+    \begin{itemize}
+    \item Classic data augmentation.
+    \end{itemize}
+    \vc
+  \item \pkg{mice} \citep{mice}
+    \begin{itemize}
+    \item Data augmentation for block updating.
+    \end{itemize}
+  \end{itemize}
+  \vb
+  JM imputation is also available in SAS, Stata, SPSS, and Mplus.
+  
 \end{frame}
 
 %------------------------------------------------------------------------------%
@@ -207,6 +230,23 @@ knit_theme$set('edit-kwrite')
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Software Implementations}
+  
+  The \pkg{mice} package is the most popular R implementation of FCS.  
+  \citep{mice}.
+  \begin{itemize}
+  \item Mature implementation
+  \item Well integrated into the larger R ecosystem
+  \item Very active development
+  \end{itemize}
+  \vb
+  The \pkg{mi} package \citep{mi} offers another option.
+  \begin{itemize}
+  \item More focus on diagnostics
+  \item Object oriented flavor
+  \item Not very actively developed
+  \end{itemize}
+  \vb
+  FCS imputation is also available in SAS, SPSS, Stata, and Mplus.
   
 \end{frame}
 
@@ -394,21 +434,26 @@ impData[!rMat] <- draws0[!rMat]
   
 <<size = "scriptsize">>=
 eif <- function(data, rVec, v) {
-    ## Get the expected betas:
+    ## Get the expected model parameters:
     fit  <- lm(paste(v, "~ ."), data = data[rVec, ])
     beta <- coef(fit)
+    s2   <- summary(fit)$sigma^2
+    
+    ## Partition data:
+    vars <- setdiff(colnames(data), v)
+    data <- as.matrix(data)
+    xObs <- cbind(1, data[rVec, vars])
+    xMis <- cbind(1, data[!rVec, vars])
     
     ## Sample sigma:
-    sigScale <- (1 / fit$df) * crossprod(resid(fit))
-    sigmaSam <- rinvchisq(1, df = fit$df, scale = sigScale)
+    sigmaSam <- rinvchisq(1, df = fit$df, scale = s2)
         
     ## Sample beta:
-    betaVar <- sigmaSam * solve(crossprod(qr.X(fit$qr)))
+    betaVar <- sigmaSam * solve(crossprod(xObs))
     betaSam <- rmvnorm(1, mean = beta, sigma = betaVar)
     
     ## Return a randomly sampled imputation:
-    matrix(cbind(1, data[!rVec, ])) %*% betaSam + 
-        rnorm(sum(!rVec), 0, sqrt(sigmaSam))
+    xMis %*% t(betaSam) + rnorm(nrow(xMis), 0, sqrt(sigmaSam))
 }
 @ 
 
@@ -559,6 +604,9 @@ print(xtable(res2, caption = "MICE Version"),
 
 \begin{frame}{Procedure: Joint Modeling}
   
+  In JM imputation, we estimate the imputation model via the 
+  \citet{tannerWong:1987} \emph{data augmentation} algorithm.
+  \vc
   \begin{enumerate}
   \item Partition the incomplete data by response pattern.
     \begin{itemize}
@@ -585,18 +633,15 @@ print(xtable(res2, caption = "MICE Version"),
 
 \begin{frame}[fragile]{Example: Joint Modeling}
  
-<<size = "scriptsize">>=
-iStep <- function(data, pats, ind, p0, pars) {
+<<>>=
+iStep <- function(data, pats, ind, pars) {
     ## Loop over non-trivial response patterns:
-    for(i in c(1 : nrow(pats))[-p0]) {
+    for(i in 1:nrow(pats)) {
         ## Define the current response pattern:
         p1 <- pats[i, ]
-        
-        ## Subset the data:
-        dat1 <- data[ind == i, ]
-        
+                
         ## Replace missing data with imputations:
-        data[ind == i, !p1] <- getImps(data  = dat1, 
+        data[ind == i, !p1] <- getImps(data  = data[ind == i, ], 
                                        mu    = pars$mu, 
                                        sigma = pars$sigma, 
                                        p1    = p1)
@@ -613,7 +658,7 @@ iStep <- function(data, pats, ind, p0, pars) {
 
 \begin{frame}[fragile]{Example: Joint Modeling}
 
-<<size = "scriptsize">>=
+<<>>=
 getImps <- function(data, mu, sigma, p1) {
     ## Partition the parameter matrices:
     mY  <- matrix(mu[!p1])
@@ -649,7 +694,7 @@ pStep <- function(data) {
     m <- colMeans(data)
     s <- (n - 1) * cov(data)
     
-    ## Sample sigma and mu:
+    ## Sample the covariance matrix and mean vector:
     sigma <- riwish((n - 1), s)
     mu    <- rmvnorm(1, m, (sigma / n))
     
@@ -674,14 +719,17 @@ nImps   <- 100
 
 ## Summarize response patterns:
 rMat <- !is.na(impData)
-pats <- uniquecombs(rMat)
+pats <- uniquecombs(rMat, ordered = TRUE)
 ind  <- attr(pats, "index")
-p0   <- which(apply(pats, 1, all))
+
+## Exclude the fully observed pattern:
+if(tail(pats, 1) %>% all())
+    pats <- pats[-nrow(pats), ]
 
 ## Get starting values for the parameters:
-pars <- list(mu    = colMeans(impData, na.rm = TRUE),
-             sigma = cov(impData, use = "pairwise")
-             )
+theta0 <- list(mu    = colMeans(impData, na.rm = TRUE),
+               sigma = cov(impData, use = "pairwise")
+               )
 @ 
 
 \end{frame}
@@ -692,18 +740,22 @@ pars <- list(mu    = colMeans(impData, na.rm = TRUE),
 
 <<cache = TRUE>>=
 ## Iterate over I- and P-Steps to generate imputations:
-impList3 <- list()
-for(m in 1 : nImps) {
-    for(rp in 1 : nIter) {
+impList1 <- list()
+for(m in 1:nImps) {
+    ## Initialize the parameter vector:
+    theta1 <- theta0
+    for(rp in 1:nIter) {
+        ## Do one I-Step:
         impData <- iStep(data = impData,
                          pats = pats,
                          ind  = ind,
-                         p0   = p0,
-                         pars = pars)
-        pars <- pStep(impData)
+                         pars = theta1)
         
-        if(rp == nIter) impList3[[m]] <- impData
+        ## Do one P-Step:
+        theta1 <- pStep(impData)
     }
+    ## Save the final imputed dataset:
+    impList1[[m]] <- impData
 }
 @ 
 
@@ -718,19 +770,19 @@ for(m in 1 : nImps) {
 <<cache = TRUE>>=
 missData <- as.matrix(missData)
 
+## Pre-process the data and get starting values via EM:
 meta   <- prelim.norm(missData)
 theta0 <- em.norm(meta, showits = FALSE)
 
 rngseed(235711)   
 
-impList4 <- list()
+impList2 <- list()
 for(m in 1 : nImps) {
-    theta1 <- da.norm(s     = meta,
-                      start = theta0,
-                      steps = nIter)
-    impList4[[m]] <- imp.norm(s     = meta,
-                              theta = theta1,
-                              x     = missData)
+    ## Estimate the imputation model via data augmentation:
+    theta1 <- da.norm(s = meta, start = theta0, steps = nIter)
+    
+    ## Impute missing values via a final I-Step of DA:
+    impList2[[m]] <- imp.norm(s = meta, theta = theta1, x = missData)
 }
 @ 
 
@@ -744,18 +796,18 @@ for(m in 1 : nImps) {
 
 <<>>=
 ## Manual implementation:
-fits3 <- lapply(impList3, 
+fits1 <- lapply(impList1, 
                 function(x) lm(x1 ~ x2 + x3, data = x)
                 )
-pool3 <- MIcombine(fits3)
+pool1 <- MIcombine(fits1)
 
 ## Imputation using norm():
-fits4 <- lapply(impList4, 
+fits2 <- lapply(impList2, 
                 function(x) lm(x1 ~ x2 + x3, 
                                data = as.data.frame(x)
                                )
                 )
-pool4 <- MIcombine(fits4)
+pool2 <- MIcombine(fits2)
 @ 
 
 \end{frame}
@@ -768,40 +820,117 @@ pool4 <- MIcombine(fits4)
   \vb
   
 <<echo = FALSE, results = "asis">>=
-cf3  <- coef(pool3)
-se3  <- sqrt(diag(vcov(pool3)))
-t3   <- cf3 / se3
-df3  <- pool3$df
-p3   <- 2 * pt(t3, df3, lower.tail = FALSE)
-fmi3 <- pool3$missinfo
+cf1  <- coef(pool1)
+se1  <- sqrt(diag(vcov(pool1)))
+t1   <- cf1 / se1
+df1  <- pool1$df
+p1   <- 2 * pt(t1, df1, lower.tail = FALSE)
+fmi1 <- pool1$missinfo
 
-res3 <- round(cbind(cf3, se3, t3, p3, fmi3), 3)
-colnames(res3) <- c("Est", "SE", "t", "p", "FMI")
+res1 <- round(cbind(cf1, se1, t1, p1, fmi1), 3)
+colnames(res1) <- c("Est", "SE", "t", "p", "FMI")
 
-flag            <- res3[ , "p"] < 0.001
-res3[flag, "p"] <- "<0.001"
+flag            <- res1[ , "p"] < 0.001
+res1[flag, "p"] <- "<0.001"
 
-cf4  <- coef(pool4)
-se4  <- sqrt(diag(vcov(pool4)))
-t4   <- cf4 / se4
-df4  <- pool4$df
-p4   <- 2 * pt(t4, df4, lower.tail = FALSE)
-fmi4 <- pool4$missinfo
+cf2  <- coef(pool2)
+se2  <- sqrt(diag(vcov(pool2)))
+t2   <- cf2 / se2
+df2  <- pool2$df
+p2   <- 2 * pt(t2, df2, lower.tail = FALSE)
+fmi2 <- pool2$missinfo
 
-res4 <- round(cbind(cf4, se4, t4, p4, fmi4), 3)
-colnames(res4) <- c("Est", "SE", "t", "p", "FMI")
+res2 <- round(cbind(cf2, se2, t2, p2, fmi2), 3)
+colnames(res2) <- c("Est", "SE", "t", "p", "FMI")
 
-flag            <- res4[ , "p"] < 0.001
-res4[flag, "p"] <- "<0.001"
+flag            <- res2[ , "p"] < 0.001
+res2[flag, "p"] <- "<0.001"
 
-print(xtable(res3, caption = "Manual Version"), 
+print(xtable(res1, caption = "Manual Version"), 
       booktabs = TRUE, 
       scalebox = 0.85)
-print(xtable(res4, caption = "NORM Version"), 
+print(xtable(res2, caption = "NORM Version"), 
       booktabs = TRUE, 
       scalebox = 0.85)
 @ 
 
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\sectionslide{Mixed Data Types}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{FCS for Mixed Data Types}
+
+  FCS imputation can easily accomodate incomplete data that contain both 
+  continous and categorical/non-normal variables.
+  \vc
+  \begin{itemize}
+  \item Replace the normal-theory elementary imputation model described above 
+    with an appropriate model for the distribution of each incomplete variable
+    \vc
+    \begin{itemize}
+    \item Logistic regression (various flavors)
+      \vc
+    \item Donor-based methods
+      \vc
+    \item Tree-based methods
+    \end{itemize}
+  \end{itemize}
+  \vb
+  The FCS framework can essentially accomodate any data for which you can define 
+  an appropriate supervised model.
+  \vc
+  \begin{itemize}
+  \item Many useful methods are already implemented in the \pkg{mice} package.
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{JM for Mixed Data Types}
+
+  When applying JM to incomplete data with mixed variable types, we have to 
+  general options.
+  \vc
+  \begin{enumerate}
+  \item Impute under the multivariate normal model and round, coarsen, or 
+    truncate the continuous imputations to ``match'' the original data.
+    \vc
+    \begin{itemize}
+    \item This was the old-school recommendation from the days before FCS 
+      \citep[e.g.,][]{allison:2002, schafer:1997}.
+      \vc
+    \item The \pkg{Amelia} package implements this approach.
+      \vc
+    \item This approach tends to perform poorly in methodological evaluations 
+      \citep[e.g.,][]{langWu:2017,wuEtAl:2015}.
+    \end{itemize}
+    \vb
+  \item Impute under an appropriate joint model for the data.
+    \vc
+    \begin{itemize}
+    \item This approach is only available when a suitable joint model exists.
+      \vc
+    \item The \pkg{mix} package \citep{mix} implements this approach for the 
+      general location model \citep{littleSchluchter:1985}.
+      \vc
+    \item This approach also doesn't do very well, in practice \citep{langWu:2017}.
+    \end{itemize}
+  \end{enumerate}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[allowframebreaks]{References}
+  
+  \bibliographystyle{apacite}
+  \bibliography{../../../literature/bibtex/winter_school_refs.bib}
+  
 \end{frame}
 
 %------------------------------------------------------------------------------%
