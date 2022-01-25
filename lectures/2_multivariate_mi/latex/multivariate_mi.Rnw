@@ -18,6 +18,7 @@
 
 \newcommand{\rmsc}[1]{\textrm{\textsc{#1}}}
 \newcommand{\pkg}[1]{\textbf{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
 
 \title{Multivariate Multiple Imputation}
 \subtitle{Utrecht University Winter School: Missing Data in R}
@@ -40,7 +41,7 @@ library(xtable)
 library(pROC)
 library(dplyr)
 library(magrittr)
-#library(naniar)
+library(naniar)
 library(ggpubr)
 #library(lme4)
 #library(lavaan)
@@ -366,7 +367,9 @@ knit_theme$set('edit-kwrite')
 
 \watermarkoff %----------------------------------------------------------------%
 
-\begin{frame}[fragile]{Example: Fully Conditional Specification}
+\begin{frame}[fragile]{Example: Data Generation}
+
+  First we'll simulate some synthetic data.
   
 <<>>=
 ## Simulate some data:
@@ -380,10 +383,11 @@ head(simData, 10)
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}[fragile, allowframebreaks]{Example: Fully Conditional Specification}
+\begin{frame}[fragile]{Example: Data Generation}
+
+  Next, we impose some missing values on the simluated data.
 
 <<>>=
-## Impose missing:
 targets  <- paste0("x", 1:3)
 missData <- imposeMissData(data    = simData,
                            targets = targets,
@@ -393,11 +397,125 @@ missData <- imposeMissData(data    = simData,
                            )
 @ 
 
-\pagebreak
+\end{frame}
 
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example: Data Visualization}
+
+  Check the results.
+  
 <<>>=
 head(missData, 10)
 @ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example: Data Visualization}
+
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      Use the \code{naniar::vis\_missing()} function to visualize the pattern of 
+      missing values.
+     
+<<eval = FALSE>>=
+vis_miss(missData)
+@ 
+
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      
+<<echo = FALSE>>=
+vis_miss(missData)
+@ 
+
+    \end{column}
+  \end{columns}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile, allowframebreaks]{Example: Data Visualization}
+
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      Use \code{naniar::geom\_miss\_point()} to visualize the response pattern.
+      
+<<eval = FALSE>>=
+ggplot(missData, aes(x4, x1)) +
+    geom_miss_point()
+@         
+
+    \end{column}
+    \begin{column}{0.5\textwidth}
+     
+<<echo = FALSE>>=
+ggplot(missData, aes(x4, x1)) +
+    geom_miss_point()
+@         
+
+    \end{column}
+  \end{columns}
+    
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile, allowframebreaks]{Example: Data Visualization}
+
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      Use \code{naniar::geom\_miss\_point()} to visualize the response pattern.
+      
+<<eval = FALSE>>=
+ggplot(missData, aes(x4, x2)) +
+    geom_miss_point()
+@         
+
+    \end{column}
+    \begin{column}{0.5\textwidth}
+     
+<<echo = FALSE>>=
+ggplot(missData, aes(x4, x2)) +
+    geom_miss_point()
+@         
+
+    \end{column}
+  \end{columns}
+    
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile, allowframebreaks]{Example: Data Visualization}
+
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      Use \code{naniar::geom\_miss\_point()} to visualize the response pattern.
+      
+<<eval = FALSE>>=
+ggplot(missData, aes(x4, x3)) +
+    geom_miss_point()
+@         
+
+    \end{column}
+    \begin{column}{0.5\textwidth}
+     
+<<echo = FALSE>>=
+ggplot(missData, aes(x4, x3)) +
+    geom_miss_point()
+@         
+
+    \end{column}
+  \end{columns}
+    
 \end{frame}
 
 %------------------------------------------------------------------------------%

@@ -323,7 +323,7 @@ imposeMissData <- function(data, targets, preds, pm, types) {
         M[[i]] <- simLogisticMissingness0(data  = data,
                                           preds = preds,
                                           pm    = parms$pm[i],
-                                          types = parms$type[i])$r
+                                          type  = parms$type[i])$r
     
     names(M) <- targets
 
