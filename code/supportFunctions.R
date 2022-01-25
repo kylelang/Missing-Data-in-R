@@ -220,34 +220,34 @@ simulateSimpleData <- function(parms) {
 
 ###--------------------------------------------------------------------------###
 
-imposeMissing <- function(compData, parms)
-{
-    incompVars <- parms$incompVars
-    auxVar <- parms$auxVar
-    pm <- parms$pm
-    marType <- parms$marType
-
-    pVec <- pnorm(compData[ , auxVar],
-                  mean(compData[ , auxVar]),
-                  sd(compData[ , auxVar])
-                  )
-
-    if(marType == "tails") {
-        rVec <- pVec < (pm / 2) | pVec > (1 - (pm/2))
-    } else if(marType == "center") {
-        rVec <- pVec > (0.5 - (pm / 2)) & pVec < (0.5 + (pm / 2))
-    } else if(marType == "lower") {
-        rVec <- pVec < pm
-    } else if(marType == "upper") {
-        rVec <- pVec > (1 - pm)
-    } else {
-        stop("Please provide a valid 'marType'")
-    }
-
-    missData <- simData
-    missData[rVec, incompVars] <- NA
-    missData
-}
+                                        #imposeMissing <- function(compData, parms)
+                                        #{
+                                        #    incompVars <- parms$incompVars
+                                        #    auxVar <- parms$auxVar
+                                        #    pm <- parms$pm
+                                        #    marType <- parms$marType
+                                        #
+                                        #    pVec <- pnorm(compData[ , auxVar],
+                                        #                  mean(compData[ , auxVar]),
+                                        #                  sd(compData[ , auxVar])
+                                        #                  )
+                                        #
+                                        #    if(marType == "tails") {
+                                        #        rVec <- pVec < (pm / 2) | pVec > (1 - (pm/2))
+                                        #    } else if(marType == "center") {
+                                        #        rVec <- pVec > (0.5 - (pm / 2)) & pVec < (0.5 + (pm / 2))
+                                        #    } else if(marType == "lower") {
+                                        #        rVec <- pVec < pm
+                                        #    } else if(marType == "upper") {
+                                        #        rVec <- pVec > (1 - pm)
+                                        #    } else {
+                                        #        stop("Please provide a valid 'marType'")
+                                        #    }
+                                        #
+                                        #    missData <- simData
+                                        #    missData[rVec, incompVars] <- NA
+                                        #    missData
+                                        #}
 
 ###--------------------------------------------------------------------------###
 
@@ -289,3 +289,45 @@ pooledCorMat <- function(x, vars) {
 }
 
 ###--------------------------------------------------------------------------###
+
+simCovData <- function(nObs,
+                       nVars,
+                       mu = rep(0, nVars),
+                       sigma = diag(nVars),
+                       names = NULL)
+{
+    ## Populate a covariance matrix, if necessary:
+    if(length(sigma) == 1) {
+        sigma       <- matrix(sigma, nVars, nVars)
+        diag(sigma) <- 1
+    }
+
+    ## Generate the data:
+    dat <- as.data.frame(rmvnorm(nObs, mu, sigma))
+
+    if(is.null(names))
+        colnames(dat) <- paste0("x", 1:nVars)
+    else
+        colnames(dat) <- names
+    
+    dat
+}
+
+###--------------------------------------------------------------------------###
+
+imposeMissData <- function(data, targets, preds, pm, types) {
+    parms <- data.frame(y = targets, pm = pm, type = types)
+    
+    M <- list()
+    for(i in 1 : nrow(parms))
+        M[[i]] <- simLogisticMissingness0(data  = data,
+                                          preds = preds,
+                                          pm    = parms$pm[i],
+                                          types = parms$type[i])$r
+    
+    names(M) <- targets
+
+    for(v in targets) data[M[[v]], v] <- NA
+
+    data
+}

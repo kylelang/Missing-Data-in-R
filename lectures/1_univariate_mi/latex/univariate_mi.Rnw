@@ -1,0 +1,1456 @@
+%%% Title:    Missing Data in R: Univariate MI
+%%% Author:   Kyle M. Lang
+%%% Created:  2017-09-12
+%%% Modified: 2021-01-24
+
+\documentclass[10pt]{beamer}
+\usetheme{Utrecht}
+
+\usepackage{graphicx}
+\usepackage[natbibapa]{apacite}
+\usepackage[libertine]{newtxmath}
+\usepackage{fancybox}
+\usepackage{booktabs}
+\usepackage{eurosym}
+\usepackage{caption}
+
+\captionsetup{labelformat = empty}
+
+\newcommand{\rmsc}[1]{\textrm{\textsc{#1}}}
+
+
+\title{Univariate Multiple Imputation}
+\subtitle{Utrecht University Winter School: Missing Data in R}
+\author{Kyle M. Lang}
+\institute{Department of Methodology \& Statistics\\Utrecht University}
+\date{2022-02-03}
+
+%------------------------------------------------------------------------------%
+
+\begin{document}
+
+<<setup, include = FALSE, cache = FALSE>>=
+set.seed(235711)
+
+library(knitr)
+library(ggplot2)
+library(mice)
+library(mvtnorm)
+library(xtable)
+library(pROC)
+library(dplyr)
+library(magrittr)
+#library(naniar)
+library(ggpubr)
+#library(lme4)
+#library(lavaan)
+library(LaplacesDemon)
+library(mitools)
+
+source("../../../code/supportFunctions.R")
+source("../../../code/sim_missing/code/simMissingness.R")
+
+dataDir <- "../../../data/"
+figDir  <- "figures/"
+
+options(width = 60)
+opts_chunk$set(size = "footnotesize",
+               fig.align = "center",
+               fig.path = "figure/univariate_mi-",
+               message = FALSE,
+               warning = FALSE,
+               comment = "")
+knit_theme$set('edit-kwrite')
+@
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[t, plain]
+  \titlepage
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Outline}
+  \tableofcontents  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\section{Prediction}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Prediction}
+  
+  Many of us learn supervised learning from the perspective of estimation and 
+  inference.  
+  \vb
+  \begin{itemize}
+  \item Asking questions about how $\mathbf{X}$ is related to $Y$
+  \end{itemize}
+  \vb
+  We can also supervised learning for \emph{prediction}.
+  \vb
+  \begin{itemize}
+  \item Given a new observation, $X_m$, what outcome value, $\hat{Y}_m$, does
+    our model attribute to the $m$th observation?
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Prediction}
+  
+  Train a model to predict employee performance using features extracted from 
+  CVs.
+  \begin{itemize}
+  \item When screening applicants for a new position, use the data in their CVs 
+    to predict their expected performance.  
+  \end{itemize}
+  \vb
+  Predict recidivism risk based on personal history, criminal history, and 
+  in-prison behavior record.
+  \begin{itemize}
+  \item When evaluating a parole application, calculate the predicted chance of 
+    recidivism.
+  \end{itemize}
+  \vb
+  Predict future gasoline prices based on geo-political events in
+  oil-producing countries.  
+  \begin{itemize}
+    \item If conflict escalates in the Middle East, adjust the appropriate
+      features and project likely changes in gasoline prices.
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Prediction Example}
+  
+  To fix ideas, let's consider the \emph{diabetes} data and the following model:
+  \begin{align*}
+    Y_{LDL} = \beta_0 + \beta_1 X_{BP} + \beta_2 X_{gluc} + \beta_3 X_{BMI} + 
+    \varepsilon
+  \end{align*}
+  
+<<echo = FALSE>>=
+diabetes <- readRDS(paste0(dataDir, "diabetes.rds"))
+
+trainDat <- diabetes[1 : 400, ]
+testDat  <- diabetes[401 : 442, ]
+
+out1 <- lm(ldl ~ bp + glu + bmi, data = trainDat)
+
+b0 <- round(coef(out1)[1], 3)
+b1 <- round(coef(out1)[2], 3)
+b2 <- round(coef(out1)[3], 3)
+b3 <- round(coef(out1)[4], 3)
+
+x1 <- testDat[1, "bp"]
+x2 <- testDat[1, "glu"]
+x3 <- testDat[1, "bmi"]
+
+confInt <- round(
+    predict(out1, newdat = testDat, interval = "confidence")[1, 2 : 3], 3
+)
+predInt <- round(
+    predict(out1, newdat = testDat, interval = "prediction")[1, 2 : 3], 3
+)
+@ 
+
+Training this model on the first $N = 400$ patients' data produces the following
+fitted model:
+\begin{align*}
+  Y_{LDL} = \Sexpr{b0} + \Sexpr{b1} X_{BP} + \Sexpr{b2} X_{gluc} + 
+  \Sexpr{b3} X_{BMI}
+\end{align*}
+\pause
+Suppose a new patient presents with $BP = \Sexpr{x1}$, $gluc = \Sexpr{x2}$, and
+$BMI = \Sexpr{x3}$. We can predict their $LDL$ score by:
+\begin{align*}
+  \hat{Y}_{LDL} &= \Sexpr{b0} + \Sexpr{b1} (\Sexpr{x1}) + \Sexpr{b2} 
+  (\Sexpr{x2}) + \Sexpr{b3} (\Sexpr{x3})\\
+  &= \Sexpr{round(predict(out1, testDat[1 : 2, ])[1], 3)}
+\end{align*}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\sectionslide{Single Imputation}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Imputation is Just Prediction*}
+  
+  In Lecture 3, you heard a bit about missing data imputation.
+  \begin{itemize}
+  \item Multiple imputation is one of the best ways to treat missing data.
+  \end{itemize}
+  \vb
+  Imputation is nothing more than a type of prediction.
+  \begin{enumerate}
+  \item Train a model on the observed parts of the data, $Y_{obs}$.
+    \begin{itemize}
+    \item Train the imputation model.
+    \end{itemize}
+  \item Predict the missing values, $Y_{mis}$.
+    \begin{itemize}
+    \item Generate imputations.
+    \end{itemize}
+  \item Replace the missing values with these predictions.
+    \begin{itemize}
+    \item Impute the missing data.
+    \end{itemize}
+  \end{enumerate}
+  \vb
+  Imputation can be used to support either prediction or inference.
+  \begin{itemize}
+  \item Our goals will dictate what type of imputation we need to do.
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{*Levels of Uncertainty Modeling}
+
+  \citet{vanBuuren:2018} provides a very useful classification of different 
+  imputation methods:
+  \vb
+  \begin{enumerate}
+  \item Simple Prediction
+    \begin{itemize}
+    \item The missing data are naively filled with predicted values from some 
+      regression equation.
+    \item All uncertainty is ignored.
+    \end{itemize}
+    \vb
+  \item Prediction + Noise
+    \begin{itemize}
+    \item A random residual error is added to each predicted value to create the 
+      imputations.
+    \item Only uncertainty in the predicted values is modeled.
+    \item The imputation model itself is assumed to be correct and error-free.
+    \end{itemize}
+    \vb
+  \item Prediction + Noise + Model Error
+    \begin{itemize}
+    \item Uncertainty in the imputation model itself is also modeled.
+    \item Only way to get fully proper imputations in the sense of 
+      \citet{rubin:1987}.
+    \end{itemize}
+  \end{enumerate}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Do we really need to worry?}
+
+  The arguments against single imputation can seem archaic and petty. Do we 
+  really need to worry about this stuff?\\  
+  \pause
+  \vc
+  \begin{itemize}
+  \item YES!!! (At least if you care about inference)\\
+  \end{itemize}
+  \vb
+  The following are results from a simple Monte Carlo simulation:
+  
+<<echo = FALSE, results = "asis">>=
+simRes <- readRDS(paste0(figDir, "simResMat.rds"))
+
+simResTab <- 
+    xtable(simRes, 
+           caption = "Mean Correlation Coefficients and Type I Error Rates",
+           digits  = 3,
+           align   = c("r", rep("c", 4))
+           )
+
+print(simResTab, scale = 0.8, booktabs = TRUE)
+@ 
+
+\pause
+\vx{-12}
+\begin{itemize}
+\item Conditional mean substitution overestimates the correlation effect.
+  \vc
+\item Both single imputation methods inflate Type I error rates.
+  \vc
+\item MI provides unbiased point estimates and accurate Type I error rates.
+\end{itemize}
+
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}[fragile, allowframebreaks]{Simulate Some Toy Data}
+  
+<<>>=
+nObs <- 1000 # Sample Size
+pm   <- 0.3  # Proportion Missing
+
+sigma <- matrix(c(1.0, 0.5, 0.0,
+                  0.5, 1.0, 0.3,
+                  0.0, 0.3, 1.0),
+                ncol = 3)
+
+dat0 <- as.data.frame(rmvnorm(nObs, c(0, 0, 0), sigma))
+colnames(dat0) <- c("y", "x", "z")
+@ 
+
+\pagebreak
+
+<<>>=
+## Impose MAR Nonresponse:
+dat1 <- dat0
+mVec <- with(dat1, x < quantile(x, probs = pm))
+
+dat1[mVec, "y"] <- NA
+
+## Subset the data:
+yMis <- dat1[mVec, ]
+yObs <- dat1[!mVec, ]
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Look at the Data}
+  
+\begin{columns}
+\begin{column}{0.5\textwidth}
+      
+\begin{onlyenv}<1>
+<<>>=
+round(head(dat0, n = 5), 3)
+@ 
+\end{onlyenv}
+
+\begin{onlyenv}<2>
+<<>>=
+round(head(dat1, n = 5), 3)
+@
+\end{onlyenv}
+      
+\end{column}
+\begin{column}{0.5\textwidth}
+      
+\only<1>{
+<<echo = FALSE, out.width = "90%">>=
+with(dat0, gg0(x = x, y = y))
+@
+}
+\only<2>{
+<<echo = FALSE, out.width = "90%">>=
+p1 <- with(yObs, gg0(x = x, y = y)) +
+    geom_point(mapping = aes(x = x, y = y), data = dat0[mVec, ], color = "gray")
+p1
+@ 
+}
+
+\end{column}
+\end{columns}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Expected Imputation Model Parameters}
+   
+\begin{columns}
+\begin{column}{0.5\textwidth}
+
+<<>>=
+lsFit <- lm(y ~ x + z, data = yObs)
+
+beta  <- coef(lsFit)
+sigma <- summary(lsFit)$sigma
+
+as.matrix(beta)
+sigma
+@ 
+
+\end{column}
+\begin{column}{0.5\textwidth}
+    
+<<echo = FALSE, out.width = "90%">>=
+fit0 <- lm(y ~ x, data = yObs)
+b0   <- coef(fit0)
+s0   <- summary(fit0)$sigma
+
+p2 <- p1 + 
+    geom_abline(intercept = b0[1], slope = b0[2], color = "blue", lwd = 1)
+p2
+@ 
+  
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Conditional Mean Substitution}
+
+\begin{columns}
+\begin{column}{0.5\textwidth}
+
+<<>>=
+## Generate imputations:
+imps <- beta[1] + 
+    beta[2] * yMis[ , "x"] + 
+    beta[3] * yMis[ , "z"]
+
+## Fill missing cells in Y:
+dat1[mVec, "y"] <- imps
+
+round(head(dat1, n = 5), 3)
+@ 
+
+\end{column}
+\begin{column}{0.5\textwidth}
+
+<<echo = FALSE, out.width = "90%">>=
+imps <- predict(fit0, newdata = yMis)
+p2 + geom_point(mapping = aes(x = yMis[, "x"], y = imps),  color = "red")
+@ 
+  
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Stochastic Regression Imputation}
+   
+\begin{columns}
+\begin{column}{0.52\textwidth}
+  
+<<>>=
+## Generate imputations:
+imps <- imps + 
+    rnorm(nrow(yMis), 0, sigma)
+
+## Fill missing cells in Y:
+dat1[mVec, "y"] <- imps
+
+round(head(dat1, n = 5), 3)
+@ 
+
+\end{column}
+\begin{column}{0.5\textwidth}
+  
+<<echo = FALSE, out.width = "90%">>=
+imps <- imps + rnorm(length(imps), 0, s0)
+p2 + geom_point(mapping = aes(x = yMis[, "x"], y = imps),  color = "red")
+@ 
+  
+\end{column}
+\end{columns}
+
+\end{frame}
+
+\watermarkon %-----------------------------------------------------------------%
+
+\sectionslide{Multiple Imputation}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Flavors of MI}
+  
+  MI simply repeats a single regression imputation $M$ times.
+  \begin{itemize}
+  \item The specifics of the underlying regression imputation are important.
+  \end{itemize}
+  \vb
+  \pause
+  Simply repeating the stochastic regression imputation procedure described 
+  above won't suffice.
+  \begin{itemize}
+  \item Still produces too many Type I errors
+  \end {itemize}
+  
+<<echo = FALSE, results = "asis">>=
+simRes2 <- readRDS(paste0(figDir, "simResMat2.rds"))
+
+simResTab2 <- 
+    xtable(simRes2, 
+           caption = "Mean Correlation Coefficients and Type I Error Rates",
+           digits  = 3,
+           align   = c("r", rep("c", 3))
+           )
+
+print(simResTab2, scale = 0.8, booktabs = TRUE) 
+@
+
+\vx{-16}
+\begin{itemize}
+\item Type I error rates for PN-Type MI are much better than they were for 
+  single stochastic regression imputation, but they're still too high.
+\end{itemize}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Proper MI}
+  
+  The problems on the previous slide arise from using the same regression 
+  coefficients to create each of the $M$ imputations.
+  \begin{itemize}
+  \item Implies that you're using the ``correct'' coefficients.
+    \vb
+  \item This assumption is plainly ridiculous.
+    \begin{itemize}
+    \item If we don't know some values of our outcome variable, how can we know 
+      the ``correct'' coefficients to link the incomplete outcome to the 
+      observed predictors?
+    \end{itemize}
+    \vb
+    \pause
+  \item Proper MI also models uncertainty in the regression coefficients used to 
+    create the imputations.
+    \begin{itemize}
+    \item A different set of of coefficients is randomly sampled (using Bayesian 
+      simulation) to create each of the $M$ imputations.
+      \vc
+    \item The tricky part about implemented MI is deriving the distributions 
+      from which to sample these coefficients.
+    \end{itemize}
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Setting Up Proper MI}
+  
+  Our imputation model is simply a linear regression model:
+  \begin{align*}
+    Y = \mathbf{X} \beta + \varepsilon
+  \end{align*}
+  To fully account for model uncertainty, we need to randomly sample both 
+  $\beta$ and $\text{var}(\varepsilon) = \sigma^2$.
+  \begin{itemize}
+  \item \textsc{Question:} Why do we only sample $\sigma^2$ and not 
+    $\varepsilon$?
+  \end{itemize}
+  \pause
+  \va
+  For a simple imputation model with a normally distributed outcome and 
+  uninformative priors, we need to specify two distributions:
+  \begin{enumerate}
+    \item The marginal posterior distribution of $\sigma^2$
+    \item The conditional posterior distribution of $\beta$ 
+  \end{enumerate}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Marginal Distribution of $\sigma^2$}
+ 
+  We first specify the marginal posterior distribution for the noise variance,
+  $\sigma^2$.
+  \vc
+  \begin{itemize}
+  \item This distribution does not depend on any other parameters.
+  \end{itemize}
+  \begin{align}
+    \sigma^2 &\sim \text{Inv-}\chi^2 \left(N - P, MSE \right) \label{sigma2PosteriorEq}\\
+    &\text{with } MSE = \frac{1}{N - P} \left( Y - \mathbf{X}\hat{\beta}_{ls} \right)^T \left( Y - \mathbf{X}\hat{\beta}_{ls} \right) \notag
+  \end{align}
+  \vx{-12}
+  \begin{itemize}
+  \item $\sigma^2$ follows a scaled inverse $\chi^2$ distribution.
+  \end{itemize}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Conditional Distribution of $\beta$}
+
+  We then specify the conditional posterior distribution for $\beta$. 
+  \vc
+  \begin{itemize}
+  \item This distribution is conditioned on a specific value of $\sigma^2$.
+  \end{itemize}
+  \begin{align}
+    \beta \sim \text{MVN} \left( \hat{\beta}_{ls}, ~ \sigma^2 (\mathbf{X}^T \mathbf{X})^{-1} \right) \label{betaPosteriorEq}
+  \end{align}
+  \vx{-12}
+  \begin{itemize}
+  \item $\beta$ (conditionally) follows a multivariate normal distribution.
+  \end{itemize}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{PPD of the Missing Data}
+  
+  Once we've sampled our imputation model parameters, we can construct the 
+  posterior predictive distribution of the missing data.
+  \vc
+  \begin{itemize}
+  \item This is the distribution from which we sample our imputed values.
+    \vc
+  \item In practice, we directly compute the imputations based on the simulated 
+    imputation model parameters.
+  \end{itemize}
+  \begin{align}
+    Y_{imp} &= \mathbf{X}_{mis}\tilde{\beta} + \tilde{\varepsilon} \label{impPosteriorEq}\\
+    &\text{with } \varepsilon \sim \text{N} \left( 0, \widetilde{\sigma^2} \right) \notag
+  \end{align}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{General Steps for Basic MI}
+  
+  With all of the elements in place, we can execute a basic MI by following 
+  these steps:
+  \vb
+  \begin{enumerate}
+  \item Find the least squares estimates of $\beta$, $\hat{\beta}_{ls}$, by 
+    regressing the observed portion of $Y$ onto the the analogous rows of 
+    $\mathbf{X}$.
+    \vb
+  \item Use $\hat{\beta}_{ls}$ to parameterize the posterior distribution of 
+    $\sigma^2$, given by Equation \ref{sigma2PosteriorEq}, and draw $M$ samples 
+    of $\sigma^2$ from this distribution.
+    \vb
+  \item For each of the $\sigma^2_m$, sample a corresponding value of $\beta$ 
+    from Equation \ref{betaPosteriorEq}.
+    \vb
+  \item Plug the $M$ samples of $\beta$ and $\sigma^2$ into Equation 
+    \ref{impPosteriorEq} to create the $M$ imputations.
+  \end{enumerate}
+  
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}[fragile]{Manual MI Example}
+      
+  First, we need to sample from the marginal posterior distribution of
+  $\sigma^2$.
+  
+<<cache = TRUE>>=
+## Define iteration numbers:
+nImps <- 100
+nSams <- 5000
+
+## Get the expected betas:
+fit0  <- lm(y ~ ., data = yObs)
+beta0 <- coef(fit0)
+
+## Sample sigma:
+sigScale  <- (1 / fit0$df) * crossprod(resid(fit0))
+sigmaSams <- 
+    rinvchisq(nSams, df = fit0$df, scale = sigScale)
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Manual MI Example}
+  
+  Then we need to use those samples of $\sigma^2$ to parameterize the
+  conditional posterior distribution of $\beta$ and sample from it.
+  
+<<cache = TRUE>>=
+## Partition the predictor matrix:
+xMis <- as.matrix(cbind(1, yMis[ , c("x", "z")]))
+xObs <- as.matrix(cbind(1, yObs[ , c("x", "z")]))
+
+## Sample beta:
+betaSams <- matrix(NA, nSams, ncol(xObs))
+for(i in 1 : nSams) {
+    betaVar       <- sigmaSams[i] * solve(crossprod(xObs))
+    betaSams[i, ] <- 
+        rmvnorm(1, mean = beta0, sigma = betaVar)
+}
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Manual MI Example}
+  
+  Finally, we use the sampled imputation model moments to construct the missing 
+  data's posterior predictive distribution:
+  
+<<cache = TRUE>>=
+nMis   <- sum(mVec)
+impMat <- matrix(NA, nMis, nSams)
+for(i in 1 : nSams) {
+    impMat[ , i] <- xMis %*% matrix(betaSams[i, ]) +
+        rnorm(nMis, 0, sqrt(sigmaSams[i]))
+}
+
+## Fill the missing cells with the M imputations:
+impList <- list()
+ind     <- sample(1 : nSams)
+for(m in 1 : nImps) {
+    impList[[m]]            <- dat1
+    impList[[m]][mVec, "y"] <- impMat[ , ind[m]]
+}
+@
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{What do we get?}
+    
+<<echo = FALSE, out.width = "65%">>=
+par(mfrow = c(2, 3),
+    cex = 0.5)
+
+plot(density(betaSams[ , 1]),
+     main = "Posterior Density of Intercept",
+     xlab = "Intercept Value")
+
+rect(par("usr")[1], 
+     par("usr")[3], 
+     par("usr")[2], 
+     par("usr")[4], 
+     col = "white")
+
+lines(density(betaSams[ , 1]))
+
+plot(density(betaSams[ , 2]),
+     main = "Posterior Density of X Slope",
+     xlab = "Slope Value")
+
+rect(par("usr")[1], 
+     par("usr")[3], 
+     par("usr")[2], 
+     par("usr")[4], 
+     col = "white")
+
+lines(density(betaSams[ , 2]))
+
+plot(density(betaSams[ , 3]),
+     main = "Posterior Density of Z Slope",
+     xlab = "Slope Value")
+
+rect(par("usr")[1], 
+     par("usr")[3], 
+     par("usr")[2], 
+     par("usr")[4], 
+     col = "white")
+
+lines(density(betaSams[ , 3]))
+
+for(i in 1 : 3) {
+  obsNum <- c(1 : length(mVec))[mVec][i]
+  plot(density(impMat[i, ]),
+       main = paste0("Posterior Predictive Density of\nRow ",
+         obsNum,
+         "'s Missing Y Data"),
+       xlab = "Y Value")
+
+  rect(par("usr")[1], 
+       par("usr")[3], 
+       par("usr")[2], 
+       par("usr")[4], 
+       col = "white")
+  
+  lines(density(impMat[i, ]))
+}
+@
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Visualizing MI}
+  
+<<echo = FALSE, cache = TRUE>>=
+## Estimate the imputation model:
+                                        #nSams <- 100000
+preds <- cbind(1, yObs$x)
+df    <- nrow(yObs) - length(b0)
+
+sigmaScale <- (1 / df) * crossprod(yObs$y - preds %*% b0)
+sigmaSams  <- rinvchisq(nSams, df = df, scale = sigmaScale)
+
+betaVarDenom <- solve(crossprod(preds))
+
+betaSams2 <- matrix(NA, nSams, length(b0))
+for(m in 1 : nSams) {
+    betaSigma <- sigmaSams[m] * betaVarDenom
+    betaSams2[m, ] <- rmvnorm(1, mean = b0, sigma = betaSigma)
+}
+
+## Sample parameters:
+index  <- sample((nSams / 2) : nSams, 3)
+betas  <- betaSams2[index, ]
+sigmas <- sigmaSams[index]
+
+## Estimate posterior densities:
+dS  <- density(sigmaSams)
+dB1 <- density(betaSams2[ , 2])
+@ 
+
+Use Bayesian simulation to estimate posterior distributions for the imputation 
+model parameters:\\
+
+\vb
+
+\begin{columns}
+\begin{column}{0.5\textwidth}
+
+<<echo = FALSE, out.width = "90%">>=
+gg0(x = dS$x, y = dS$y, points = FALSE) + 
+    geom_line() + 
+    xlab("Residual Variance") + 
+    ylab("Density")
+@ 
+
+\end{column}
+\begin{column}{0.5\textwidth}
+  
+<<echo = FALSE, out.width = "90%">>=
+gg0(x = dB1$x, y = dB1$y, points = FALSE) + 
+    geom_line() + 
+    xlab("Slope") + 
+    ylab("Density")
+@
+
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Visualizing MI}
+  
+\begin{columns}
+\begin{column}{0.5\textwidth}
+
+  \only<1>{
+    Recall the incomplete data from the single imputation examples.
+  }
+  
+  \only<2>{
+    Sample values of $\beta_0$ and $\beta_1$:
+    \begin{itemize}
+    \item $\beta_0 = \Sexpr{round(betas[1, 1], 3)}$
+    \item $\beta_1 = \Sexpr{round(betas[1, 2], 3)}$
+    \end{itemize}
+    \vb
+    Define the predicted best-fit line:\\ 
+    $\hat{Y}_{mis} = \Sexpr{round(betas[1, 1], 3)} + \Sexpr{round(betas[1, 2], 3)}X_{mis}$
+  }
+  
+  \only<3>{
+    Sample a value of $\sigma^2$:
+    \begin{itemize}
+    \item $\sigma^2 = \Sexpr{round(sigmas[1], 3)}$
+    \end{itemize}
+    \vb
+    Generate imputations using the same procedure described in Single Stochastic 
+    Regression Imputation:
+    \begin{align*}
+      Y_{imp} &= \hat{Y}_{mis} + \varepsilon\\
+      \varepsilon &\sim \text{N}(0, \Sexpr{round(sigmas[1], 3)})
+    \end{align*}
+  }
+  
+  \only<4>{
+    Sample values of $\beta_0$ and $\beta_1$:
+    \begin{itemize}
+    \item $\beta_0 = \Sexpr{round(betas[2, 1], 3)}$
+    \item $\beta_1 = \Sexpr{round(betas[2, 2], 3)}$
+    \end{itemize}
+    \vb
+    Define the predicted best-fit line:\\ 
+    $\hat{Y}_{mis} = \Sexpr{round(betas[2, 1], 3)} + \Sexpr{round(betas[2, 2], 3)}X_{mis}$
+  }
+  
+  \only<5>{
+    Sample a value of $\sigma^2$:
+    \begin{itemize}
+    \item $\sigma^2 = \Sexpr{round(sigmas[2], 3)}$
+    \end{itemize}
+    \vb
+    Generate imputations using the same procedure described in Single Stochastic 
+    Regression Imputation:
+    \begin{align*}
+      Y_{imp} &= \hat{Y}_{mis} + \varepsilon\\
+      \varepsilon &\sim \text{N}(0, \Sexpr{round(sigmas[2], 3)})
+    \end{align*}
+  }
+  
+  \only<6>{
+    Sample values of $\beta_0$ and $\beta_1$:
+    \begin{itemize}
+    \item $\beta_0 = \Sexpr{round(betas[3, 1], 3)}$
+    \item $\beta_1 = \Sexpr{round(betas[3, 2], 3)}$
+    \end{itemize}
+    \vb
+    Define the predicted best-fit line:\\ 
+    $\hat{Y}_{mis} = \Sexpr{round(betas[3, 1], 3)} + \Sexpr{round(betas[3, 2], 3)}X_{mis}$
+  }
+  
+  \only<7>{
+    Sample a value of $\sigma^2$:
+    \begin{itemize}
+    \item $\sigma^2 = \Sexpr{round(sigmas[3], 3)}$
+    \end{itemize}
+    \vb
+    Generate imputations using the same procedure described in Single Stochastic 
+    Regression Imputation:
+    \begin{align*}
+      Y_{imp} &= \hat{Y}_{mis} + \varepsilon\\
+      \varepsilon &\sim \text{N}(0, \Sexpr{round(sigmas[3], 3)})
+    \end{align*}
+  }
+  
+\end{column}
+\begin{column}{0.5\textwidth}
+  
+\only<1>{
+<<echo = FALSE, out.width = "90%">>=
+print(p1)
+@
+}
+\only<2>{
+<<echo = FALSE, out.width = "90%">>=
+p3 <- p1 + 
+    geom_abline(intercept = betas[1, 1], 
+                slope     = betas[1, 2], 
+                color     = "blue", 
+                lwd       = 1)
+p3
+@
+}
+\only<3>{
+<<echo = FALSE, out.width = "90%">>=
+mPreds <- cbind(1, yMis$x)
+imps   <- mPreds %*% betas[1, ] + rnorm(nrow(yMis), 0, sqrt(sigmas[1]))
+
+p3 + geom_point(mapping = aes(x = yMis$x, y = imps), color = "red")
+@
+}
+\only<4>{
+<<echo = FALSE, out.width = "90%">>=
+p3 <- p1 + 
+    geom_abline(intercept = betas[1, 1], 
+                slope     = betas[1, 2], 
+                color     = "lightblue", 
+                lwd       = 1) + 
+    geom_abline(intercept = betas[2, 1], 
+                slope     = betas[2, 2], 
+                color     = "blue", 
+                lwd       = 1)
+p3
+@
+}
+\only<5>{
+<<echo = FALSE, out.width = "90%">>=
+mPreds <- cbind(1, yMis$x)
+imps   <- mPreds %*% betas[2, ] + rnorm(nrow(yMis), 0, sqrt(sigmas[2]))
+
+p3 + geom_point(mapping = aes(x = yMis$x, y = imps), color = "red")
+@
+}
+\only<6>{
+<<echo = FALSE, out.width = "90%">>=
+p3 <- p1 + 
+    geom_abline(intercept = betas[2, 1], 
+                slope     = betas[2, 2], 
+                color     = "lightblue", 
+                lwd       = 1) + 
+    geom_abline(intercept = betas[3, 1], 
+                slope     = betas[3, 2], 
+                color     = "blue", 
+                lwd       = 1)
+p3
+
+@
+}
+\only<7>{
+<<echo = FALSE, out.width = "90%">>=
+mPreds <- cbind(1, yMis$x)
+imps   <- mPreds %*% betas[3, ] + rnorm(nrow(yMis), 0, sqrt(sigmas[3]))
+
+p3 + geom_point(mapping = aes(x = yMis$x, y = imps), color = "red")
+@
+}
+
+\end{column}
+\end{columns}
+
+\end{frame}
+
+\watermarkon %-----------------------------------------------------------------%
+
+\sectionslide{MI-Based Analysis}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Doing MI-Based Analysis}
+  
+  An MI-based data analysis consists of three phases:
+  \vb
+  \begin{enumerate}
+  \item The imputation phase \label{iStep}
+    \begin{itemize}
+    \item Replace missing values with $M$ plausible estimates.
+    \item Produce $M$ completed datasets.
+    \end{itemize}
+    \vb
+  \item The analysis phase \label{aStep}
+    \begin{itemize}
+    \item Estimate $M$ replicates of your analysis model.
+    \item Fit the same model to each of the $M$ datasets from Step \ref{iStep}.
+    \end{itemize}
+    \vb
+  \item The pooling phase
+    \begin{itemize}
+    \item Combine the $M$ sets of parameter estimates and standard errors from 
+      Step \ref{aStep} into a single set of MI estimates.
+    \item Use these pooled parameter estimates and standard errors for 
+      inference.
+    \end{itemize}
+  \end{enumerate}
+  
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}{MI-Based Analysis}
+
+  \begin{center}
+    \includegraphics<1>[width = 0.75\textwidth]{figures/mi_schematic0.pdf}
+    \includegraphics<2>[width = 0.75\textwidth]{figures/mi_schematic1.pdf}
+    \includegraphics<3>[width = 0.75\textwidth]{figures/mi_schematic2.pdf}
+    \includegraphics<4>[width = 0.75\textwidth]{figures/mi_schematic.pdf}
+  \end{center}
+  
+\end{frame}
+
+\watermarkon %-----------------------------------------------------------------%
+
+\begin{frame}{Pooling MI Estimates}
+  
+  \citet{rubin:1987} formulated a simple set of pooling rules for MI estimates.
+  \vb
+  \begin{itemize}
+  \item The MI point estimate of some interesting quantity, $Q^*$, is simply 
+    the mean of the $M$ estimates, $\{\hat{Q}_m\}$:
+    \begin{align*}
+      Q^* &= \frac{1}{M} \sum_{m = 1}^M \hat{Q}_m\\
+    \end{align*}
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Pooling MI Estimates}
+  
+  The MI variability estimate, $T$, is a slightly more complex entity.
+  \vb
+  \begin{itemize}
+  \item A weighted sum of the \emph{within-imputation} variance, $W$, and the 
+    \emph{between-imputation} variance, $B$.
+    \begin{align*}
+      W &= \frac{1}{M} \sum_{m = 1}^M \widehat{SE}_{Q,m}^2\\
+      B &= \frac{1}{M - 1} \sum_{m = 1}^M \left( \hat{Q}_m - Q^* \right)^2\\
+      T &= W + \left( 1 + M^{-1} \right) B\\ 
+      &= W + B + \frac{B}{M}
+    \end{align*}
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Inference with MI Estimates}
+  
+  After computing $Q^*$ and $T$, we combine them in the usual way to get test 
+  statistics and confidence intervals.
+  \begin{align*}
+    t &= \frac{Q^* - Q_0}{\sqrt{T}}\\
+    CI &= Q^* \pm t_{crit} \sqrt{T}
+  \end{align*}
+  
+  We must take care with our \emph{df}, though.
+  \begin{align*}
+    df = (M - 1) \left[1 + \frac{W}{\left(1 + M^{-1}\right)B}\right]^2
+  \end{align*}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Fraction of Missing Information}
+  
+  In Lecture 4, we briefly discussed a very desirable measure of nonresponse: 
+  \emph{fraction of missing information} (FMI).
+  
+  \begin{align*}
+    FMI = \frac{r + \frac{2}{(df + 3)}}{r + 1} \approx \frac{(1 + M^{-1})B}{(1 + M^{-1})B + W} \rightarrow \frac{B}{B + W}
+  \end{align*}
+  where
+  \begin{align*}
+    r = \frac{(1 + M^{-1})B}{W}
+  \end{align*}
+  The FMI gives us a sense of how much the missing data (and their treatment) 
+  have influence our parameter estimates.
+  \vc
+  \begin{itemize}
+  \item We should report the FMI for an estimated parameter along with other 
+    ancillary statistics (e.g., t-tests, p-values, effect sizes, etc.).
+  \end{itemize}
+  
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example: Analysis \& Pooling}
+  
+  Analyze the multiply imputed datasets and pool results:
+  
+<<cache = TRUE>>=
+## Use each dataset to estimate the analysis model:
+fits <- lapply(impList, 
+               function(dat) lm(z ~ x + y, data = dat)
+               )
+
+## Pool the results:
+MIcombine(fits) %>% summary(digits = 3)
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Special Pooling Considerations}
+  
+  The \citet{rubin:1987} pooling rules only hold when the parameter of 
+  interest, $Q$, follows an approximately normal sampling distribution.
+  \vc
+  \begin{itemize}
+  \item For substantially non-normal parameters, we may want to transform before 
+    pooling and back-transform the pooled estimate.
+  \end{itemize}
+  \vb
+  The following table, reproduced from \citet{vanBuuren:2018}, shows some 
+  recommended transformations.
+  \vx{-6}
+  \begin{center}
+    \begin{tabular}{lll}
+      \hline
+      \bf{Statistic} & \bf{Transformation} & \bf{Source}\\
+      \hline
+      Correlation & Fisher's $z$ & \citet{schafer:1997}\\
+      Odds ratio & Logarithm & \citet{agresti:2013}\\
+      Relative risk & Logarithm & \citet{agresti:2013}\\
+      Hazard ratio & Logarithm & \shortcites{marshallEtAl:2009}\citet{marshallEtAl:2009}\\
+      $R^2$ & Fisher's $z$ on square root & \citet{harel:2009}\\
+      Survival probabilities & Complementary log-log & \citet{marshallEtAl:2009}\\
+      Survival distribution & Logarithm & \citet{marshallEtAl:2009}\\
+      \hline
+    \end{tabular}
+  \end{center}
+  
+\end{frame}
+
+\watermarkon %-----------------------------------------------------------------%
+
+\begin{frame}[allowframebreaks]{Pooling Predictions}
+
+  When doing an MI-based analysis, we generally want to pool results as late as 
+  possible in the analytic process.
+  \vc
+  \begin{itemize}
+  \item This pattern also holds when doing prediction with MI data 
+    \citep{woodEtAl:2015}.
+    \vc
+  \item When doing prediction, we pool the $M$ sets of predictions.
+    \begin{itemize}
+    \item We don't generate predictions using the pooled parameters.
+    \item \emph{Caveat:} For GLMs, we pool predictions before applying the 
+      inverse link function.
+    \end{itemize}
+    \vc
+  \item When pooling fit measures based on predictions (e.g., MSE), we pool the 
+    $M$ estimates of fit.
+    \begin{itemize}
+    \item We don't generate fit values using pooled predictions or parameters.
+    \end{itemize}
+    \vc
+  \item Variability between the $M$ predictions (or any estimates derived 
+    therefrom) quantifies uncertainty due to missing data.
+  \end{itemize}
+  
+  \pagebreak
+  
+  According to \citet{woodEtAl:2015}, the most natural approach also tends to 
+  perform best:
+  \vc
+  \begin{enumerate}
+  \item Train the prediction model on each of the $M$ imputed datasets separately.
+    \vc
+  \item Generate $M$ sets of predictions by submitting the fully observed future 
+    data to the $M$ models from above.
+    \vc
+  \item Average the $M$ sets of predictions into a single vector of predicted 
+    values.
+    \begin{itemize}
+    \item When estimating prediction error, calculate $M$ separate measures of 
+      error, and pool these estimates.
+    \end{itemize}
+  \end{enumerate}
+  
+  \pagebreak
+  
+  To cross-validate predictive models with MI data, we have a few options:
+  \vc  
+  \begin{enumerate}
+  \item We can simply impute the entire sample before splitting and run the 
+    cross-validation procedure on each of the $M$ imputed datasets.
+    \vc
+  \item We can split the sample first, train the imputation model on 
+    the training set, and also use this imputation model to generate imputations 
+    for the validation data.
+    \vc
+  \item We can train separate imputation models on the training and validation 
+    data.
+    \vc
+    \begin{itemize}
+    \item When generating the validation-set predictions, we need to cross the 
+      training- and validation-set imputations.
+      \vc
+    \item I.e., for $M_1 = 10$ sets of training-set estimates and $M_2 = 10$ 
+      validation-set imputations, we'll have $M_1 \times M_2 = 100$ predictions.
+    \end{itemize}
+  \end{enumerate}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\sectionslide{Donor-Based Methods}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[allowframebreaks]{Model-Based vs. Donor-Based Methods}
+  
+  They types of MI we've discussed above are all \emph{model-based}.
+  \vc
+  \begin{itemize}
+  \item The imputations are randomly sampled from an estimated distribution of 
+    the missing values (i.e., a probability \emph{model} of the missing data).
+  \end{itemize}
+  \vb
+  Model-based methods are theoretically ideal when the missing data truly follow 
+  the chosen distribution.
+  \vc
+  \begin{itemize}
+  \item If the missing data do not follow the model, performance suffers.
+  \end{itemize}
+  \vb
+  Sometimes, the solution is to employ a different probability model.
+  \vc
+  \begin{itemize}
+  \item We'll see this approach when we discuss MI for categorical variables.
+  \end{itemize}
+  
+  \pagebreak
+  
+  If we're not able to choose a sensible distribution for the missing data, we 
+  can use \emph{Donor-Based Methods}.
+  \vc
+  \begin{itemize}
+  \item Imputations are sampled from a pool of matched observed cases.
+    \vc
+  \item The empirical distribution of the observed data is preserved.
+  \end{itemize}
+  \vb
+  One particularly useful donor-based method is \emph{Predictive Mean Matching} 
+  \citep{little:1988}.
+  \begin{itemize}
+  \item The cases that make up the donor pool are matched based on their 
+    predicted outcome values.
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[allowframebreaks]{Predictive Mean Matching: Procedure}
+  
+  Suppose we want to generate $M$ imputations for an incomplete variable, $Y$, 
+  using some set of predictors, $\mathbf{X}$.
+  \vc
+  \begin{enumerate}
+  \item Regress $Y_{obs}$ onto $\mathbf{X}_{obs}$ and compute the conditional mean 
+    of $Y_{obs}$: 
+    \begin{itemize}
+    \item $\hat{\mu} = \mathbf{X}_{obs} \hat{\beta}$
+    \end{itemize}
+    \vc
+  \item Do a Bayesian linear regression of $Y_{obs}$ onto $\mathbf{X}_{obs}$ and 
+    sample $M$ values of the posterior predicted mean of $Y_{mis}$: 
+    \begin{itemize}
+    \item $\tilde{\mu}_m = \mathbf{X}_{mis} \tilde{\beta}_m$.
+    \end{itemize}
+    \vc
+  \item Compute $M$ sets of the matching distances: 
+    \begin{itemize}
+    \item $d(i, j)_m = (\tilde{\mu}_{mi} - \hat{\mu}_j)^2,~~i = 1, 2, \ldots N_{mis},~~j = 1, 2, \ldots, N_{obs}.$
+    \end{itemize}
+    
+    \pagebreak
+    
+  \item Use each $d(i, j)_m$ to construct $N_{mis}$ donor pools. \label{findPools}
+    \begin{itemize} 
+    \item Find the $K$ (e.g., $K \in \{3, 5, 10\}$) cases with the smallest 
+      values of $d(1, j)_m$, $d(2, j)_m$, $\ldots$, $d(N_{mis}, j)_m$. 
+    \end{itemize}
+    \vc
+  \item For $m = 1, 2, \ldots, M$, select the final donor cases by randomly 
+    sampling a single observation from each of the $N_{mis}$ donor pools defined 
+    in Step \ref{findPools}. \label{findDonors}
+    \vc
+  \item For each of the $M$ imputations replace the missing values in $Y$ with 
+    the donor data selected in Step \ref{findDonors}.
+  \end{enumerate}
+  
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}[fragile]{Predictive Mean Matching: Example}
+
+  Compute/sample the appropriate conditional means:
+  
+<<cache = TRUE>>=
+## Define donor pool size:
+K <- 5
+
+## Conditional mean of Y_mis:
+mu0 <- predict(fit0)
+
+## Posterior predicted means of Y_mis:
+mu1 <- as.data.frame(
+    xMis %*% t(betaSams[sample(1 : nSams, nImps), ])
+)
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Predictive Mean Matching: Example}
+
+  Define a function to find donor cases:
+  
+<<>>=
+getDonors <- function(x, y, K) {
+    ## Compute distances:
+    d <- (x - y)^2
+    
+    ## Indices of the K smallest distances:
+    ind <- which(order(d) %in% 1 : K)
+    
+    ## Return a randomly sampled index:
+    sample(ind, 1)
+}
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Predictive Mean Matching: Example}
+
+  Implement the imputation:
+  
+<<cache = TRUE>>=
+impList2 <- list()
+for(m in 1 : nImps) {
+    ## Find donor cases:
+    d0 <- sapply(mu1[ , m], getDonors, y = mu0, K = K)
+    
+    ## Impute the missing values:
+    impData            <- dat1
+    impData[mVec, "y"] <- yObs$y[d0]
+    
+    ## Save the imputed dataset:
+    impList2[[m]] <- impData
+}
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Predictive Mean Matching: Example}
+<<>>=
+## Use each dataset to estimate the analysis model:
+fits <- lapply(impList2, 
+               function(dat) lm(z ~ x + y, data = dat)
+               )
+
+## Pool the results:
+MIcombine(fits) %>% summary(digits = 3)
+@
+
+\end{frame}
+
+\watermarkon %-----------------------------------------------------------------%
+
+\begin{frame}{Pros and Cons of Predictive Mean Matching}
+  
+  PMM tends to work well with continuous, non-normal variables.
+  \begin{itemize}
+  \item Relatively robust to misspecification of the imputation model
+  \item Imputed values are always valid
+  \end{itemize}
+  \vb
+  PMM does have some important limitations.
+  \begin{itemize}
+  \item In small samples, the same donor cases can be re-used many times.
+  \item PMM cannot extrapolate beyond the observed range of the data.
+  \item PMM cannot be used with some variable types.
+    \begin{itemize}
+    \item Nominal variables
+    \end{itemize}
+  \item PMM may perform poorly when the number of predictor variables is small.
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[allowframebreaks]{References}
+  
+  \bibliographystyle{apacite}
+  \bibliography{../../../literature/bibtex/winter_school_refs.bib}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\end{document}
+
