@@ -40,11 +40,9 @@ library(mvtnorm)
 library(xtable)
 library(pROC)
 library(dplyr)
-library(magrittr)
+                                        #library(magrittr)
 library(naniar)
-library(ggpubr)
-#library(lme4)
-#library(lavaan)
+                                        #library(ggpubr)
 library(LaplacesDemon)
 library(mitools)
 library(mgcv)
@@ -385,7 +383,7 @@ head(simData, 10)
 
 \begin{frame}[fragile]{Example: Data Generation}
 
-  Next, we impose some missing values on the simluated data.
+  Next, we impose some missing values on the simulated data.
 
 <<>>=
 targets  <- paste0("x", 1:3)
@@ -612,7 +610,7 @@ fits1 <- lapply(impList,
                 )
 pool1 <- MIcombine(fits1)
 
-## Do the same analysis with mice():
+## Do the same analysis with mice::mice():
 miceOut <- mice(data      = missData,
                 m         = 100,
                 method    = "norm",
@@ -749,6 +747,31 @@ print(xtable(res2, caption = "MICE Version"),
 
 \watermarkoff %----------------------------------------------------------------%
 
+\begin{frame}[fragile, allowframebreaks]{Example: Data Visualization}
+
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      Use \code{mice::md.pattern()} to visualize the response patterns.
+      
+<<eval = FALSE>>=
+pats <- md.pattern(missData)
+@         
+
+    \end{column}
+    \begin{column}{0.5\textwidth}
+     
+<<echo = FALSE>>=
+pats <- md.pattern(missData)
+@         
+
+    \end{column}
+  \end{columns}
+    
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
 \begin{frame}[fragile]{Example: Joint Modeling}
  
 <<>>=
@@ -883,7 +906,7 @@ for(m in 1:nImps) {
 
 \begin{frame}[fragile]{Example: Joint Modeling}
   
-  Do the same type of imputation with \texttt{norm}:
+  Do the same type of imputation with \pkg{norm}:
   
 <<cache = TRUE>>=
 missData <- as.matrix(missData)
@@ -919,7 +942,7 @@ fits1 <- lapply(impList1,
                 )
 pool1 <- MIcombine(fits1)
 
-## Imputation using norm():
+## Imputation using norm:
 fits2 <- lapply(impList2, 
                 function(x) lm(x1 ~ x2 + x3, 
                                data = as.data.frame(x)
@@ -982,8 +1005,8 @@ print(xtable(res2, caption = "NORM Version"),
 
 \begin{frame}{FCS for Mixed Data Types}
 
-  FCS imputation can easily accomodate incomplete data that contain both 
-  continous and categorical/non-normal variables.
+  FCS imputation can easily accommodate incomplete data that contain both 
+  continuous and categorical/non-normal variables.
   \vc
   \begin{itemize}
   \item Replace the normal-theory elementary imputation model described above 
@@ -998,7 +1021,7 @@ print(xtable(res2, caption = "NORM Version"),
     \end{itemize}
   \end{itemize}
   \vb
-  The FCS framework can essentially accomodate any data for which you can define 
+  The FCS framework can essentially accommodate any data for which you can define 
   an appropriate supervised model.
   \vc
   \begin{itemize}
