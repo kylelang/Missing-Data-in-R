@@ -1,0 +1,23 @@
+\begin{Schunk}
+\begin{Sinput}
+ ## Complete data loglikelihood function:
+ myLL <- function(parVec, inData)
+ {
+     ## Extract the parameter matrices:
+     nVar <- ncol(inData)
+     muHat <- parVec[1 : 3]
+     sigmaHat <- matrix(parVec[4 : 12], ncol = 3)
+ 
+     ## Compute the row-wise LogLikelihoods:
+     llVec <- rep(NA, nrow(inData))
+     for(i in 1 : nrow(inData)) {
+         llVec[i] <- -0.5 * nVar * log(2 * pi) -
+             0.5 * log(det(sigmaHat)) -
+                 0.5 * (inData[i, ] - muHat) %*%
+                     solve(sigmaHat) %*%
+                         matrix(inData[i, ] - muHat)
+     }
+     sum(llVec)# return the overall LL value
+ }
+\end{Sinput}
+\end{Schunk}

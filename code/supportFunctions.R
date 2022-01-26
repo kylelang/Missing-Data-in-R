@@ -1,7 +1,7 @@
 ### Title:    Support Functions for Teaching
 ### Author:   Kyle M. Lang
 ### Created:  2017-08-24
-### Modified: 2021-01-22
+### Modified: 2021-01-26
 
 ###--------------------------------------------------------------------------###
 
@@ -315,7 +315,12 @@ simCovData <- function(nObs,
 
 ###--------------------------------------------------------------------------###
 
-imposeMissData <- function(data, targets, preds, pm, types) {
+imposeMissData <- function(data, targets, preds, pm, types = "random", ...) {
+    if(types == "random")
+        types <- sample(c("high", "low", "center", "tails"),
+                        length(targets),
+                        TRUE)
+    
     parms <- data.frame(y = targets, pm = pm, type = types)
     
     M <- list()
@@ -323,7 +328,8 @@ imposeMissData <- function(data, targets, preds, pm, types) {
         M[[i]] <- simLogisticMissingness0(data  = data,
                                           preds = preds,
                                           pm    = parms$pm[i],
-                                          type  = parms$type[i])$r
+                                          type  = parms$type[i],
+                                          ...)$r
     
     names(M) <- targets
 

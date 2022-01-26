@@ -1,0 +1,24 @@
+\frametitle{FIML Example}
+
+  Just to make sure our results are plausible, we can do the same analysis using
+  the \texttt{cfa} function from the \textbf{lavaan} package:
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.878, 0.918, 0.933}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{## Confirm the manual approach by using lavaan::cfa() to }
+\hlcom{## get the FIML estimates:}
+\hlstd{mod1} \hlkwb{<-} \hlstr{"
+bmi ~~ ldl + glu
+ldl ~~ glu
+"}
+
+\hlcom{## Fit the model with lavaan::cfa():}
+\hlstd{out2} \hlkwb{<-} \hlkwd{cfa}\hlstd{(mod1,} \hlkwc{data} \hlstd{= dat2,} \hlkwc{missing} \hlstd{=} \hlstr{"fiml"}\hlstd{)}
+
+\hlstd{muHat2.2}    \hlkwb{<-} \hlkwd{inspect}\hlstd{(out2,} \hlstr{"est"}\hlstd{)}\hlopt{$}\hlstd{nu}
+\hlstd{sigmaHat2.2} \hlkwb{<-} \hlkwd{inspect}\hlstd{(out2,} \hlstr{"theta"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+

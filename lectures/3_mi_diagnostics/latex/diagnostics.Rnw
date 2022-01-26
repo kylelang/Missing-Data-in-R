@@ -1,0 +1,515 @@
+%%% Title:    Missing Data in R: MI Diagnostics
+%%% Author:   Kyle M. Lang
+%%% Created:  2017-09-12
+%%% Modified: 2022-01-26
+
+\documentclass[10pt]{beamer}
+\usetheme{Utrecht}
+
+\usepackage{graphicx}
+\usepackage[natbibapa]{apacite}
+\usepackage[libertine]{newtxmath}
+\usepackage{fancybox}
+\usepackage{booktabs}
+\usepackage{eurosym}
+\usepackage{caption}
+
+\captionsetup{labelformat = empty}
+
+\newcommand{\rmsc}[1]{\textrm{\textsc{#1}}}
+\newcommand{\pkg}[1]{\textbf{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+\title{Imputation Diagnostics}
+\subtitle{Utrecht University Winter School: Missing Data in R}
+\author{Kyle M. Lang}
+\institute{Department of Methodology \& Statistics\\Utrecht University}
+\date{2022-02-03}
+
+%------------------------------------------------------------------------------%
+
+\begin{document}
+
+<<setup, include = FALSE, cache = FALSE>>=
+set.seed(235711)
+
+library(knitr)
+library(ggplot2)
+library(mice)
+library(dplyr)
+library(naniar)
+library(norm)
+
+source("../../../code/supportFunctions.R")
+source("../../../code/sim_missing/code/simMissingness.R")
+
+dataDir <- "../../../data/"
+figDir  <- "figures/"
+
+options(width = 60)
+opts_chunk$set(size = "footnotesize",
+               fig.align = "center",
+               fig.path = "figure/diagnostics-",
+               message = FALSE,
+               warning = FALSE,
+               comment = "")
+knit_theme$set('edit-kwrite')
+@
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[t, plain]
+  \titlepage
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Outline}
+  \tableofcontents
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Example Data}
+  
+  The example data are synthesized from questionnaire data collected by 
+  \citet{langEtAl:2009}.
+  \begin{itemize}
+  \item $N = 87$
+  \item $P = 33$ Likert-type variables assessing: 
+    \begin{itemize}
+    \item Perceptions and definitions of racism
+    \item Political affiliation
+    \item Support for affirmative action policies
+    \item Belief in meritocratic ideals
+    \end{itemize}
+  \end{itemize}
+  
+  \vb
+  
+  The data synthesis involved:
+  \begin{enumerate}
+  \item Resampling the original data to produce a new sample of 250 cases
+  \item Adding Gaussian noise
+  \item Imposing 25\% MAR missing
+    \begin{itemize}
+    \item MAR Predictors = Political Affiliation, Definition of Racism 
+    \end{itemize}
+  \end{enumerate}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+      
+\begin{frame}{Imputation Diagnostics}
+
+  After we run an MI routine, we need to make sure that the procedure has 
+  performed as expected.\\
+  \va
+  Problems can arise to two different places:
+  \begin{enumerate}
+    \item The imputation model may fail to converge.
+    \item The imputed values may be invalid.
+  \end{enumerate}
+  \va 
+  We need to examine our results to check for these problems.
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\section{Imputation Model Convergence}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Imputation Model Convergence}
+  
+  The imputation model is usually estimated through some form of Bayesian 
+  simulation.
+  \vb
+  \begin{itemize}
+  \item Gibbs sampled parameters form a \emph{Markov Chain}.
+    \begin{itemize}
+    \item Each draw is dependent on only its immediate predecessor in the chain.
+    \item $\theta^{(t)} | \theta^{(t - 1)} \perp \theta^{(t - j)} ~ \forall j > 1$
+    \end{itemize}
+    \vb
+  \item Early elements of a Markov chain are similar to the starting values.
+    \begin{itemize}
+    \item Samples are poor approximations of the true posterior.
+    \end{itemize}
+    \vb
+  \item We must let the sampler iterate for a while to allow the estimates time 
+    to separate from their starting values.
+    \begin{itemize}
+    \item We call these initial iterations ``burn-in'' or ``warm-up'' 
+      iterations.
+    \end{itemize}
+  \end{itemize}
+  
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}{Traceplots}
+  
+  Once converged, each sampled parameter should ``bounce'' around some 
+  equilibrium point.
+  \begin{itemize}
+  \item The draws will never converge to a single point.
+  \item Deterministic convergence would defeat the purpose of simulation.
+  \end{itemize}
+  
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+<<echo = FALSE, cache = TRUE, out.width = "90%">>=
+missData <- readRDS(paste0(dataDir, "adams_klps_data-incomplete.rds"))
+nSams    <- 500
+dat0     <- missData %>% dplyr::select(-matches("policy\\d")) %>% as.matrix()
+muHat1   <- matrix(NA, nSams, ncol(dat0), dimnames = list(NULL, colnames(dat0)))
+s2Hat1   <- matrix(NA, nSams, ncol(dat0), dimnames = list(NULL, colnames(dat0)))
+
+## Do preliminary manipulations:
+metaData <- prelim.norm(dat0) 
+
+## Find the MLE:
+mle <- em.norm(metaData, showits = FALSE)
+
+## Add some bias to the means to get some variation in plots:
+tmp       <- getparam.norm(metaData, mle)
+tmp$mu    <- tmp$mu - 1
+tmp$sigma <- tmp$sigma * 0.25
+thetaHat  <- makeparam.norm(metaData, tmp)
+
+muHat1[1, ]  <- getparam.norm(s = metaData, theta = thetaHat)$mu
+s2Hat1[1, ] <- getparam.norm(s = metaData, theta = thetaHat)$sigma %>% diag()
+
+## Set random number generator seed:
+rngseed(235711)   
+
+## Run the DA algorithm, and store the result of each P-Step for plotting:
+for(s in 2 : nSams) {
+    thetaHat    <- da.norm(s = metaData, start = thetaHat, steps = 1)
+    muHat1[s, ] <- getparam.norm(s = metaData, theta = thetaHat)$mu
+    s2Hat1[s, ] <- getparam.norm(s = metaData, theta = thetaHat)$sigma %>% diag()
+
+}
+
+muHat1 %<>% as.data.frame() %>% mutate(Iteration = 1:nSams)
+s2Hat1 %<>% as.data.frame() %>% mutate(Iteration = 1:nSams)
+
+ggplot(s2Hat1, aes(Iteration, riae5)) + 
+    geom_line() + 
+    ylab("Mean of RIAE5") +
+    ggtitle("Trace of Estimated Mean for RIAE5") +
+    theme_classic() + 
+    theme(text = element_text(family = "Courier"),
+          plot.title = element_text(face = "bold", hjust = 0.5)
+          ) 
+                                        #plot(muHat1[ , "riae5"],
+                                        #     type = "l",
+                                        #     main = "Trace of Estimated Mean for RIAE5",
+                                        #     xlab = "Iteration",
+                                        #     ylab = "Mean of RIAE5")
+@ 
+
+\end{column}
+
+\begin{column}{0.5\textwidth}
+  
+<<echo = FALSE, cache = TRUE, out.width = "90%">>=
+ggplot(s2Hat1, aes(Iteration, wpriv3)) + 
+    geom_line() + 
+    ylab("Mean of WPRIV3") +
+    ggtitle("Trace of Estimated Mean for WPRIV3") +
+    theme_classic() + 
+    theme(text = element_text(family = "Courier"),
+          plot.title = element_text(face = "bold", hjust = 0.5)
+          ) 
+                                        #plot(muHat1[ , "wpriv3"],
+                                        #     type = "l",
+                                        #     main = "Trace of Estimated Mean for WPRIV3",
+                                        #     xlab = "Iteration",
+                                        #     ylab = "Mean of WPRIV3")
+@ 
+
+\end{column}
+\end{columns}
+
+\end{frame}
+
+\watermarkon %-----------------------------------------------------------------%
+
+\begin{frame}{Potential Scale Reduction Factor}
+  
+  Suppose we have two Markov chains for the same parameter.
+  \vc 
+  \begin{itemize}
+  \item If these chains have converged, the average distance between any two
+    points on separate chains should be the same as the average distance 
+    between two points on the same chain.
+    \vc
+  \item The \emph{between-chain} variance should, on average, equal the 
+    \emph{within-chain} variance.
+  \end{itemize}
+  \vc
+  The \citet{gelmanRubin:1992} \emph{Potential Scale Reduction Factor}, 
+  $\widehat{R}$, quantifies this concept:
+  \begin{align*}
+    \widehat{R} = \frac{\hat{\sigma}^2_{between}}{\hat{\sigma}^2_{within}}
+  \end{align*}
+  $\widehat{R}$ will approach 1.0 at convergence.
+  \vc
+  \begin{itemize}
+  \item $\widehat{R} < $ 1.1 or 1.2 suggests acceptable convergence.
+  \end{itemize}
+  
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}{Example: Potential Scale Reduction Factor}
+   
+<<echo = FALSE, cache = TRUE, out.width = "65%">>=
+muHat2 <- matrix(NA, nSams, ncol(dat0), dimnames = list(NULL, colnames(dat0)))
+s2Hat2 <- matrix(NA, nSams, ncol(dat0), dimnames = list(NULL, colnames(dat0)))
+
+## Add some bias to the means to get some variation in plots:
+tmp       <- getparam.norm(metaData, mle)
+tmp$mu    <- tmp$mu + 1
+tmp$sigma <- tmp$sigma * 3
+thetaHat  <- makeparam.norm(metaData, tmp)
+
+muHat2[1, ] <- getparam.norm(s = metaData, theta = thetaHat)$mu
+s2Hat2[1, ] <- getparam.norm(s = metaData, theta = thetaHat)$sigma %>% diag()
+
+## Set random number generator seed:
+rngseed(314159)   
+
+## Run the DA algorithm, and store the result of each P-Step for plotting:
+for(s in 2 : nSams) {
+    thetaHat    <- da.norm(s = metaData, start = thetaHat, steps = 1)
+    muHat2[s, ] <- getparam.norm(s = metaData, theta = thetaHat)$mu
+    s2Hat2[s, ] <- getparam.norm(s = metaData, theta = thetaHat)$sigma %>% diag()
+}
+
+## Visualize the results:
+chain1 <- s2Hat1[ , "riae5"]
+chain2 <- s2Hat2[ , "riae5"]
+
+chains <- data.frame(Iteration = rep(1:nSams, 2),
+                     chain = c(chain1, chain2),
+                     run = rep(1:2, each = nSams)
+                     )
+
+ggplot(chains, aes(Iteration, chain, color = factor(run))) + 
+    geom_line() + 
+    ylab("Mean of RIAE5") +
+    ggtitle("Multi-Chain Trace of Estimated Mean for RIAE5") +
+    theme_classic() + 
+    theme(text = element_text(family = "Courier"),
+          plot.title = element_text(face = "bold", hjust = 0.5),
+          legend.position = "none") +
+    scale_color_manual(values = c("red", "blue"))
+
+                                        #yRange <- range(chain1, chain2)
+
+                                        #plot(chain1,
+                                        #     type = "l",
+                                        #     ylim = yRange,
+                                        #     col  = "red",
+                                        #     main = "Multi-Chain Trace of Estimated Mean for RIAE5",
+                                        #     xlab = "Iteration",
+                                        #     ylab = "Mean of RIAE5")
+                                        #lines(chain2, col = "blue")
+@
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example: Potential Scale Reduction Factor}
+  
+<<cache = TRUE>>=
+## Pool chains:
+iterMat  <- cbind(chain1, chain2)
+burntMat <- tail(iterMat, nSams - 100)
+
+## R-Hat from all iterations:
+wVar1 <- apply(iterMat, 2, var) %>% mean()
+bVar1 <- apply(iterMat, 1, var) %>% mean()
+rHat1 <- bVar1 / wVar1
+rHat1
+
+## Burnt-In R-Hat:
+wVar2 <- apply(burntMat, 2, var) %>% mean()
+bVar2 <- apply(burntMat, 1, var) %>% mean()
+rHat2 <- bVar2 / wVar2
+rHat2
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile, allowframebreaks]{More Imputation Model Convergence}
+  
+  A convergent imputation model will produce imputed values that
+  fluctuate around an equilibrium point. 
+  \vc
+  \begin{itemize}
+  \item Imputation model convergence can be assessed indirectly by
+    looking at plots of the item-level sufficient statistics for each
+    imputation.
+  \end{itemize}
+  \vb
+  This approach is automated for \textbf{mice} via \code{plot.mice()}.
+  
+  \vb
+  
+<<eval = FALSE>>=
+## Impute missing values:
+miceOut <- mice(data   = dat3, 
+                m      = 25, 
+                maxit  = 50, 
+                method = "norm", 
+                seed   = 235711)
+
+## Create diagnostic traceplots:
+plot(miceOut1, c("riae5", "wpriv3", "policy2"))
+@ 
+
+<<echo = FALSE, cache = TRUE, out.width = "65%">>=
+miceOut <- readRDS(paste0(dataDir, "adams_klps_data-mids.rds"))
+plot(miceOut, c("riae5", "wpriv3", "policy2"))
+@ 
+
+\end{frame}
+
+\watermarkon %-----------------------------------------------------------------%
+
+\section{Plausibility of Imputed Values}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Imputed Value Plausibility}
+  
+  We need to ensure that the imputations are sensible.
+  \vc
+  \begin{itemize}
+  \item Imputed values shouldn't be \emph{too} dissimilar from their observed 
+    counterparts.
+    \begin{itemize}
+    \item What constitutes \emph{too} much dissimilarity is subjective and 
+      problem-specific.
+    \end{itemize}
+  \end{itemize}
+  \vb
+  We can assess dissimilarity graphically or through summary statistics.
+  \vc
+  \begin{itemize}
+  \item Out-of-bounds values for the imputations are perfectly acceptable.
+    \begin{itemize}
+    \item MI is \emph{NOT} designed to maintain the range.
+    \item We don't want wildly extreme values, though.
+    \end{itemize}
+    \vc
+  \item The means of the observed and imputed components of each variable 
+    shouldn't differ too much.
+    \begin{itemize}
+    \item Again, how much is \emph{too} much is subjective.
+    \end{itemize}
+  \end{itemize}
+  
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}[fragile]{Numeric Imputation Checks}
+  
+<<cache = TRUE>>=
+## Fill the missing values with imputations:
+impList <- complete(miceOut, "all")
+
+## Computes means:
+rawMeans <- colMeans(missData, na.rm = TRUE)
+impMeans <- do.call("rbind", impList) %>% colMeans()
+
+## Compute standard deviations:
+rawSds <- sapply(missData, sd, na.rm = TRUE)
+impSds <- lapply(impList, function(x) sapply(x, sd)) %>% 
+    do.call(rbind, .) %>% 
+    colMeans()
+
+## Compute ranges:
+rawRanges <- sapply(missData, range, na.rm = TRUE)
+impRanges <- do.call("rbind", impList) %>% sapply(range)
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile, allowframebreaks]{Numeric Imputation Checks}
+
+  Compare observed and imputation-based means:
+<<>>=
+vars <- grep("policy\\d", colnames(missData))
+
+round(rawMeans[vars], 3)
+round(impMeans[vars], 3)
+@ 
+
+\pagebreak
+
+Compare observed and imputation-based standard deviations:
+<<>>=
+round(rawSds[vars], 3)
+round(impSds[vars], 3)
+@
+
+\pagebreak
+
+Compare observed and imputation-based ranges:
+<<>>=
+round(rawRanges[ , vars], 3)
+round(impRanges[ , vars], 3)
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Graphical Imputation Checks}
+
+<<out.width = "55%">>=
+## Overlaid density plots of imputed vs. observed values:
+densityplot(miceOut, ~ riae1 + riae2 + riae3 + riae4, layout = c(2, 2))
+@ 
+     
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Graphical Imputation Checks}
+
+<<out.width = "55%">>=
+## Stripplots of imputed vs. observed values:
+stripplot(miceOut, riae1 + riae2 + riae3 + riae5 ~ .imp, layout = c(2, 2))
+@
+
+\end{frame}
+
+\watermarkon %----------------------------------------------------------------%
+
+\begin{frame}{References}
+
+  \bibliographystyle{apacite}
+  \bibliography{../../../literature/bibtex/winter_school_refs.bib}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\end{document}
