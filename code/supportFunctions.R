@@ -316,7 +316,10 @@ simCovData <- function(nObs,
 ###--------------------------------------------------------------------------###
 
 imposeMissData <- function(data, targets, preds, pm, types = "random", ...) {
-    if(types == "random")
+    if(is.matrix(data))
+        data <- as.data.frame(data)
+    
+    if(length(types) == 1 && types == "random")
         types <- sample(c("high", "low", "center", "tails"),
                         length(targets),
                         TRUE)

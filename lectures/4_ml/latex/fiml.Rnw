@@ -1,105 +1,91 @@
-%%% Title:    Missing Data Stats Camp Course: FIML
+%%% Title:    Missing Data in R: FIML
 %%% Author:   Kyle M. Lang
-%%% Created:  < 2015-SEP-29
-%%% Modified: 2018-OCT-19
+%%% Created:  2015-09-29
+%%% Modified: 2022-01-27
 
-\documentclass{beamer}
-\usetheme[%
-  pageofpages          = of,
-  bullet               = circle,
-  titleline            = true,
-  alternativetitlepage = true,
-  titlepagelogo        = Logo3,
-  watermark            = watermarkTiU,
-  watermarkheight      = 100px,
-  watermarkheightmult  = 4%
-]{UVT}
+\documentclass[10pt]{beamer}
+\usetheme{Utrecht}
 
 \usepackage{graphicx}
-\usepackage{booktabs}
 \usepackage[natbibapa]{apacite}
 \usepackage[libertine]{newtxmath}
 \usepackage{fancybox}
+\usepackage{booktabs}
+\usepackage{eurosym}
+\usepackage{caption}
 \usepackage[mathcal]{eucal}
 \usepackage{upgreek}
-\usepackage{caption}
 
-\newcommand{\kfold}[0]{\emph{K}-fold cross-validation}
-\newcommand{\mub}[0]{\boldsymbol{\muup}}
-
-%% Ensure styles of `blocks' (used in Definitions, Theorems etc.) follows the
-%% UVT-style theme:
-\setbeamercolor{block title}{fg = darkblue, bg = white}
-\setbeamercolor{block body}{use = block title, bg = block title.bg}
-
-%% Ensure TableOfContents is in UVT-style theme:
-\setbeamercolor{section in toc}{fg = darkblue}
-
-%% Don't label table captions:
 \captionsetup{labelformat = empty}
 
-\title{Full Information Maximum Likelihood}
-\subtitle{Stats Camp 2018: Missing Data Analysis}
-\author{Kyle M. Lang}
-\institute{Department of Methodology \& Statistics\\Tilburg University}
-\date{19--21 October 2018}
+\newcommand{\rmsc}[1]{\textrm{\textsc{#1}}}
+\newcommand{\pkg}[1]{\textbf{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\mub}[0]{\boldsymbol{\muup}}
 
-\begin{document}
+\title{Full Information Maximum Likelihood}
+\subtitle{Utrecht University Winter School: Missing Data in R}
+\author{Kyle M. Lang}
+\institute{Department of Methodology \& Statistics\\Utrecht University}
+\date{2022-02-03}
 
 %------------------------------------------------------------------------------%
 
-<<setup, include=FALSE>>=
+\begin{document}
+
+<<setup, include = FALSE, cache = FALSE>>=
 set.seed(235711)
 
 library(knitr)
 library(ggplot2)
-library(MASS)
+library(mice)
 library(mvtnorm)
 library(xtable)
+library(pROC)
+library(dplyr)
+                                        #library(magrittr)
+library(naniar)
+                                        #library(ggpubr)
+                                        #library(LaplacesDemon)
+                                        #library(mitools)
+library(mgcv)
+                                        #library(MCMCpack)
+                                        #library(norm)
 library(optimx)
 library(lavaan)
-library(SURF)
-library(mgcv)
+library(semTools)
 
 source("../../../code/supportFunctions.R")
+source("../../../code/sim_missing/code/simMissingness.R")
+
 dataDir <- "../../../data/"
+figDir  <- "figures/"
 
-opts_chunk$set(size = 'footnotesize', fig.align = 'center')
+options(width = 60)
+opts_chunk$set(size = "footnotesize",
+               fig.align = "center",
+               fig.path = "figure/multivariate_mi-",
+               message = FALSE,
+               warning = FALSE,
+               comment = "")
 knit_theme$set('edit-kwrite')
-
-lightBlue <- rgb(0, 137, 191, max = 255)
-midBlue   <- rgb(0, 131, 183, max = 255)
-darkBlue  <- rgb(0, 128, 179, max = 255)
-deepGold  <- rgb(184, 138, 45, max = 255)
-lightGold <- rgb(195, 146, 48, max = 255)
 @
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}[t,plain]
-
+\begin{frame}[t, plain]
   \titlepage
-
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Outline}
-
-  \begin{itemize}
-  \item Look at FIML in more depth
-    \va
-    \begin{itemize}
-    \item Review of maximum likelihood (ML)
-    \item Show how to do ML and FIML manually in \textsf{R}.
-    \end{itemize}
-  \end{itemize}
-    
+  \tableofcontents
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}{FIML Conceptual Refresher}
+\begin{frame}{FIML Intuition}
 
   FIML is an ML estimation method that is robust to ignorable nonresponse.
   \vc
@@ -119,7 +105,11 @@ lightGold <- rgb(195, 146, 48, max = 255)
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}[allowframebreaks]{Maximum Likelihood Estimation Refresher}
+\section{Maximum Likelihood}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[allowframebreaks]{Maximum Likelihood Estimation}
 
   ML estimation simply finds the parameter values that are ``most likely'' to 
   have given rise to the observed data.
@@ -411,21 +401,20 @@ ll0 <- dmvnorm(y, mean = mu, sigma = sigma, log = TRUE)
 
 \begin{frame}[fragile]{ML Example}
 
-  We can wrap the preceding code in a nice \textsf{R} function:
+  We can wrap the preceding code in a nice R function:
 
 <<>>=
 ## Complete data loglikelihood function:
 ll <- function(par, data) {
     ## Extract the parameter matrices:
     p  <- ncol(data)
-    mu <- par[1 : p]
+    mu <- par[1:p]
     
     ## Populate sigma from its Cholesky factor:
-    sigma <-vecChol(par[-c(1 : p)], revert = TRUE)
+    sigma <- vecChol(tail(par, -p), p = p, revert = TRUE)
     
     ## Compute the row-wise contributions to the LL:
-    ll0 <- 
-        dmvnorm(data, mean = mu, sigma = sigma, log = TRUE)
+    ll0 <- dmvnorm(data, mean = mu, sigma = sigma, log = TRUE)
     
     sum(ll0)# return the overall LL value
 }
@@ -437,24 +426,19 @@ ll <- function(par, data) {
 
 \begin{frame}[fragile]{ML Example}
 
-  We'll also need the helper functions:
+  We'll also need the following helper function:
   
 <<>>=
-## Convert from covariance matrix to vectorized Cholesky 
-## factor and back:
-vecChol <- function(x, revert = FALSE) {
+## Convert from covariance matrix to vectorized Cholesky factor and back:
+vecChol <- function(x, p, revert = FALSE) {
     if(revert) {
-        tmp                  <- matrix(0, nV(x), nV(x))
+        tmp                  <- matrix(0, p, p)
         tmp[!lower.tri(tmp)] <- x
         crossprod(tmp)
     }
     else
         chol(x)[!lower.tri(x)]
 }
-
-## Find the number of variables given a vector of unique 
-## variances/covariances:
-nV <- function(x) (-1 + sqrt(1 + 8 * length(x))) / 2
 @ 
 
 \end{frame}
@@ -468,13 +452,13 @@ nV <- function(x) (-1 + sqrt(1 + 8 * length(x))) / 2
   \item We can use it to (semi)manually implement ML.
   \end{itemize}
   
-<<size = "scriptsize">>=
+<<>>=
 ## Subset the 'diabetes' data:
-dat1 <- as.matrix(diabetes[ , c("bmi", "ldl", "glu")])
+dat1 <- diabetes[ , c("bmi", "ldl", "glu")] %>% as.matrix()
 
 ## Choose some starting values:
 m0   <- rep(0, 3)
-s0   <- vecChol(diag(3))
+s0   <- diag(3) %>% vecChol()
 par0 <- c(m0, s0)
 
 ## Use optimx() to numerically optimize the LL function:
@@ -499,8 +483,8 @@ mle <- optimx(par     = par0,
 mle[c("convcode", "kkt1", "kkt2")]
 
 ## Get the optimize mean vector and covariance matrix:
-muHat    <- mle[1 : 3]
-sigmaHat <- vecChol(as.numeric(mle[4 : 9]), revert = TRUE)
+muHat    <- mle[1:3]
+sigmaHat <- mle[4:9] %>% as.numeric() %>% vecChol(p = 3, revert = TRUE)
 @ 
 
 \end{frame}
@@ -513,7 +497,7 @@ sigmaHat <- vecChol(as.numeric(mle[4 : 9]), revert = TRUE)
 names(muHat) <- colnames(dat1)
 
 muMat           <- rbind(muHat, colMeans(dat1))
-rownames(muMat) <- c("Max. Like.", "Closed Form")
+rownames(muMat) <- c("ML", "Closed Form")
 
 print(xtable(muMat, digits = 3, caption = "Estimated Means"), booktabs = TRUE)
 @ 
@@ -544,6 +528,10 @@ print(xtable(cov(dat1), digits = 3, caption = "Closed Form Covariance Matrix"),
 
 \watermarkon %-----------------------------------------------------------------%
 
+\sectionslide{Full Information Maximum Likelihood}
+
+%------------------------------------------------------------------------------%
+
 \begin{frame}{From ML to FIML}
 
   The $n$th observation's contribution to the multivariate normal loglikelihood 
@@ -570,16 +558,47 @@ print(xtable(cov(dat1), digits = 3, caption = "Closed Form Covariance Matrix"),
   First things first, we need to punch some holes in our example data.
   
 <<>>=
-## Impose MAR missing data:
-dat2 <- 
-    imposeMissData(dat     = dat1,
-                   targets = list(mar = c("ldl", "glu")),
-                   preds   = "bmi",
-                   pm      = 0.3,
-                   snr     = 2,
-                   pattern = "low")$data
-@ 
+## Impose MAR missing:
+dat2 <- imposeMissData(data    = dat1,
+                       targets = c("ldl", "glu"),
+                       preds   = "bmi",
+                       pm      = 0.3,
+                       types   = c("low", "high"),
+                       stdDat  = TRUE)
+@
 
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Visualize the Response Patterns}
+
+<<echo = FALSE>>=
+nPats <- md.pattern(dat2, plot = FALSE) %>% nrow() - 1
+@
+
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      The data contain \Sexpr{nPats} unique response patterns.
+      \vc
+      \begin{itemize}
+      \item We'll define \Sexpr{nPats} different version of $\mu$ and $\Sigma$.
+        \vc
+      \item We'll calculate each individual loglikelihood contributions using 
+        the appropriate flavor of $\mu$ and $\Sigma$. 
+      \end{itemize}
+      
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      
+<<echo = FALSE>>=
+  tmp <- md.pattern(dat2)
+@
+
+    \end{column}
+  \end{columns}
+  
 \end{frame}
 
 %------------------------------------------------------------------------------%
@@ -589,7 +608,7 @@ dat2 <-
 <<>>=
 ## Compute the within-pattern contributions to the LL:
 ll0 <- function(i, mu, sigma, pats, ind, data) {
-    ## Find the current pattern:
+    ## Define the current response pattern:
     p1 <- pats[i, ]
     
     if(sum(p1) > 1) # More than one observed variable?
@@ -611,18 +630,18 @@ ll0 <- function(i, mu, sigma, pats, ind, data) {
 
 \begin{frame}[fragile]{FIML Example}
 
-<<size = "scriptsize">>=
+<<>>=
 ## FIML loglikelihood function:
 llm <- function(par, data, pats, ind) {
     ## Extract the parameter matrices:
     p  <- ncol(data)
-    mu <- par[1 : p]
+    mu <- par[1:p]
     
     ## Populate sigma from its cholesky factor:
-    sigma <-vecChol(par[-c(1 : p)], revert = TRUE)
+    sigma <- vecChol(tail(par, -p), p = p, revert = TRUE)
     
     ## Compute the pattern-wise contributions to the LL:
-    ll1 <- sapply(X     = 1 : nrow(pats),
+    ll1 <- sapply(X     = 1:nrow(pats),
                   FUN   = ll0,
                   mu    = mu,
                   sigma = sigma,
@@ -640,25 +659,25 @@ llm <- function(par, data, pats, ind) {
 
 \begin{frame}[fragile]{FIML Example}
 
-<<size = "scriptsize">>=
+<<>>=
 ## Summarize response patterns:
 pats <- uniquecombs(!is.na(dat2))
 ind  <- attr(pats, "index")
 
 ## Choose some starting values:
 m0   <- colMeans(dat2, na.rm = TRUE)
-s0   <- vecChol(cov(dat2, use = "pairwise"))
+s0   <- cov(dat2, use = "pairwise") %>% vecChol()
 par0 <- c(m0, s0)
 
 ## Use optimx() to numerically optimize the LL function:
-mle2 <- optimx(par     = par0,
-               fn      = llm,
-               data    = dat2,
-               pats    = pats,
-               ind     = ind,
-               method  = "BFGS",
-               control = list(maximize = TRUE, maxit = 1000)
-               )
+mle <- optimx(par     = par0,
+              fn      = llm,
+              data    = dat2,
+              pats    = pats,
+              ind     = ind,
+              method  = "BFGS",
+              control = list(maximize = TRUE, maxit = 1000)
+              )
 @
 
 \end{frame}
@@ -671,12 +690,11 @@ mle2 <- optimx(par     = par0,
   
 <<>>=
 ## Check convergence:
-mle2[c("convcode", "kkt1", "kkt2")]
+mle[c("convcode", "kkt1", "kkt2")]
 
 ## Get the optimize mean vector and covariance matrix:
-muHat2.1    <- mle2[1 : 3]
-sigmaHat2.1 <- 
-    vecChol(as.numeric(mle2[4 : 9]), revert = TRUE)
+muHat1    <- mle[1:3]
+sigmaHat1 <- mle[4:9] %>% as.numeric() %>% vecChol(p = 3, revert = TRUE)
 @ 
 
 \end{frame}
@@ -689,18 +707,18 @@ sigmaHat2.1 <-
   the \texttt{cfa} function from the \textbf{lavaan} package:
 
 <<>>=
-## Confirm the manual approach by using lavaan::cfa() to 
-## get the FIML estimates:
-mod1 <- "
+## Define the model in lavaan syntax:
+mod <- "
 bmi ~~ ldl + glu
 ldl ~~ glu
 "
 
 ## Fit the model with lavaan::cfa():
-out2 <- cfa(mod1, data = dat2, missing = "fiml")
+fit <- cfa(mod, data = dat2, missing = "fiml")
 
-muHat2.2    <- inspect(out2, "est")$nu
-sigmaHat2.2 <- inspect(out2, "theta")
+## Extract the estimated parameters:
+muHat2    <- inspect(fit, "est")$nu
+sigmaHat2 <- inspect(fit, "theta")
 @
 
 \end{frame}
@@ -710,7 +728,7 @@ sigmaHat2.2 <- inspect(out2, "theta")
 \begin{frame}{FIML Example}
   
 <<echo = FALSE, results = "asis">>=
-muMat           <- rbind(muHat2.1, t(muHat2.2))
+muMat           <- rbind(muHat1, t(muHat2))
 colnames(muMat) <- colnames(dat1)
 rownames(muMat) <- c("Manual", "Lavaan")
 
@@ -723,8 +741,8 @@ print(xtable(muMat, digits = 3, caption = "Estimated Means"), booktabs = TRUE)
   \begin{column}{0.5\textwidth}
     
 <<echo = FALSE, results = "asis">>= 
-colnames(sigmaHat2.1) <- rownames(sigmaHat2.1) <- colnames(dat1)
-print(xtable(sigmaHat2.1, 
+colnames(sigmaHat1) <- rownames(sigmaHat1) <- colnames(dat1)
+print(xtable(sigmaHat1, 
              digits  = 3, 
              caption = "Manual FIML Covariance Matrix"), 
       booktabs = TRUE)
@@ -734,7 +752,7 @@ print(xtable(sigmaHat2.1,
 \begin{column}{0.5\textwidth}
   
 <<echo = FALSE, results = "asis">>= 
-print(xtable(sigmaHat2.2, 
+print(xtable(sigmaHat2, 
              digits  = 3, 
              caption = "Lavaan FIML Covariance Matrix"), 
       booktabs = TRUE)
@@ -743,6 +761,85 @@ print(xtable(sigmaHat2.2,
 \end{column}
 \end{columns}
 
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\sectionslide{Auxiliary Variables}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[allowframebreaks]{Satisfying the MAR Assumption}
+ 
+  Like MI, FIML also requires MAR data.
+  \begin{itemize}
+  \item Parameters will be biased with MAR is violated.
+  \end{itemize}
+  \vb
+  Unlike MI, FIML directly treats the missing data while estimating the analysis 
+  model.
+  \begin{itemize}
+  \item The MAR predictors must be included in the analysis model.
+  \item Otherwise, FIML reduces to pairwise deletion.
+  \end{itemize}
+  
+  \pagebreak
+  
+  If the MAR predictors are not substantively interesting variables, naively 
+  included them in the analysis model will change the model's meaning.
+  \vc
+  \begin{itemize}
+  \item Suppose we are interested in the effect of age on blood pressure.
+    \begin{itemize}
+    \item $Y_{BP} = \beta_0 + \beta_1 X_{age} + \varepsilon$
+      \vc
+    \item In this model, $\beta_1$ represents the effect of age on blood pressure.
+    \end{itemize}
+    \vc
+  \item If missingness in blood pressure depends on blood glucose and total 
+    cholesterol, we need to add those variables into our model.
+    \begin{itemize}
+    \item $Y_{BP} = \beta_0 + \beta_1 X_{age} + \beta_2 X_{glu} + \beta_3 X_{TC} + \varepsilon$
+      \vc
+    \item Now, $\beta_1$ represents the partial effect of age, after controlling 
+      for blood glucose and total cholesterol.
+    \end{itemize}
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Saturated Correlates Technique}
+
+  \citet{graham:2003} developed the \emph{saturated correlates} approach to 
+  satisfy two desiderata:
+  \vc
+  \begin{enumerate}
+  \item Satisfy the MAR assumption by incorporating MAR predictors into the 
+    analysis model.
+    \vc
+  \item Not affecting the meaning of the substantively interesting parameters.
+  \end{enumerate}
+  \vb
+  Incorporate the MAR predictors via a fully-saturated covariance structure:
+  \vc
+  \begin{enumerate}
+  \item Allow all MAR predictors to covary with all other MAR predictors.
+    \vc
+  \item Allow all MAR predictors to covary with all observed variables in the
+    analysis model (or their residuals).
+  \end{enumerate}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[allowframebreaks]{References}
+  
+  \bibliographystyle{apacite}
+  \bibliography{../../../literature/bibtex/winter_school_refs.bib}
+  
 \end{frame}
 
 %------------------------------------------------------------------------------%
