@@ -6,7 +6,7 @@
 rm(list = ls(all = TRUE)) # Clear workspace
 
 ## Intall packages as necessary:
-install.packages("miceadds", #c("Amelia", "mice", "mitools"),
+install.packages("psych", #c("Amelia", "mice", "mitools"),
                  repos = "http://cloud.r-project.org")
 
 ## Load the packages we'll use:
@@ -18,6 +18,7 @@ library(Amelia)
 library(semTools)
 library(dplyr)
 library(magrittr)
+library(psych)
 
 dataDir <- "../../../data/"
 plotDir <- "../plots/"
@@ -217,8 +218,12 @@ dev.off()
 
 ###-Analyzing MI Data--------------------------------------------------------###
 
-## Use the with.mids() function to fiit a model directly to the imputed data in
-## the mids object:
+## Use miceadds::micombine.cor() to run correlation tests on the imputed data:
+varPositions <- grep("riae\\d", colnames(missData))
+micombine.cor(miceOut2, varPositions)
+
+## Use mice::with.mids() to fit a linear regression directly to the imputed data
+## in the mids object:
 fit1 <- with(miceOut2, lm(policy1 ~ nori1 + nori4 + nori10 + polv + sex))
 
 ## Pool the results:
@@ -228,64 +233,69 @@ summary(pool1)
 ## Extract the FMIs:
 pool1$pooled$fmi
 
-## Process the imputed items:
-impList3.2 <-
-    lapply(impList3,
-           FUN = function(x) {
-               data.frame(
-                   sysRac = rowMeans(x[ , grep("sysRac", colnames(x))]),
-                   indRac = rowMeans(x[ , grep("indRac", colnames(x))]),
-                   wPriv  = rowMeans(x[ , grep("wPriv",  colnames(x))]),
-                   policy = rowMeans(x[ , grep("policy", colnames(x))]),
-                   liberal = x$liberal
-               )
-           })
+## Pool the R^2 and adjusted R^2:
+pool.r.squared(fit1)
+pool.r.squared(fit1, adjusted = TRUE)
 
-impList3.2[[1]]
+## Pool the F-statistic two ways:
+D1(fit1)
+D3(fit1)
 
-## Fit a simple regression model:
-fit3.2 <- lapply(X   = impList3.2,
-                 FUN = function(x)
-                     lm(policy ~ sysRac + wPriv + liberal, data = x)
-                 )
+## Use miceadds::mi.anova() to run a factorial ANOVA on the imputed data:
+mi.anova(miceOut2, "policy1 ~ polv * sex")
 
-pool3.2 <- MIcombine(fit3.2)
-summary(pool3.2)
+
+###-Processing the Imputed Data----------------------------------------------###
+
+## Use mice::complete() to generate a list of imputed datasets:
+impList <- complete(miceOut2, "all")
+
+## Use psych::scoreVeryFast() to create some scale scores from the imputed data:
+keys <- list(indRac = grep("riae\\d|nori\\d", colnames(missData), value = TRUE),
+             policy = grep("policy\\d", colnames(missData), value = TRUE)
+             )
+
+impList <- lapply(impList,
+                  function(x, keys) {
+                      scales <- scoreVeryFast(keys, x)
+                      data.frame(x, scales)
+                  },
+                  keys = keys)
+
+summary(impList[[1]])
+
+## Fit a linear regression model using the processed data:
+fit1 <- lapply(impList, function(x) lm(policy ~ indRac + polv, data = x))
+       
+pool1 <- MIcombine(fit1)
+summary(pool1)
 
 summary(fit3.2[[1]])
 ls(fit3.2[[1]])
 
 ## Extract the FMI:
-fmi3.2 <- pool3.2$missinfo
-fmi3.2
+(fmi <- pool1$missinfo)
 
 ## Extract coefficients:
-cf3.2 <- coef(pool3.2)
-cf3.2
+(cf <- coef(pool1))
 
 ## Extract SEs:
-se3.2 <- sqrt(diag(vcov(pool3.2)))
-se3.2
+(se <- vcov(pool1) %>% diag() %>% sqrt())
 
 ## Calcuate t-statistics:
-t3.2 <- cf3.2 / se3.2
-t3.2
+(t <- cf / se)
 
 ## Get p-values:
-p3.2 <- 2 * pt(abs(t3.2), df = pool3.2$df, lower = FALSE)
-p3.2
+(p <- 2 * pt(abs(t), df = pool1$df, lower = FALSE))
 
 ## Put the results in a nice table:
-outTab           <- round(cbind(cf3.2, se3.2, t3.2, p3.2, fmi3.2), 3)
+outTab           <- round(cbind(cf, se, t, p, fmi), 3)
 colnames(outTab) <- c("Estimate", "SE", "t-Stat", "p-Value", "FMI")
-rownames(outTab) <- c("Intercept", "Sys. Rac.", "W. Priv.", "Liberal")
+rownames(outTab) <- c("Intercept", "Ind. Rac.", "Moderate", "Liberal")
 outTab
 
-## Write out nice table to disk:
-write.csv(outTab, paste0(outDir, "resTab3.2.csv"), row.names = TRUE)
 
 ##----------------------------------------------------------------------------##
-
 
 ### Now we'll try amelia() ###
 
