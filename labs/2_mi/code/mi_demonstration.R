@@ -5,38 +5,23 @@
 
 rm(list = ls(all = TRUE)) # Clear workspace
 
-## Intall packages as necessary:
-install.packages("psych", #c("Amelia", "mice", "mitools"),
-                 repos = "http://cloud.r-project.org")
-
 ## Load the packages we'll use:
 library(naniar)
 library(mice)
 library(miceadds)
 library(mitools)
-library(Amelia)
 library(semTools)
 library(dplyr)
-library(magrittr)
 library(psych)
 
 dataDir <- "../../../data/"
 plotDir <- "../plots/"
-outDir  <- "../output/"
 
 ## Read in the incomplete data:
 missData <- readRDS(paste0(dataDir, "adams_klps_data-example.rds"))
 
-## Subset the data to make examples run faster: 
-#drops <- c(paste0("riae", c(2, 3, 7:9, 11, 12)),
-#           paste0("nori", c(2, 7, 9)),
-#           paste0("wpriv", c(1:3, 5:9))
-#           )
 
-#missData %<>% select(-drops)
-
-
-##--Missing Data Descriptives-------------------------------------------------##
+###-Missing Data Descriptives------------------------------------------------###
 
 ## Take a peek:
 summary(missData)
@@ -44,15 +29,15 @@ summary(missData)
 ## Visualize the missing data:
 vis_miss(missData)
 
-## First look at the percent missing:
+## Look at the percent missing:
 (pm <- is.na(missData) %>% colMeans())
 
-## Compute the covaraince coverage using the md.pairs() is part of the mice package
+## Compute the covaraince coverage using mice::md.pairs():
 cover <- md.pairs(missData)$rr / nrow(missData)
 hist(cover)
 cover[cover < 1] %>% range()
 
-## How many unique response patterns:
+## How many unique response patterns?
 md.pattern(missData) %>% nrow() - 1
 
 
@@ -158,7 +143,7 @@ for(v in targets) {
 dev.off()
 
 
-##----------------------------------------------------------------------------##
+###-Tweak the Imputation Model-----------------------------------------------###
 
 ## Change the method used to impute 'policy' items:
 methVec[grep("policy", colnames(missData))] <- "pmm"
@@ -241,19 +226,33 @@ pool.r.squared(fit1, adjusted = TRUE)
 D1(fit1)
 D3(fit1)
 
+## Fit a restricted model:
+fit2 <- with(miceOut2, lm(policy1 ~ nori1 + nori4 + nori10 + sex))
+
+## Summarize the results:
+pool(fit2) %>% summary()
+
+## Compare models via a likelihood ratio test:
+anova(fit1, fit2)
+D1(fit1, fit2)
+D3(fit1, fit2)
+
 ## Use miceadds::mi.anova() to run a factorial ANOVA on the imputed data:
 mi.anova(miceOut2, "policy1 ~ polv * sex")
 
 
-###-Processing the Imputed Data----------------------------------------------###
+###-Working Directly with the Imputed Datasets-------------------------------###
 
 ## Use mice::complete() to generate a list of imputed datasets:
 impList <- complete(miceOut2, "all")
 
 ## Use psych::scoreVeryFast() to create some scale scores from the imputed data:
-keys <- list(indRac = grep("riae\\d|nori\\d", colnames(missData), value = TRUE),
+keys <- list(indRac = grep("riae\\d", colnames(missData), value = TRUE),
              policy = grep("policy\\d", colnames(missData), value = TRUE)
              )
+
+## "policy2" needs to be reverse coded:
+keys$policy <- gsub("policy2", "-policy2", keys$policy)
 
 impList <- lapply(impList,
                   function(x, keys) {
@@ -269,9 +268,6 @@ fit1 <- lapply(impList, function(x) lm(policy ~ indRac + polv, data = x))
        
 pool1 <- MIcombine(fit1)
 summary(pool1)
-
-summary(fit3.2[[1]])
-ls(fit3.2[[1]])
 
 ## Extract the FMI:
 (fmi <- pool1$missinfo)
@@ -295,97 +291,20 @@ rownames(outTab) <- c("Intercept", "Ind. Rac.", "Moderate", "Liberal")
 outTab
 
 
-##----------------------------------------------------------------------------##
+###-SEM with MI--------------------------------------------------------------###
 
-### Now we'll try amelia() ###
-
-## Amelia wants all of our data to be numeric:
-missData$liberal <- as.numeric(missData$liberal == "lib")
-missData         <- sapply(missData, as.numeric)
-
-## Define nominal and ordinal variables:
-nomVars <- "liberal"
-ordVars <- paste0("policy", c(1 : 3))
-
-## Run the imputation:
-ameliaOut <- amelia(x       = missData,
-                    m       = 50,
-                    noms    = nomVars,
-                    ords    = ordVars,
-                    p2s     = 1,
-                    autopri = 0.1,
-                    seed    = 235711)
-
-## We can easily get overlaid density plots:
-plot(ameliaOut)
-
-
-## Amelia will give us some helpful summary information:
-summary(ameliaOut)
-
-## Process the imputed items:
-impList4 <-
-    lapply(ameliaOut$imputations,
-           FUN = function(x) {
-               x <- as.data.frame(x)
-               data.frame(
-                   sysRac = rowMeans(x[ , grep("sysRac", colnames(x))]),
-                   indRac = rowMeans(x[ , grep("indRac", colnames(x))]),
-                   wPriv  = rowMeans(x[ , grep("wPriv",  colnames(x))]),
-                   policy = rowMeans(x[ , grep("policy", colnames(x))]),
-                   liberal = x$liberal
-               )
-           })
-
-## Fit a simple regression model:
-fit4 <- lapply(X   = impList4,
-               FUN = function(x)
-                   lm(policy ~ sysRac + wPriv + liberal, data = x)
-               )
-
-## Pool the results:
-pool4 <- MIcombine(fit4)
-
-## Extract the FMI:
-fmi4 <- pool4$missinfo
-fmi4
-
-## Extract coefficients:
-cf4 <- coef(pool4)
-cf4
-
-## Extract SEs:
-se4 <- sqrt(diag(vcov(pool4)))
-se4
-
-## Calcuate t-statistics:
-t4 <- cf4 / se4
-t4
-
-## Get p-values:
-p4 <- 2 * pt(abs(t4), df = pool4$df, lower = FALSE)
-p4
-
-## Put the results in a nice table:
-outTab4           <- round(cbind(cf4, se4, t4, p4, fmi4), 3)
-colnames(outTab4) <- c("Estimate", "SE", "t-Stat", "p-Value", "FMI")
-rownames(outTab4) <- c("Intercept", "Sys. Rac.", "W. Priv.", "Liberal")
-outTab4
-
-
-##--SEM with MI---------------------------------------------------------------##
-
-impList5 <- lapply(impList3, function(x) {
-    x$liberal <- as.numeric(x$liberal == "lib")
-    scale(x)
-})
-
-## Simple structural model:
-mod2 <- "
-sysRac =~ sysRac1 + sysRac2 + sysRac3
+## Simple CFA model:
+mod <- "
+fIndRac =~ riae1 + riae4 + riae5 + riae6 + riae10
+fPolicy =~ policy1 + policy2 + policy3 + policy4 + policy5 + policy6
 "
 
-out5 <- cfa.mi(model = mod2, data = impList5, std.lv = TRUE)
-warnings()
+## Use semTools::cfa.mi() to fit the above lavaan model to the imputed data and
+## pool the results:
+fit <- cfa.mi(model = mod, data = impList, std.lv = TRUE)
 
-?runMI
+## Summarize the results:
+summary(fit, fit.measures = TRUE)
+
+
+###-END----------------------------------------------------------------------###
