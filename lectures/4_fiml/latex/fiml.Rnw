@@ -1,0 +1,847 @@
+%%% Title:    Missing Data in R: FIML
+%%% Author:   Kyle M. Lang
+%%% Created:  2015-09-29
+%%% Modified: 2022-01-28
+
+\documentclass[10pt]{beamer}
+\usetheme{Utrecht}
+
+\usepackage{graphicx}
+\usepackage[natbibapa]{apacite}
+\usepackage[libertine]{newtxmath}
+\usepackage{fancybox}
+\usepackage{booktabs}
+\usepackage{eurosym}
+\usepackage{caption}
+\usepackage[mathcal]{eucal}
+\usepackage{upgreek}
+
+\captionsetup{labelformat = empty}
+
+\newcommand{\rmsc}[1]{\textrm{\textsc{#1}}}
+\newcommand{\pkg}[1]{\textbf{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\mub}[0]{\boldsymbol{\muup}}
+
+\title{Full Information Maximum Likelihood}
+\subtitle{Utrecht University Winter School: Missing Data in R}
+\author{Kyle M. Lang}
+\institute{Department of Methodology \& Statistics\\Utrecht University}
+\date{2022-02-03}
+
+%------------------------------------------------------------------------------%
+
+\begin{document}
+
+<<setup, include = FALSE, cache = FALSE>>=
+set.seed(235711)
+
+library(knitr)
+library(ggplot2)
+library(mice)
+library(mvtnorm)
+library(xtable)
+library(pROC)
+library(dplyr)
+                                        #library(magrittr)
+                                        #library(naniar)
+                                        #library(ggpubr)
+                                        #library(LaplacesDemon)
+                                        #library(mitools)
+library(mgcv)
+                                        #library(MCMCpack)
+                                        #library(norm)
+library(optimx)
+library(lavaan)
+                                        #library(semTools)
+
+source("../../../code/supportFunctions.R")
+source("../../../code/sim_missing/code/simMissingness.R")
+
+dataDir <- "../../../data/"
+figDir  <- "figures/"
+
+options(width = 60)
+opts_chunk$set(size = "footnotesize",
+               fig.align = "center",
+               fig.path = "figure/multivariate_mi-",
+               message = FALSE,
+               warning = FALSE,
+               comment = "")
+knit_theme$set('edit-kwrite')
+@
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[t, plain]
+  \titlepage
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Outline}
+  \tableofcontents
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{FIML Intuition}
+
+  FIML is an ML estimation method that is robust to ignorable nonresponse.
+  \vc
+  \begin{itemize}
+  \item FIML partitions the missing information out of the likelihood function 
+    so that the model is only estimated from the observed parts of the data.
+  \end{itemize}
+  \vb
+  After a minor alteration to the likelihood function, FIML reduces to simple ML 
+  estimation.
+  \vc
+  \begin{itemize}
+  \item So, let's review ML estimation before moving forward.
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\section{Maximum Likelihood}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[allowframebreaks]{Maximum Likelihood Estimation}
+
+  ML estimation simply finds the parameter values that are ``most likely'' to 
+  have given rise to the observed data.
+  \vb
+  \begin{itemize}
+  \item The \emph{likelihood} function is just a probability density (or mass) 
+    function with the data treated as fixed and the parameters treated as 
+    random variables.
+    \vb
+  \item Having such a framework allows us to ask: ``Given that I've observed 
+    these data values, what parameter values most probably describe these 
+    data?''
+  \end{itemize}
+  
+  \pagebreak
+  
+  ML estimation is usually employed when there is no closed form solution for 
+  the parameters we seek.
+  \vb
+  \begin{itemize}
+  \item This is why you don't usually see ML used to fit general linear models.
+  \end{itemize}
+  \vb
+  After choosing a likelihood function, we iteratively optimize the function to 
+  produce the ML estimated parameters.
+  \vb
+  \begin{itemize}
+  \item In practice, we nearly always work with the natural logarithm of the 
+    likelihood function (i.e., the \emph{loglikelihood}).
+  \end{itemize}
+  
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}{Likelihoods}
+  
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      Suppose we have the following model:
+      \begin{align*}
+        Y \sim \text{N}\left( \mu, \sigma^2 \right).
+      \end{align*}
+      
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      
+<<echo = FALSE, cache = TRUE>>=
+x    <- seq(0, 15, length.out = 1000)
+dat1 <- data.frame(x = x, y = dnorm(x, 7.5, 1.75))
+
+ggplot(data = dat1, aes(x = x, y = y)) + 
+    theme_classic() +
+    geom_line() +
+    theme(text       = element_text(size = 16, family = "Courier"),
+          plot.title = element_text(size = 20, face = "bold", hjust = 0.5)
+          ) +
+    ylab("Density") +
+    xlab("Y")
+@
+
+\end{column}
+\end{columns}
+
+\end{frame}
+
+\watermarkon %-----------------------------------------------------------------%
+
+\begin{frame}{Likelihoods}
+  
+  For a given $Y_n$, we have:
+  \begin{align}
+    P \left( Y_n|\mu, \sigma^2 \right) = 
+    \frac{1}{\sqrt{2 \pi \sigma^2}} 
+    e^{-\frac{\left( Y_n - \mu \right)^2}{2\sigma^2}}. \label{margPdf}
+  \end{align}
+  
+  If we plug estimated parameters into Equation \ref{margPdf}, we get the 
+  probability of observing $Y_n$ given $\hat{\mu}$ and $\hat{\sigma}^2$:
+  \begin{align}
+    P \left( Y_n|\hat{\mu}, \hat{\sigma}^2 \right) = 
+    \frac{1}{\sqrt{2 \pi \hat{\sigma}^2}} 
+    e^{-\frac{\left( Y_n - \hat{\mu}\right)^2}{2\hat{\sigma}^2}}. \label{estMargPdf}
+  \end{align}
+  
+  Applying Equation \ref{estMargPdf} to all $N$ observations and multiplying the 
+  results produces a \emph{likelihood}:
+  \begin{align*}
+    \hat{L} \left( \hat{\mu}, \hat{\sigma}^2 \right) = 
+    \prod_{n = 1}^N P \left( Y_n|\hat{\mu}, \hat{\sigma}^2 \right).
+  \end{align*}
+  
+\end{frame}
+
+%%----------------------------------------------------------------------------%%
+
+\begin{frame}{Likelihoods}
+  
+  We generally want to work with the natural logarithm of Equation 
+  \ref{estMargPdf}. Doing so gives the \emph{loglikelihood}:
+  \begin{align*}
+  \hat{\mathcal{L}} \left( \hat{\mu}, \hat{\sigma}^2 \right) &= 
+    \ln \prod_{n = 1}^N P \left( Y_n|\hat{\mu}, \hat{\sigma}^2 \right)\\ 
+    &= -\frac{N}{2} \ln 2\pi - N \ln \hat{\sigma} - \frac{1}{2\hat{\sigma}^2} 
+    \sum_{n = 1}^N \left( Y_n - \hat{\mu} \right)^2
+  \end{align*}
+  
+  ML tries to find the values of $\hat{\mu}$ and $\hat{\sigma}^2$ that maximize 
+  $\hat{\mathcal{L}} \left( \hat{\mu}, \hat{\sigma}^2 \right)$.
+  \vc
+  \begin{itemize}
+  \item Find the values of $\hat{\mu}$ and $\hat{\sigma}^2$ that are \emph{most 
+    likely}, given the observed values of $Y$.
+  \end{itemize}
+  
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}{Likelihoods}
+  
+    \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      Suppose we have a linear regression model:
+      \begin{align*}
+        Y &= \beta_0 + \beta_1 X + \varepsilon,\\[6pt]
+        \varepsilon &\sim \text{N}\left( 0, \sigma^2 \right).
+      \end{align*}
+      This model can be equivalently written as:
+      \begin{align*}
+        Y \sim \text{N} \left( \beta_0 + \beta_1 X, \sigma^2 \right)
+      \end{align*}
+      
+    \end{column}
+    \begin{column}{0.5\textwidth}
+
+      \begin{figure}
+        \includegraphics[width = \textwidth]{figures/conditional_density_figure.png}\\
+        \va
+        \tiny{Image retrieved from:
+          \url{http://www.seaturtle.org/mtn/archives/mtn122/mtn122p1.shtml}}
+      \end{figure}
+      
+    \end{column}
+    \end{columns}
+    
+\end{frame}
+
+\watermarkon %-----------------------------------------------------------------%
+
+\begin{frame}{Likelihoods}
+  
+  For a given $\{Y_n, X_n\}$, we have:
+  \begin{align}
+    P \left( Y_n|X_n, \beta_0, \beta_1, \sigma^2 \right) = 
+    \frac{1}{\sqrt{2 \pi \sigma^2}} 
+    e^{-\frac{\left( Y_n - \beta_0 - \beta_1 X_n \right)^2}{2\sigma^2}}. \label{olsPdf}
+  \end{align}
+  
+  If we plug our estimated parameters into Equation \ref{olsPdf}, we get the 
+  probability of observing $Y_n$ given $\hat{Y}_n = \hat{\beta}_0 + 
+  \hat{\beta}_1X_n$ and $\hat{\sigma}^2$.
+  \begin{align}
+    P \left( Y_n|X_n, \hat{\beta}_0, \hat{\beta}_1, \hat{\sigma}^2 \right) = 
+    \frac{1}{\sqrt{2 \pi \hat{\sigma}^2}} 
+    e^{-\frac{\left( Y_n - \hat{\beta}_0 - \hat{\beta}_1 X_n \right)^2}{2\hat{\sigma}^2}} \label{estOlsPdf}
+  \end{align}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Likelihoods}
+ 
+  So, our final loglikelihood function would be the following:
+  \begin{align*}
+  \hat{\mathcal{L}} \left( \hat{\beta}_0, \hat{\beta}_1, \hat{\sigma}^2 \right) &= 
+    \ln \prod_{n = 1}^N P \left( Y_n|X_n, \hat{\beta}_0, \hat{\beta}_1, \hat{\sigma}^2 \right)\\ 
+    &= -\frac{N}{2} \ln 2\pi - N \ln \hat{\sigma} - \frac{1}{2\hat{\sigma}^2} 
+    \sum_{n = 1}^N \left( Y_n - \hat{\beta}_0 - \hat{\beta}_1 X_n \right)^2.
+  \end{align*}
+  
+\end{frame}
+  
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}[fragile, allowframebreaks]{Example}
+    
+<<echo = FALSE>>=
+diabetes <- readRDS(paste0(dataDir, "diabetes.rds"))
+@ 
+
+<<>>=
+## Fit a model:
+out1 <- lm(ldl ~ bp + glu + bmi, data = diabetes)
+
+## Extract the predicted values and estimated residual 
+## standard error:
+yHat <- predict(out1)
+s    <- summary(out1)$sigma
+
+## Compute the row-wise probabilities:
+pY <- dnorm(diabetes$ldl, mean = yHat, sd = s)
+
+## Compute the loglikelihood, and compare to R's version:
+sum(log(pY)); logLik(out1)[1]
+@
+
+\end{frame}
+
+\watermarkon %-----------------------------------------------------------------%
+
+\begin{frame}{Multivariate Normal Distribution}
+  
+  The PDF for the multivariate normal distribution is:
+  \begin{align*}
+    P(\mathbf{Y}|\mub, \Sigma) = 
+    \frac{1}{\sqrt{(2\pi)^P|\Sigma|}} e^{-\frac{1}{2}(\mathbf{Y} - \mub)^T\Sigma^{-1}(\mathbf{Y} - \mub)}.
+  \end{align*}
+  So, the multivariate normal loglikelihood is:
+  \begin{align*}
+    \mathcal{L} \left( \mub, \Sigma \right) = 
+    -\left[\frac{P}{2} \ln(2\pi) + \frac{1}{2} \ln |\Sigma| + \frac{1}{2} \right] \sum_{n = 1}^N(\mathbf{Y}_n - \mub)^T \Sigma^{-1}(\mathbf{Y}_n - \mub).
+  \end{align*}
+  Which can be further simplified if we multiply through by -2:
+  \begin{align*}
+    -2\mathcal{L} \left( \mub, \Sigma \right) = 
+    \left[P \ln(2\pi) + \ln |\Sigma| \right] \sum_{n = 1}^N(\mathbf{Y}_n - \mub)^T \Sigma^{-1}(\mathbf{Y}_n - \mub).
+  \end{align*}
+  
+\end{frame}
+
+%%----------------------------------------------------------------------------%%
+
+\begin{frame}{Steps of ML}
+
+  \begin{enumerate}
+  \item Choose a probability distribution, $f(Y|\theta)$, to describe the 
+    distribution of the data, $Y$, given the parameters, $\theta$.
+    \vc
+  \item Choose some estimate of $\theta$, $\hat{\theta}^{(i)}$.
+    \vc
+  \item Compute each row's contribution to the loglikelihood function by 
+    evaluating: $\ln \left[f\left(Y_n|\hat{\theta}^{(i)}\right)\right]$. 
+    \label{rowContrib}
+    \vc
+  \item Sum the individual loglikelihood contributions from Step 
+    \ref{rowContrib} to find the loglikelihood value, $\hat{\mathcal{L}}$. 
+    \label{getLL}
+    \vc
+  \item Choose a ``better'' estimate of the parameters, $\hat{\theta}^{(i + 1)}$, 
+    and repeat Steps \ref{rowContrib} and \ref{getLL}. \label{updateTheta}
+    \vc
+  \item Repeat Steps \ref{rowContrib} -- \ref{updateTheta} until the change 
+    between $LL^{(i - 1)}$ and $LL^{(i)}$ falls below some trivially small 
+    threshold.
+    \vc
+  \item Take $\hat{\theta}^{(i)}$ as your estimated parameters.
+  \end{enumerate}
+
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}[fragile]{ML Example}
+  
+  Recall the $n$th observation's contribution to the multivariate normal 
+  loglikelihood function:
+  \begin{align*}
+   \mathcal{L} \left( \mub, \Sigma \right)_n = 
+   -\frac{P}{2} \ln(2\pi) - \frac{1}{2} \ln |\Sigma| - \frac{1}{2} (\mathbf{Y}_n - \mub)^T \Sigma^{-1}(\mathbf{Y}_n - \mub).
+  \end{align*}
+
+  \va
+
+  It turns out that this function is readily available in R via the 
+  \textbf{mvtnorm} package:
+
+<<eval = FALSE>>=
+## Vector of row-wise contributions to the overall LL:
+ll0 <- dmvnorm(y, mean = mu, sigma = sigma, log = TRUE)
+@
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{ML Example}
+
+  We can wrap the preceding code in a nice R function:
+
+<<>>=
+## Complete data loglikelihood function:
+ll <- function(par, data) {
+    ## Extract the parameter matrices:
+    p  <- ncol(data)
+    mu <- par[1:p]
+    
+    ## Populate sigma from its Cholesky factor:
+    sigma <- vecChol(tail(par, -p), p = p, revert = TRUE)
+    
+    ## Compute the row-wise contributions to the LL:
+    ll0 <- dmvnorm(data, mean = mu, sigma = sigma, log = TRUE)
+    
+    sum(ll0)# return the overall LL value
+}
+@
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{ML Example}
+
+  We'll also need the following helper function:
+  
+<<>>=
+## Convert from covariance matrix to vectorized Cholesky factor and back:
+vecChol <- function(x, p, revert = FALSE) {
+    if(revert) {
+        tmp                  <- matrix(0, p, p)
+        tmp[!lower.tri(tmp)] <- x
+        crossprod(tmp)
+    }
+    else
+        chol(x)[!lower.tri(x)]
+}
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{ML Example}
+  
+  The \textbf{optimx} package can numerically optimize arbitrary functions.
+  \begin{itemize}
+  \item We can use it to (semi)manually implement ML.
+  \end{itemize}
+  
+<<>>=
+## Subset the 'diabetes' data:
+dat1 <- diabetes[ , c("bmi", "ldl", "glu")] %>% as.matrix()
+
+## Choose some starting values:
+m0   <- rep(0, 3)
+s0   <- diag(3) %>% vecChol()
+par0 <- c(m0, s0)
+
+## Use optimx() to numerically optimize the LL function:
+mle <- optimx(par     = par0,
+              fn      = ll,
+              data    = dat1,
+              method  = "BFGS",
+              control = list(maximize = TRUE, maxit = 1000)
+              )
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{ML Example}
+  
+  Finally, let's check convergence and extract the optimized parameters:
+  
+<<>>=
+## Check convergence:
+mle[c("convcode", "kkt1", "kkt2")]
+
+## Get the optimize mean vector and covariance matrix:
+muHat    <- mle[1:3]
+sigmaHat <- mle[4:9] %>% as.numeric() %>% vecChol(p = 3, revert = TRUE)
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{ML Example}
+  
+<<echo = FALSE, results = "asis">>=
+names(muHat) <- colnames(dat1)
+
+muMat           <- rbind(muHat, colMeans(dat1))
+rownames(muMat) <- c("ML", "Closed Form")
+
+print(xtable(muMat, digits = 3, caption = "Estimated Means"), booktabs = TRUE)
+@ 
+
+\vx{-12}
+
+\begin{columns}
+  \begin{column}{0.5\textwidth}
+    
+<<echo = FALSE, results = "asis">>= 
+colnames(sigmaHat) <- rownames(sigmaHat) <- colnames(dat1)
+print(xtable(sigmaHat, digits = 3, caption = "ML Covariance Matrix"), 
+      booktabs = TRUE)
+@ 
+
+\end{column}
+\begin{column}{0.5\textwidth}
+  
+<<echo = FALSE, results = "asis">>= 
+print(xtable(cov(dat1), digits = 3, caption = "Closed Form Covariance Matrix"), 
+      booktabs = TRUE)
+@
+
+\end{column}
+\end{columns}
+
+\end{frame}
+
+\watermarkon %-----------------------------------------------------------------%
+
+\sectionslide{Full Information Maximum Likelihood}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{From ML to FIML}
+
+  The $n$th observation's contribution to the multivariate normal loglikelihood 
+  function would be the following:
+  \begin{align}
+   \mathcal{L} \left( \mub, \Sigma \right)_n = 
+   -\frac{P}{2} \ln(2\pi) - \frac{1}{2} \ln |\Sigma| - \frac{1}{2} (\mathbf{Y}_n - \mub)^T \Sigma^{-1}(\mathbf{Y}_n - \mub). \label{llContrib}
+  \end{align}\\
+  \va
+  \pause
+  FIML just tweaks Equation \ref{llContrib} a tiny bit: 
+  \begin{align*}
+    \mathcal{L} \left( \mub, \Sigma \right)_{fiml,n} = 
+    -\frac{P}{2} \ln(2\pi) - \frac{1}{2} \ln |\Sigma_q| - \frac{1}{2} (\mathbf{Y}_n - \mub_q)^T \Sigma_q^{-1}(\mathbf{Y}_n - \mub_q).
+  \end{align*}
+  Where $q = 1, 2, \ldots, Q$ indexes response patterns.
+  
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}[fragile]{FIML Example}
+
+  First things first, we need to punch some holes in our example data.
+  
+<<>>=
+## Impose MAR missing:
+dat2 <- imposeMissData(data    = dat1,
+                       targets = c("ldl", "glu"),
+                       preds   = "bmi",
+                       pm      = 0.3,
+                       types   = c("low", "high"),
+                       stdDat  = TRUE)
+@
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Visualize the Response Patterns}
+
+<<echo = FALSE>>=
+nPats <- md.pattern(dat2, plot = FALSE) %>% nrow() - 1
+@
+
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      The data contain \Sexpr{nPats} unique response patterns.
+      \vc
+      \begin{itemize}
+      \item We'll define \Sexpr{nPats} different version of $\mu$ and $\Sigma$.
+        \vc
+      \item We'll calculate each individual loglikelihood contributions using 
+        the appropriate flavor of $\mu$ and $\Sigma$. 
+      \end{itemize}
+      
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      
+<<echo = FALSE>>=
+  tmp <- md.pattern(dat2)
+@
+
+    \end{column}
+  \end{columns}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{FIML Example}
+
+<<>>=
+## Compute the within-pattern contributions to the LL:
+ll0 <- function(i, mu, sigma, pats, ind, data) {
+    ## Define the current response pattern:
+    p1 <- pats[i, ]
+    
+    if(sum(p1) > 1) # More than one observed variable?
+        dmvnorm(x     = data[ind == i, p1],
+                mean  = mu[p1],
+                sigma = sigma[p1, p1],
+                log   = TRUE)
+    else
+        dnorm(x    = data[ind == i, p1],
+              mean = mu[p1],
+              sd   = sqrt(sigma[p1, p1]),
+              log  = TRUE)
+}
+@
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{FIML Example}
+
+<<>>=
+## FIML loglikelihood function:
+llm <- function(par, data, pats, ind) {
+    ## Extract the parameter matrices:
+    p  <- ncol(data)
+    mu <- par[1:p]
+    
+    ## Populate sigma from its Cholesky factor:
+    sigma <- vecChol(tail(par, -p), p = p, revert = TRUE)
+    
+    ## Compute the pattern-wise contributions to the LL:
+    ll1 <- sapply(X     = 1:nrow(pats),
+                  FUN   = ll0,
+                  mu    = mu,
+                  sigma = sigma,
+                  pats  = pats,
+                  ind   = ind,
+                  data  = data)
+
+    sum(unlist(ll1))
+}
+@
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{FIML Example}
+
+<<>>=
+## Summarize response patterns:
+pats <- uniquecombs(!is.na(dat2))
+ind  <- attr(pats, "index")
+
+## Choose some starting values:
+m0   <- colMeans(dat2, na.rm = TRUE)
+s0   <- cov(dat2, use = "pairwise") %>% vecChol()
+par0 <- c(m0, s0)
+
+## Use optimx() to numerically optimize the LL function:
+mle <- optimx(par     = par0,
+              fn      = llm,
+              data    = dat2,
+              pats    = pats,
+              ind     = ind,
+              method  = "BFGS",
+              control = list(maximize = TRUE, maxit = 1000)
+              )
+@
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{FIML Example}
+  
+  Check convergence and extract the optimized parameters:
+  
+<<>>=
+## Check convergence:
+mle[c("convcode", "kkt1", "kkt2")]
+
+## Get the optimize mean vector and covariance matrix:
+muHat1    <- mle[1:3]
+sigmaHat1 <- mle[4:9] %>% as.numeric() %>% vecChol(p = 3, revert = TRUE)
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{FIML Example}
+
+  Just to make sure our results are plausible, we can do the same analysis using 
+  the \code{cfa()} function from the \textbf{lavaan} package:
+
+<<>>=
+## Define the model in lavaan syntax:
+mod <- "
+bmi ~~ ldl + glu
+ldl ~~ glu
+"
+
+## Fit the model with lavaan::cfa():
+fit <- cfa(mod, data = dat2, missing = "fiml")
+
+## Extract the estimated parameters:
+muHat2    <- inspect(fit, "est")$nu
+sigmaHat2 <- inspect(fit, "theta")
+@
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{FIML Example}
+  
+<<echo = FALSE, results = "asis">>=
+muMat           <- rbind(muHat1, t(muHat2))
+colnames(muMat) <- colnames(dat1)
+rownames(muMat) <- c("Manual", "Lavaan")
+
+print(xtable(muMat, digits = 3, caption = "Estimated Means"), booktabs = TRUE)
+@ 
+
+\vx{-12}
+
+\begin{columns}
+  \begin{column}{0.5\textwidth}
+    
+<<echo = FALSE, results = "asis">>= 
+colnames(sigmaHat1) <- rownames(sigmaHat1) <- colnames(dat1)
+print(xtable(sigmaHat1, 
+             digits  = 3, 
+             caption = "Manual FIML Covariance Matrix"), 
+      booktabs = TRUE)
+@ 
+
+\end{column}
+\begin{column}{0.5\textwidth}
+  
+<<echo = FALSE, results = "asis">>= 
+print(xtable(sigmaHat2, 
+             digits  = 3, 
+             caption = "Lavaan FIML Covariance Matrix"), 
+      booktabs = TRUE)
+@
+
+\end{column}
+\end{columns}
+
+\end{frame}
+
+\watermarkon %-----------------------------------------------------------------%
+
+\sectionslide{Auxiliary Variables}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[allowframebreaks]{Satisfying the MAR Assumption}
+ 
+  Like MI, FIML also requires MAR data.
+  \begin{itemize}
+  \item Parameters will be biased with MAR is violated.
+  \end{itemize}
+  \vb
+  Unlike MI, FIML directly treats the missing data while estimating the analysis 
+  model.
+  \begin{itemize}
+  \item The MAR predictors must be included in the analysis model.
+  \item Otherwise, FIML reduces to pairwise deletion.
+  \end{itemize}
+  \vb  
+  If the MAR predictors are not substantively interesting variables, naively 
+  included them in the analysis model can change the model's meaning.
+  
+  %\vc
+  %\begin{itemize}
+  %\item Suppose we are interested in the effect of age on blood pressure.
+  %  \begin{itemize}
+  %  \item $Y_{BP} = \beta_0 + \beta_1 X_{age} + \varepsilon$
+  %    \vc
+  %  \item In this model, $\beta_1$ represents the effect of age on blood pressure.
+  %  \end{itemize}
+  %  \vc
+  %\item If missingness in blood pressure depends on blood glucose and total 
+  %  cholesterol, we need to add those variables into our model.
+  %  \begin{itemize}
+  %  \item $Y_{BP} = \beta_0 + \beta_1 X_{age} + \beta_2 X_{glu} + \beta_3 X_{TC} + \varepsilon$
+  %    \vc
+  %  \item Now, $\beta_1$ represents the partial effect of age, after controlling 
+  %    for blood glucose and total cholesterol.
+  %  \end{itemize}
+  %\end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Saturated Correlates Technique}
+
+  \citet{graham:2003} developed the \emph{saturated correlates} approach to 
+  meet two desiderata:
+  \vc
+  \begin{enumerate}
+  \item Satisfy the MAR assumption by incorporating MAR predictors into the 
+    analysis model.
+    \vc
+  \item Do not affect the fit or substantive meaning of the analysis model.
+  \end{enumerate}
+  \vb
+  The approach entails incorporating the MAR predictors via a fully-saturated 
+  covariance structure:
+  \vc
+  \begin{enumerate}
+  \item Allow all MAR predictors to co-vary with all other MAR predictors.
+    \vc
+  \item Allow all MAR predictors to co-vary with all observed variables in the
+    analysis model (or their residuals).
+  \end{enumerate}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[allowframebreaks]{References}
+  
+  \bibliographystyle{apacite}
+  \bibliography{../../../literature/bibtex/winter_school_refs.bib}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\end{document}
