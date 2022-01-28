@@ -1,7 +1,7 @@
 ### Title:    Missing Data in R: Process Adams KLPS Data
 ### Author:   Kyle M. Lang
 ### Created:  2015-10-04
-### Modified: 2022-01-26
+### Modified: 2022-01-28
 
 rm(list = ls(all = TRUE))
 
@@ -56,43 +56,92 @@ dat2           <- dat2[sample(1:nrow(dat2), n, TRUE), ]
 rownames(dat2) <- 1:n
 
 ## Add Gaussian noise:
-dat2 <- dat2 + rmvnorm(n, sigma = (1 / 2) * sigma0)
+dat2.1 <- dat2 + rmvnorm(n, sigma = (1 / 2) * sigma0)
 
 ## Save the synthesized data as RDS:
-saveRDS(dat2, paste0(dataDir, "adams_klps_data-synthetic.rds"))
+saveRDS(dat2.1, paste0(dataDir, "adams_klps_data-synthetic.rds"))
 
 
-###-Missing Data Imposition--------------------------------------------------###
+###-Data Augmentation--------------------------------------------------------###
 
-targets <- grep("^wpriv\\d|^riae\\d|^policy\\d", colnames(dat2), value = TRUE)
-preds   <- grep("^polv|^nori\\d", colnames(dat2), value = TRUE)
+## Create a more complex version of the dataset to demonstrate MICE:
+dat2.2 <- dat2.1 %>% select(-polv, -matches("^policy\\d"))
 
-dat3 <- imposeMissData(data    = dat2,
-                       targets = targets,
-                       preds   = preds,
-                       pm      = 0.25,
-                       types   = "random",
-                       stdData = TRUE)
+## Add back the un-noised version for the policy items:
+dat2.2 <- data.frame(dat2.2,
+                     dat2 %>% select(matches("^policy\\d"))
+                     )
 
+## Covert "polv" into a three-level factor:
+dat2.2$polv <- factor(
+    cut(dat2$polv, 3, labels = c("conservative", "moderate", "liberal"))
+)
+
+## Create a trivial "sex" factor:
+dat2.2$sex <- factor(sample(c("male", "female"), n, TRUE))
+
+## Save the synthesized data as RDS:
+saveRDS(dat2.2, paste0(dataDir, "adams_klps_data-augmented.rds"))
+
+
+###-Missing Data Imposition 1------------------------------------------------###
+
+targets <- grep("^wpriv\\d|^riae\\d|^policy\\d", colnames(dat2.1), value = TRUE)
+preds   <- grep("^polv|^nori\\d", colnames(dat2.1), value = TRUE)
+
+dat3.1 <- imposeMissData(data    = dat2.1,
+                         targets = targets,
+                         preds   = preds,
+                         pm      = 0.25,
+                         types   = "random",
+                         stdData = TRUE)
 
 ## Check the results:
-head(dat3)
+head(dat3.1)
 
-colMeans(is.na(dat3))
+colMeans(is.na(dat3.1))
 
-vis_miss(dat3)
+vis_miss(dat3.1)
 
-cc <- md.pairs(dat3)$rr / nrow(dat3)
+cc <- md.pairs(dat3.1)$rr / nrow(dat3.1)
 range(cc[cc < 1])
 
 ## Save the incomplete, synthesized data as RDS:
-saveRDS(dat3, paste0(dataDir, "adams_klps_data-incomplete.rds"))
+saveRDS(dat3.1, paste0(dataDir, "adams_klps_data-incomplete.rds"))
+
+
+###-Missing Data Imposition 2------------------------------------------------###
+
+targets <- c(targets, "polv", "sex")
+preds   <- setdiff(preds, "polv")
+
+dat3.2 <- imposeMissData(data    = dat2.2,
+                         targets = targets,
+                         preds   = preds,
+                         pm      = 0.25,
+                         types   = "random",
+                         stdData = TRUE)
+
+
+## Check the results:
+head(dat3.2)
+
+colMeans(is.na(dat3.2))
+
+vis_miss(dat3.2)
+
+cc <- md.pairs(dat3.2)$rr / nrow(dat3.2)
+range(cc[cc < 1])
+
+## Save the incomplete, synthesized data as RDS:
+saveRDS(dat3.2, paste0(dataDir, "adams_klps_data-example.rds"))
 
 
 ###-Missing Data Imputation--------------------------------------------------###
 
 ## Use mice::mice() to multiply impute the missing values:
-miceOut <- mice(data = dat3, m = 25, maxit = 50, method = "norm", seed = 235711)
+miceOut <-
+    mice(data = dat3.1, m = 25, maxit = 50, method = "norm", seed = 235711)
 
 ## Check convergence:
 targets <- which(miceOut$method != "") %>% names()
