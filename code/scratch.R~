@@ -1,0 +1,58 @@
+
+library(mice)
+library(mvtnorm)
+library(lme4)
+library(ggplot2)
+library(dplyr)
+library(magrittr)
+
+data(boys)
+
+colMeans(is.na(boys))
+
+R <- !is.na(boys)
+
+iFlux <- oFlux <- 0
+j <- 5
+
+for(k in 1 : ncol(R))
+    iFlux <- iFlux + sum((1 - R[ , j]) * R[ , k])
+
+for(k in 1 : ncol(R))
+    oFlux <- oFlux + sum(R[ , j] * (1 - R[ , k]))
+
+iFlux / sum(R)
+oFlux / sum(!R)
+
+tmp <- apply(R, 2, function(x, y) x * y, y = !R[ , j])
+sum(tmp) / sum(R)
+
+tmp <- apply(!R[ , -j], 2, function(x, y) x * y, y = R[ , j])
+sum(tmp) / sum(!R)
+
+flux(boys)
+
+
+n1 <- 10
+n2 <- 100
+
+s     <- 1.0
+gamma <- c(1.5, 0.5)
+tau   <- matrix(c(1.0, -0.3, -0.3, 1.0), 2, 2)
+
+U    <- rmvnorm(n2, gamma, tau)
+time <- matrix(1:n1 - 1)
+tmp  <- U[ , 1] + U[ , 2] %*% t(time)
+
+dat1 <- data.frame(y = as.numeric(tmp) + rnorm(n1 * n2, 0, s),
+                   t = rep(0:(n1 - 1), each = n2),
+                   id = rep(1:n2, n1)
+                   )
+
+fit <- lmer(y ~ t + (1 + t | id), data = dat1)
+
+summary(fit)
+
+p0 <- ggplot(data = dat1, mapping = aes(y = y, x = t, group = id))
+
+p0 + geom_line()

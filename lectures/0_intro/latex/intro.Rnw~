@@ -1,0 +1,1278 @@
+%%% Title:    Missing Data Stats Camp: Introduction
+%%% Author:   Kyle M. Lang
+%%% Created:  2015-NOV-06
+%%% Modified: 2018-OCT-12
+
+\documentclass{beamer}
+\usetheme[%
+  pageofpages          = of,
+  bullet               = circle,
+  titleline            = true,
+  alternativetitlepage = true,
+  titlepagelogo        = Logo3,
+  watermark            = watermarkTiU,
+  watermarkheight      = 100px,
+  watermarkheightmult  = 4%
+]{UVT}
+
+\usepackage{graphicx}
+\usepackage[natbibapa]{apacite}
+\usepackage[libertine]{newtxmath}
+\usepackage{booktabs}
+\usepackage{eurosym}
+\usepackage{fancybox}
+\usepackage{caption}
+
+%% Ensure styles of `blocks' (used in Definitions, Theorems etc.) follows the
+%% UVT-style theme:
+\setbeamercolor{block title}{fg = darkblue, bg = white}
+\setbeamercolor{block body}{use = block title, bg = block title.bg}
+
+%% Ensure TableOfContents is in UVT-style theme:
+\setbeamercolor{section in toc}{fg = darkblue}
+
+\title{Missing Data Basics}
+\subtitle{Stats Camp 2018: Missing Data Analysis}
+\author{Kyle M. Lang}
+\institute{Department of Methodology \& Statistics\\Tilburg University}
+\date{19--21 October 2018}
+
+\newcommand{\R}{\textsf{R}}
+
+%% The following command was adapted from LaTeX Community user 'localghost':
+\newcommand*\bigbar[1]{%
+  \hbox{%
+    \vbox{%
+      \hrule height 0.65pt % The actual bar
+      \kern0.35ex%         % Distance between bar and symbol
+      \hbox{%
+        \kern-0.1em%      % Shortening on the left side
+        \ensuremath{#1}%
+        %\kern-0.1em%      % Shortening on the right side
+      }%
+    }%
+  }%
+} 
+
+\begin{document}
+
+<<setup, include = FALSE>>=
+set.seed(235711)
+
+library(knitr)
+library(ggplot2)
+library(plyr)
+library(mvtnorm)
+library(mice)
+library(xtable)
+library(carData)
+library(SURF)
+
+source("../../../code/supportFunctions.R")
+dataDir <- "../../../data/"
+
+opts_chunk$set(size = 'footnotesize', fig.align = 'center')
+knit_theme$set('edit-kwrite')
+
+lightBlue <- rgb(0, 137, 191, max = 255)
+midBlue   <- rgb(0, 131, 183, max = 255)
+darkBlue  <- rgb(0, 128, 179, max = 255)
+deepGold  <- rgb(184, 138, 45, max = 255)
+lightGold <- rgb(195, 146, 48, max = 255)
+@
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[t,plain]
+  
+  \titlepage
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Introduction}
+
+  \begin{enumerate}
+  \item What's your name?
+    \vc
+  \item Where are you from/where do you work?
+    \vc
+  \item What type of research do you do?
+    \vc
+  \item What type of missing data problems do you encounter in your research?
+    \vc
+  \item What statistical software do you use/do you have programming experience?
+    \vc
+  \item What's your math background?
+  \end{enumerate}
+  
+\end{frame}
+
+
+\begin{frame}{Outline}
+  
+  \begin{itemize}
+  \item Missing Data Descriptives
+    \vb
+  \item Ad Hoc Missing Data Treatments
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{A Little Notation}
+  
+  \begin{align*}
+    Y &\coloneqq \text{An $N \times P$ Matrix of Arbitrary Data}\\
+    \\
+    Y_{mis} &\coloneqq \text{The \emph{missing} part of $Y$}\\
+    \\
+    Y_{obs} &\coloneqq \text{The \emph{observed} part of $Y$}\\
+    \\
+    R &\coloneqq \text{An $N \times P$ pattern matrix encoding nonresponse}
+  \end{align*}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{What are Missing Data?}
+  
+  Missing data are empty cells in a dataset where there should be observed 
+  values.
+  \vc
+  \begin{itemize}
+  \item The missing cells correspond to true population values, but we haven't 
+    observed those values.
+  \end{itemize}
+  \vb 
+  \pause
+  Not every empty cell is a missing datum.
+  \vc
+  \begin{itemize}
+  \item Quality-of-life ratings for dead patients in a mortality study
+    \vc
+  \item Firm profitability after the company goes out of business
+    \vc
+  \item Self-reported severity of menstrual cramping for men
+    \vc
+  \item Empty blocks of data following ``gateway'' items
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+    
+\begin{frame}
+  
+  \begin{center}
+    \huge{Missing Data Descriptives}
+  \end{center}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Missing Data Pattern}
+  
+  The spatial arrangement of missing cells on a data set.\\
+   
+  \vb
+  
+  Comes in three flavors:
+  
+  \vc
+  
+  \begin{itemize}
+  \item Univariate
+    \begin{itemize}
+      \item Missing data occur on only one variable
+    \end{itemize}
+  
+    \vb
+  
+  \item Monotone
+    \begin{itemize}
+    \item The proportion of complete elements, in both rows and columns, 
+      decreases when traversing the data set.
+    \item The observed cells can be arranged into a ``staircase'' pattern.
+    \end{itemize}
+  
+    \vb
+  
+  \item Arbitrary
+    \begin{itemize}
+    \item Missing values are ``randomly'' scattered throughout the data set.
+    \end{itemize}
+  \end{itemize}
+  
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
+\captionsetup{labelformat = empty}
+
+\begin{frame}{Example Missing Data Patterns}
+  
+<<echo = FALSE>>=
+tmpTab <- matrix(c(rep("x", 10), 
+                   rep("y", 5), rep(".", 5),
+                   rep("z", 10)), 
+                 ncol = 3)
+colnames(tmpTab) <- c("X", "Y", "Z")
+
+patTab1 <- xtable(tmpTab, 
+                  align   = rep("c", 4),
+                  caption = "Univariate Pattern")
+
+tmpTab2 <- matrix(c(rep("x", 9), rep(".", 1), 
+                    rep("y", 6), rep(".", 4),
+                    rep("z", 3), rep(".", 7)), 
+                  ncol = 3)
+colnames(tmpTab2) <- c("X", "Y", "Z")
+
+patTab2 <- xtable(tmpTab2, 
+                  align   = rep("c", 4),
+                  caption = "Monotone Pattern")
+
+tmpTab3 <- matrix(c(rep("x", 10), 
+                    rep("y", 10),
+                    rep("z", 10)), 
+                  ncol = 3)
+rMat <- matrix(as.logical(rbinom(30, 1, 0.3)), ncol = 3)
+tmpTab3[rMat] <- "."
+colnames(tmpTab3) <- c("X", "Y", "Z")
+
+patTab3 <- xtable(tmpTab3, 
+                  align   = rep("c", 4),
+                  caption = "Arbitrary Pattern")
+@ 
+
+\begin{columns}[T]
+  \begin{column}{0.33\textwidth}
+    
+<<echo = FALSE, results = 'asis'>>=
+print(patTab1, booktabs = TRUE)
+@ 
+
+\end{column}
+\begin{column}{0.33\textwidth}
+  
+<<echo = FALSE, results = 'asis'>>=
+print(patTab2, booktabs = TRUE)
+@
+  
+\end{column}
+\begin{column}{0.33\textwidth}
+  
+<<echo = FALSE, results = 'asis'>>=
+print(patTab3, booktabs = TRUE)
+@ 
+  
+\end{column}
+\end{columns}
+
+\end{frame}
+
+\captionsetup{labelformat = default}
+
+\watermarkon %-----------------------------------------------------------------%
+
+\begin{frame}[allowframebreaks]{Nonresponse Rates}
+  
+  \textsc{Percent/Proportion Missing}
+  \begin{itemize}
+  \item The proportion of cells containing missing data
+  \item Good early screening measure
+  \item Should be computed for each variable, not for the entire dataset
+  \end{itemize}
+  
+  \va
+  
+  \textsc{Attrition Rate}
+  \begin{itemize}
+  \item The proportion of participants that drop-out of a study at each 
+    measurement occasion
+  \end{itemize}
+  
+  \va
+  
+  \textsc{Percent/Proportion of Complete Cases}
+  \begin{itemize}
+  \item The proportion of observations with no missing data
+  \item Often reported but nearly useless quantity
+  \end{itemize}
+  
+  \pagebreak
+  
+  \textsc{Covariance Coverage}
+  \begin{itemize}
+  \item The proportion of cases available to estimate a given pairwise
+    relationship (e.g., a covariance between two variables)
+  \item Very important to have adequate coverage of the parameters you
+    want to estimate
+  \end{itemize}
+  
+  \va
+  
+  \textsc{Fraction of Missing Information}
+  \begin{itemize}
+  \item Associated with an estimated parameter, not with an incomplete variable
+  \item Like an $R^2$ for the missing data
+  \item Most important diagnostic value for missing data problems
+  \item Can only be computed after treating the missing data
+  \end{itemize}
+  
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}{Covariance Coverage Examples}
+  
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      \begin{itemize}
+      \item What is the coverage for $cov(X, Y)$?
+        \vc
+      \item What is the coverage for $cov(W, Y)$?
+        \vc
+      \item What about $cov(X, Z)$?
+      \end{itemize}
+      
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      
+<<echo = FALSE, results = 'asis'>>=
+tmpTab4 <- matrix(c(rep("w", 10), 
+                    rep("x", 5), rep(".", 5),
+                    rep("y", 10),
+                    rep(".", 5), rep("z", 5)), 
+                 ncol = 4)
+colnames(tmpTab4) <- c("W", "X", "Y", "Z")
+
+patTab4 <- xtable(tmpTab4, align = rep("c", 5))
+print(patTab4, booktabs = TRUE)
+@
+
+\end{column}
+\end{columns}
+ 
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Nonresponse Rate Examples}
+  
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      \begin{itemize}
+        \item What is the percent missing at Time 2?
+          \vc
+        \item What is the attrition rate at Time 3?
+      \end{itemize}
+      
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      
+<<echo = FALSE, results = 'asis'>>=
+tmpTab5 <- matrix(c(rep("x1", 10), 
+                    rep("x2", 7), rep(".", 3),
+                    rep("x3", 5), rep(".", 5),
+                    rep("x4", 3), rep(".", 7)), 
+                 ncol = 4)
+colnames(tmpTab5) <- c("T1", "T2", "T3", "T4")
+
+patTab5 <- xtable(tmpTab5, align = rep("c", 5))
+print(patTab5, booktabs = TRUE)
+@
+
+\end{column}
+\end{columns}
+
+\end{frame}
+
+\watermarkon %-----------------------------------------------------------------%
+
+\begin{frame}
+  
+  \begin{center}
+    \huge{Missing Data Mechanisms}
+  \end{center}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Missing Data Mechanisms}
+
+  MCAR:
+  \begin{align*}
+    P(R | Y_{mis}, Y_{obs}) = P(R)
+  \end{align*}
+  MAR:
+  \begin{align*}
+    P(R | Y_{mis}, Y_{obs}) = P(R | Y_{obs})
+  \end{align*}
+  MNAR:
+  \begin{align*}
+    P(R | Y_{mis}, Y_{obs}) \neq P(R | Y_{obs})
+  \end{align*}
+  
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}[fragile]{Simulate Some Toy Data}
+  
+<<>>=
+nObs <- 5000 # Sample Size
+pm   <- 0.3  # Proportion Missing
+
+sigma <- matrix(c(1.0, 0.5, 0.0,
+                  0.5, 1.0, 0.3,
+                  0.0, 0.3, 1.0),
+                ncol = 3)
+simDat <- as.data.frame(rmvnorm(nObs, c(0, 0, 0), sigma))
+colnames(simDat) <- c("y", "x", "z")
+
+x <- simDat$x
+y <- simDat$y
+z <- simDat$z
+
+cor(y, x) # Check correlation between X and Y
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile, allowframebreaks]{MCAR Example}
+  
+<<>>=
+## Simulate MCAR Missingness:
+rVec1 <- as.logical(rbinom(nObs, size = 1, prob = pm))
+mean(rVec1) # Check the PM
+
+y2 <- y
+y2[rVec1] <- NA
+
+cor(y2, x, use = "pairwise") # Look at correlation
+@ 
+
+\pagebreak
+
+<<echo = FALSE, out.width = "65%">>=
+yDen  <- density(y)
+y2Den <- density(y2, na.rm = TRUE)
+
+yLim <- range(c(yDen$y, y2Den$y))
+xLim <- range(c(yDen$x, y2Den$x))
+
+plot(yDen, 
+     ylim = yLim, 
+     xlim = xLim,
+     main = "Density Plot of Y",
+     xlab = "Value of Y")
+
+lines(yDen)
+lines(y2Den, col = "red")
+
+legend(x      = "topright",
+       legend = c("Complete", "MCAR w/ Deletion"),
+       col    = c("black", "red"),
+       lty    = 1,
+       lwd    = 1,
+       cex    = 0.75)
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile, allowframebreaks]{MAR Example}
+  
+<<>>=
+## Simulate MAR Missingness:
+rVec2 <- pnorm(x, mean = mean(x), sd = sd(x)) < pm
+mean(rVec2)
+
+y3 <- y
+y3[rVec2] <- NA
+
+cor(y3, x, use = "pairwise") # Not looking so good :(
+@ 
+
+\pagebreak
+
+<<echo = FALSE, out.width = "65%">>=
+yDen  <- density(y)
+y3Den <- density(y3, na.rm = TRUE)
+
+yLim <- range(c(yDen$y, y3Den$y))
+xLim <- range(c(yDen$x, y3Den$x))
+
+plot(yDen, 
+     ylim = yLim, 
+     xlim = xLim,
+     main = "Density Plot of Y",
+     xlab = "Value of Y")
+
+lines(yDen)
+lines(y3Den, col = "red")
+
+legend(x      = "topright",
+       legend = c("Complete", "MAR w/ Deletion"),
+       col    = c("black", "red"),
+       lty    = 1,
+       lwd    = 1,
+       cex    = 0.75)
+@
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile, allowframebreaks]{MNAR Example}
+  
+<<>>=
+## Simulate MNAR Missingness:
+rVec3 <- pnorm(y, mean = mean(y), sd = sd(y)) < pm
+mean(rVec3)
+
+y4 <- y
+y4[rVec3] <- NA
+
+cor(y4, x, use = "pairwise") # Hmm...looks pretty bad.
+@ 
+
+\pagebreak
+
+<<echo = FALSE, out.width = "65%">>=
+y4Den <- density(y4, na.rm = TRUE)
+
+yLim <- range(c(yDen$y, y4Den$y))
+xLim <- range(c(yDen$x, y4Den$x))
+
+plot(yDen, 
+     ylim = yLim, 
+     xlim = xLim,
+     main = "Density Plot of Y",
+     xlab = "Value of Y")
+
+lines(y4Den, col = "red")
+
+legend(x      = "topright",
+       legend = c("Complete", "MNAR w/ Deletion"),
+       col    = c("black", "red"),
+       lty    = 1,
+       lwd    = 1,
+       cex    = 0.75)
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Crucial Nuance}
+  
+  In our previous MAR example, ignoring the predictor of missingness actually 
+  produces \emph{Indirect MNAR}.\\
+  
+  \pause
+  \va
+  
+  \textsc{Question:} What happens if we ignore the predictor of missingness, but
+  that predictor is independent of our study variables?
+  
+  \pause
+  
+<<>>=
+rVec3     <- pnorm(z, mean = mean(z), sd = sd(z)) < pm
+y5        <- y
+y5[rVec3] <- NA
+
+cor(y5, x, use = "pairwise")
+@ 
+
+\textsc{Answer:} We get back to MCAR :)
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Crucial Nuance}
+  
+  The missing data mechanisms are not simply characteristics of an incomplete 
+  dataset.
+  \begin{itemize}
+  \item The analysis must also be accounted for.
+  \end{itemize}
+  
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+<<echo = FALSE, out.width = "100%">>=
+yDen  <- density(y)
+y3Den <- density(y3, na.rm = TRUE)
+
+yLim <- range(c(yDen$y, y3Den$y))
+xLim <- range(c(yDen$x, y3Den$x))
+
+plot(yDen, 
+     ylim = yLim, 
+     xlim = xLim,
+     main = "Density Plot of Y",
+     xlab = "Value of Y")
+
+lines(yDen)
+lines(y3Den, col = "red")
+
+legend(x      = "topright",
+       legend = c("Complete", "Indirect MNAR"),
+       col    = c("black", "red"),
+       lty    = 1,
+       lwd    = 1,
+       cex    = 0.75)
+@ 
+
+\end{column}
+\begin{column}{0.5\textwidth}
+  
+<<echo = FALSE, out.width = "100%">>=
+yDen  <- density(y)
+y5Den <- density(y5, na.rm = TRUE)
+
+yLim <- range(c(yDen$y, y5Den$y))
+xLim <- range(c(yDen$x, y5Den$x))
+
+plot(yDen, 
+     ylim = yLim, 
+     xlim = xLim,
+     main = "Density Plot of Y",
+     xlab = "Value of Y")
+
+lines(yDen)
+lines(y5Den, col = "red")
+
+legend(x      = "topright",
+       legend = c("Complete", "MCAR2"),
+       col    = c("black", "red"),
+       lty    = 1,
+       lwd    = 1,
+       cex    = 0.75)
+@
+  
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+\comment{%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}{Testing the Missing Data Mechanism}
+  
+  We cannot test for MAR or MNAR.
+  \begin{itemize}
+  \item To do so would require knowing the values of the missing data.
+  \end{itemize}
+  \vb
+  We can test for MCAR (sort of).
+  \begin{itemize}
+  \item With MCAR, the missing data and the observed data should have the same distribution.
+  \item We can test for MCAR by testing the distributions of \emph{auxiliary variables}, $Z$.
+    \begin{itemize}
+      \item Use a $t$-test to compare the subset of $Z$ that corresponds to 
+        $Y_{mis}$ to the subset corresponding to $Y_{obs}$.
+    \end{itemize}
+  \end{itemize}
+  
+\end{frame}
+}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\watermarkon %-----------------------------------------------------------------%
+
+\begin{frame}
+  
+  \begin{center}
+    \huge{Missing Data Treatments}
+  \end{center}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Bad Methods (These almost never work)}
+   
+  Listwise Deletion (Complete Case Analysis)
+  \begin{itemize}
+  \item Use only complete observations for the analysis
+    \begin{itemize}
+    \item Very wasteful (can throw out lots of useful data)
+    \item Loss of statistical power
+    \end{itemize}
+  \end{itemize}
+
+  \va
+  
+  Pairwise Deletion (Available Case Analysis)
+  \begin{itemize}
+  \item Use only complete pairs of observations for analysis
+    \begin{itemize}
+    \item Different samples sizes for different parameter estimates
+    \item Can cause computational issues 
+    \end{itemize}
+  \end{itemize}
+  
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}{Bad Methods (These almost never work)}
+  
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      (Unconditional) Mean Substitution
+      \begin{itemize}
+      \item Replace $Y_{mis}$ with $\bigbar{Y}_{obs}$
+        \begin{itemize}
+        \item Negatively biases regression slopes and correlations
+        \item Attenuates measures of linear association
+        \end{itemize}
+      \end{itemize}
+      
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      
+<<echo = FALSE, cache = TRUE, warning = FALSE>>=
+dat1 <- readRDS(paste0(dataDir, "diabetes.rds"))
+dat2 <- imposeMissData(data    = dat1,
+                       targets = list(mar = c("ldl", "glu"),
+                                      mcar = NA,
+                                      mnar = NA),
+                       preds   = "bmi",
+                       pm      = list(mar = 0.25),
+                       snr     = list(mar = 3),
+                       pattern = "high")$data
+
+dat3 <- dat2[ , c("bmi", "glu")]
+rVec <- is.na(dat2$glu)
+
+p0 <- ggplot(data = dat1, mapping = aes(x = bmi, y = glu)) +
+    geom_point() +
+    theme_classic() +
+    theme(text = element_text(family = "Courier", size = 16)) +
+    xlab("BMI") +
+    ylab("Blood Glucose")
+
+p0
+@ 
+
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Bad Methods (These almost never work)}
+  
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      (Unconditional) Mean Substitution
+      \begin{itemize}
+      \item Replace $Y_{mis}$ with $\bigbar{Y}_{obs}$
+        \begin{itemize}
+        \item Negatively biases regression slopes and correlations
+        \item Attenuates measures of linear association
+        \end{itemize}
+      \end{itemize}
+      
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      
+<<echo = FALSE, cache = TRUE, warning = FALSE>>=
+p1 <- p0 +
+    geom_point(mapping = aes(y = dat2$glu, x = dat2$bmi), colour = "blue")
+
+p1
+@ 
+
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Bad Methods (These almost never work)}
+  
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      (Unconditional) Mean Substitution
+      \begin{itemize}
+      \item Replace $Y_{mis}$ with $\bigbar{Y}_{obs}$
+        \begin{itemize}
+        \item Negatively biases regression slopes and correlations
+        \item Attenuates measures of linear association
+        \end{itemize}
+      \end{itemize}
+      
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      
+<<echo = FALSE, cache = TRUE, warning = FALSE>>=
+miceM <- mice(data      = dat3,
+              m         = 1,
+              maxit     = 1,
+              method    = "mean",
+              printFlag = FALSE)
+
+datM          <- complete(miceM, 1)
+datM[!rVec, ] <- NA
+
+p1 + geom_point(mapping = aes(y = datM$glu, x = datM$bmi), colour = "red")
+@ 
+
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Bad Methods (These almost never work)} 
+
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      Deterministic Regression Imputation\\
+      (Conditional Mean Substitution)
+      \begin{itemize}
+      \item Replace $Y_{mis}$ with $\widehat{Y}_{mis}$ from some regression 
+        equation
+        \begin{itemize}
+        \item Positively biases regression slopes and correlations
+        \item Inflates measures of linear association
+        \end{itemize}
+      \end{itemize}
+      
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      
+<<echo = FALSE, cache = TRUE, warning = FALSE>>=
+miceD <- mice(data      = dat3,
+              m         = 1,
+              maxit     = 10,
+              method    = "norm.predict",
+              printFlag = FALSE)
+
+datD          <- complete(miceD, 1)
+datD[!rVec, ] <- NA
+
+p1 + geom_point(mapping = aes(y = datD$glu, x = datD$bmi), colour = "red")
+@ 
+
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Bad Methods (These almost never work)} 
+
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      Deterministic Regression Imputation\\
+      (Conditional Mean Substitution)
+      \begin{itemize}
+      \item Replace $Y_{mis}$ with $\widehat{Y}_{mis}$ from some regression 
+        equation
+        \begin{itemize}
+        \item Positively biases regression slopes and correlations
+        \item Inflates measures of linear association
+        \end{itemize}
+      \end{itemize}
+      
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      
+<<echo = FALSE, cache = TRUE, warning = FALSE>>=
+miceD <- mice(data      = dat2,
+              m         = 1,
+              maxit     = 10,
+              method    = "norm.predict",
+              printFlag = FALSE)
+
+datD          <- complete(miceD, 1)
+datD[!rVec, ] <- NA
+
+p1 + geom_point(mapping = aes(y = datD$glu, x = datD$bmi), colour = "red")
+@ 
+
+\end{column}
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Bad Methods (These almost never work)}
+  
+  \begin{center}
+    \ovalbox{General Issues with Deletion-Based Methods}
+  \end{center}
+  
+  \begin{itemize}
+  \item Biased parameter estimates unless data are MCAR
+  \item Generalizability issues
+  \end{itemize}
+  
+  \va
+  
+  \begin{center}
+    \ovalbox{General Issues with Simple Single Imputation Methods}
+  \end{center}
+
+  \begin{itemize}
+  \item Biased parameter estimates even when data are MCAR
+  \item Attenuates variability in any treated variables
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Bad Methods (These almost never work)}
+  
+  Averaging Available Items (Person-Mean Imputation)
+  \begin{itemize}
+  \item Compute aggregate scores using only available values
+    \begin{itemize}
+    \item Missing data must be MCAR
+    \item Each item must contributes equally to the aggregate score
+    \end{itemize}
+  \end{itemize}
+  
+  \vb
+  
+  Last Observation Carried Forward (LOCF)
+  \begin{itemize}
+  \item Replace post-dropout values with the most recent observed value
+    \begin{itemize}
+    \item Assume that dropouts would maintain their last known values
+    \item Attenuates estimates of growth/development
+    \end{itemize}
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{OK Methods (These work in some situations)}
+  
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      Stochastic Regression Imputation
+      \vc
+      \begin{itemize}
+      \item Fill $Y_{mis}$ with $\widehat{Y}_{mis}$ plus some random noise.
+        \vc
+        \begin{itemize}
+        \item Produces unbiased parameter estimates and predictions
+          \vc
+        \item Computationally efficient
+          \vc
+        \item Attenuates standard errors
+          \vc
+        \item Makes CIs and prediction intervals too narrow
+        \end{itemize}
+      \end{itemize}
+      
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      
+<<echo = FALSE, cache = TRUE, warning = FALSE>>=
+miceS <- mice(data      = dat3,
+              m         = 1,
+              maxit     = 10,
+              method    = "norm.nob",
+              printFlag = FALSE)
+
+datS          <- complete(miceS, 1)
+datS[!rVec, ] <- NA
+
+p1 + geom_point(mapping = aes(y = datS$glu, x = datS$bmi), colour = "red")
+@ 
+
+\end{column}
+\end{columns}
+
+\end{frame}
+
+\watermarkon %-----------------------------------------------------------------%
+
+\begin{frame}{OK Methods (These work in some situations)}
+  
+  Nonresponse Weighting
+  \vc
+  \begin{itemize}
+  \item Weight the observed cases to correct for nonresponse bias
+    \vc
+    \begin{itemize}
+    \item Popular in survey research and official statistics
+      \vc
+    \item Only worth considering with \emph{Unit Nonresponse}
+      \vc
+    \item Doesn't make any sense with \emph{Item Nonresponse}
+    \end{itemize}
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Good Methods (These almost always work)}
+  
+  Multiple Imputation (MI)
+  \vc
+  \begin{itemize}
+  \item Replace the missing values with $M$ plausible estimates
+    \vc
+    \begin{itemize}
+    \item Essentially, a repeated application of stochastic regression 
+      imputation (with a particular type of regression model)
+      \vc
+    \item Produces unbiased parameter estimates and predictions
+      \vc
+    \item Produces ``correct'' standard errors, CIs, and prediction intervals
+      \vc
+    \item Very, very flexible
+      \vc
+    \item Computationally expensive
+    \end{itemize}
+  \end{itemize}
+  
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}[allowframebreaks, fragile]{Good Methods (These almost always 
+    work)}
+
+  What happens when we apply MI to our previous MAR example?
+<<>>=
+## Estimate imputation model:
+miceOut1 <- mice(data      = data.frame(y3, x),
+                 m         = 100,
+                 maxit     = 1,
+                 method    = c("norm", ""),
+                 printFlag = FALSE)
+
+## Replace missing values with imputations:
+impList1 <- list()
+for(m in 1 : miceOut1$m) 
+    impList1[[m]] <- complete(miceOut1, m)
+@ 
+
+\pagebreak
+
+<<>>=
+## Estimate M correlations:
+corList <-lapply(impList1,
+                 FUN = function(impDat)
+                     cor(impDat$x, impDat$y3)
+                 )
+
+## Pool estimates:
+mean(unlist(corList))
+@ 
+
+The MI-based parameter estimate looks good.
+\begin{itemize}
+\item MI produces unbiased estimates of the parameter when data are MAR.
+\end{itemize}
+
+\pagebreak
+
+<<echo = FALSE, out.width = "65%">>=
+yDen <- density(y)
+
+impDen <- list()
+for(m in 1 : 100)
+    impDen[[m]] <- density(impList1[[m]]$y3)
+
+impRangeY <- range(unlist(lapply(impDen, FUN = function(den){den$y})))
+impRangeX <- range(unlist(lapply(impDen, FUN = function(den){den$x})))
+
+yLim <- range(c(yDen$y, impRangeY))
+xLim <- range(c(yDen$x, impRangeX))
+
+plot(yDen, 
+     ylim = yLim, 
+     xlim = xLim,
+     main = "Density Plot of Y",
+     xlab = "Value of Y")
+
+for(m in 1 : 100) {
+    impDen <- density(impList1[[m]]$y3)
+    lines(impDen, col = "red")
+}
+
+lines(yDen, lwd = 2)
+
+legend(x      = "topright",
+       legend = c("Complete", "MAR w/ MI"),
+       col    = c("black", "red"),
+       lty    = 1,
+       lwd    = 1,
+       cex    = 0.75)
+@
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Good Methods (These almost always work)}
+  
+  What about applying MI to our MNAR example?
+<<>>=
+## Estimate imputation model:
+miceOut2 <- mice(data      = data.frame(y4, x),
+                 m         = 100,
+                 maxit     = 1,
+                 method    = c("norm", ""),
+                 printFlag = FALSE)
+
+## Replace missing values with imputations:
+impList2 <- list()
+for(m in 1 : miceOut2$m) 
+    impList2[[m]] <- complete(miceOut2, m)
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[allowframebreaks, fragile]{Good Methods (These \emph{almost} 
+    always work)}
+
+<<>>=
+## Estimate M correlations:
+corList2 <-lapply(impList2,
+                 FUN = function(impDat)
+                     cor(impDat$x, impDat$y4)
+                 )
+
+## Pool estimates:
+mean(unlist(corList2))
+@ 
+
+The MI-based parameter estimate is still biased.
+\begin{itemize}
+\item MI cannot correct bias in parameter estimates when data are MNAR.
+\end{itemize}
+
+\pagebreak
+
+<<echo = FALSE, out.width = "65%">>=
+y4Den <- density(y4, na.rm = TRUE)
+
+impDen <- list()
+for(m in 1 : 100) 
+    impDen[[m]] <- density(impList2[[m]]$y4)
+
+impRangeY <- range(unlist(lapply(impDen, FUN = function(den){den$y})))
+impRangeX <- range(unlist(lapply(impDen, FUN = function(den){den$x})))
+
+yLim <- range(c(yDen$y, impRangeY))
+xLim <- range(c(yDen$x, impRangeX))
+
+plot(yDen, 
+     ylim = yLim, 
+     xlim = xLim,
+     main = "Density Plot of Y",
+     xlab = "Value of Y")
+
+for(m in 1 : 100) {
+    impDen <- density(impList2[[m]]$y4)
+    lines(impDen, col = "blue")
+}
+
+lines(yDen, lwd = 2)
+lines(y4Den, col = "red", lwd = 2)
+
+legend(x      = "topright",
+       legend = c("Complete", "MNAR w/ Deletion", "MNAR w/ MI"),
+       col    = c("black", "red", "blue"),
+       lty    = 1,
+       lwd    = 1,
+       cex    = 0.75)
+@ 
+
+\end{frame}
+
+\watermarkon %-----------------------------------------------------------------%
+
+\begin{frame}[allowframebreaks]{Good Methods (These almost always work)}
+
+  Bayesian Modeling
+  \vc
+  \begin{itemize}
+  \item Treat missing values as just another parameter to be estimated
+    \vc
+    \begin{itemize}
+    \item Models can be directly estimated in the presence of missing data
+      \begin{itemize}
+      \item Essentially, runs MI behind-the-scenes during model estimation
+      \end{itemize}
+      \vc
+    \item The predictors of nonresponse must be included in the model, somehow
+      \vc
+    \item Computationally expensive
+    \end{itemize}
+  \end{itemize}
+  
+  \pagebreak
+  
+  Full Information Maximum Likelihood (FIML)
+  \vc
+  \begin{itemize} 
+  \item Adjust the objective function to only consider the observed parts of the 
+    data
+    \vc
+    \begin{itemize}
+    \item Models are directly estimated in the presence of missing data
+      \vc
+    \item The predictors of nonresponse must be included in the model, somehow
+      \vc
+    \item Unless you write your own optimization program, FIML is only available 
+      for certain types of models
+      \vc
+    \item In linear regression models, FIML cannot treat missing data on 
+      predictors (if the predictors are taken as fixed)
+    \end{itemize}
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+\comment{%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[allowframebreaks]{References}
+
+  \bibliographystyle{apacite}
+  \bibliography{../../../literature/bibtexFiles/statMethRefs.bib}
+
+\end{frame}
+}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%------------------------------------------------------------------------------%
+
+\end{document}

@@ -1,0 +1,69 @@
+%%% Title:    R-Related Bibtex Entries
+%%% Author:   Kyle M. Lang
+%%% Created:  2016-JAN-27
+%%% Modified: 2016-JAN-27
+
+
+%%%%% JOURNAL ARTICLES %%%%%
+
+
+@article{ihakaGentleman:1996,
+title = {R: {A} language for data analysis and graphics},
+author = {Ihaka, Ross and Gentleman, Robert},
+journal = {Journal of Computational and Graphical Statistics},
+volume = {5},
+number = {3},
+pages = {299--314},
+year = {1996},
+publisher = {Taylor \& Francis}
+}
+
+
+%%%%% COMPUTER SOFTWARE %%%%%
+
+
+@manual{R,
+title = {R: A Language and Environment for Statistical Computing},
+author = {{R Core Team}},
+organization = {R Foundation for Statistical Computing},
+address = {Vienna, Austria},
+year = {2015},
+url = {https://www.R-project.org/},
+}
+
+
+%%%%% BOOKS %%%%%
+
+
+@book{beckerChambers:1984,
+title = {S: an interactive environment for data analysis and graphics},
+author = {Becker, Richard A and Chambers, John M},
+year = {1984},
+publisher = {Wadsworth and Brooks/Cole},
+address = {Monterey, CA}
+}
+
+@book{beckerEtAl:1988,
+title = {The new {S} language},
+author = {Becker, Richard A and Chambers, John M and Wilks, Allan R},
+year = {1988},
+publisher = {Chapman \& Hall},
+address = {London}
+}
+
+@book{chambers:1998,
+title = {Programming with data: {A} guide to the {S} language},
+author = {Chambers, John M},
+year = {1998},
+publisher = {Springer Science \& Business Media},
+address = {New York}
+}
+
+@book{chambersHastie:1992,
+title = {Statistical models in S},
+author = {Chambers, John M and Hastie, Trevor J},
+year = {1992},
+publisher = {Chapman \& Hall},
+address = {London}
+}
+

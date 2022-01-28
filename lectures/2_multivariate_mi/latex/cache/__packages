@@ -1,0 +1,16 @@
+knitr
+ggplot2
+mice
+mvtnorm
+xtable
+pROC
+dplyr
+naniar
+LaplacesDemon
+mitools
+nlme
+mgcv
+coda
+MASS
+MCMCpack
+norm
