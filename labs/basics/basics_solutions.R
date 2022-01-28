@@ -1,7 +1,8 @@
-### Title:    Stats & Methods Lab 1 Suggested Solutions
+### Title:    Missing Data in R: Missing Data Basics Suggested Solutions
 ### Author:   Kyle M. Lang
 ### Created:  2018-04-10
-### Modified: 2020-09-09
+### Modified: 2022-01-28
+
 
 ###-Overview-----------------------------------------------------------------###
 
@@ -101,3 +102,35 @@ counts <- rownames(pats)[-nrow(pats)] %>% as.numeric()
 counts[flag] %>% sum()
 
 
+###-Missing Data Visualizations----------------------------------------------###
+
+### Use the "adams_klps_data-example" data to answer the following questions:
+
+## 1) Use naniar::vis_miss() to visualize the spatial distribtuion of the
+##    missing data.
+
+vis_miss(adams)
+
+## 2) Use naniar::gg_miss_var() to visualize the percents missing for each
+##    variable in the data.
+
+gg_miss_var(adams, show_pct = TRUE)
+
+## 3a) Use naniar::geom_miss_point() to visualize the relative distribution of
+##     missing values between "raie1" and "wpriv1"
+
+(p1 <- ggplot(adams, aes(riae1, wpriv1)) + geom_miss_point())
+
+## 3b) Facet the plot you made in (3a) by "sex".
+
+p1 + facet_wrap(vars(sex))
+
+## 4) Use naniar::gg_miss_upset() to visualize the coverages for all "policy"
+##    items in the data.
+
+adams %>%
+    select(matches("policy\\d")) %>%
+    gg_miss_upset(nsets = ncol(.), nintersects = NA)
+
+
+###-END----------------------------------------------------------------------###

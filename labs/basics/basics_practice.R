@@ -1,7 +1,7 @@
-### Title:    Stats & Methods Lab 1 Practice Script
+### Title:    Missing Data in R: Missing Data Basics Practice Script
 ### Author:   Kyle M. Lang
 ### Created:  2018-04-10
-### Modified: 2020-09-09
+### Modified: 2022-01-28
 
 
 ###-Overview-----------------------------------------------------------------###

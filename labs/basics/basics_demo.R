@@ -97,7 +97,7 @@ cc[lower.tri(cc)]
 cc[lower.tri(cc, diag = TRUE)]
 
 ## What proportion of coverages exceed 0.8?
-(cc[lower.tri(cc, diag = TRUE)] > 0.8) %>% mean()
+(cc[lower.tri(cc)] > 0.8) %>% mean()
 
 ## What's on the diagonial of the coverage matrix?
 diag(cc) - po
@@ -136,3 +136,5 @@ bfi %>%
     select(education, matches("^A\\d")) %>%
     md.pattern(rotate.names = TRUE)
 
+
+###-END----------------------------------------------------------------------###
