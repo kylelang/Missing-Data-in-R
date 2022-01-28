@@ -64,8 +64,15 @@ saveRDS(dat2.1, paste0(dataDir, "adams_klps_data-synthetic.rds"))
 
 ###-Data Augmentation--------------------------------------------------------###
 
-## Create a more complex version of the dataset to demonstrate MICE:
-dat2.2 <- dat2.1 %>% select(-polv, -matches("^policy\\d"))
+### Here we'll prep some data specifically for MI examples.
+
+## Subset the columns: 
+drops <- c(paste0("riae", c(2, 3, 7:9, 11, 12)),
+           paste0("nori", c(2, 7, 9)),
+           paste0("wpriv", c(1:3, 5:9))
+           )
+
+dat2.2 <- dat2.1 %>% select(-polv, -all_of(drops), -matches("^policy\\d"))
 
 ## Add back the un-noised version for the policy items:
 dat2.2 <- data.frame(dat2.2,
@@ -112,8 +119,8 @@ saveRDS(dat3.1, paste0(dataDir, "adams_klps_data-incomplete.rds"))
 
 ###-Missing Data Imposition 2------------------------------------------------###
 
-targets <- c(targets, "polv", "sex")
-preds   <- setdiff(preds, "polv")
+targets <- c(targets, "polv", "sex") %>% intersect(colnames(dat2.2))
+preds   <- setdiff(preds, "polv") %>% intersect(colnames(dat2.2))
 
 dat3.2 <- imposeMissData(data    = dat2.2,
                          targets = targets,
