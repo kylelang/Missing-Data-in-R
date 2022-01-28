@@ -1,7 +1,7 @@
 %%% Title:    Missing Data in R: FIML
 %%% Author:   Kyle M. Lang
 %%% Created:  2015-09-29
-%%% Modified: 2022-01-27
+%%% Modified: 2022-01-28
 
 \documentclass[10pt]{beamer}
 \usetheme{Utrecht}
@@ -44,7 +44,7 @@ library(xtable)
 library(pROC)
 library(dplyr)
                                         #library(magrittr)
-library(naniar)
+                                        #library(naniar)
                                         #library(ggpubr)
                                         #library(LaplacesDemon)
                                         #library(mitools)
@@ -53,7 +53,7 @@ library(mgcv)
                                         #library(norm)
 library(optimx)
 library(lavaan)
-library(semTools)
+                                        #library(semTools)
 
 source("../../../code/supportFunctions.R")
 source("../../../code/sim_missing/code/simMissingness.R")
@@ -637,7 +637,7 @@ llm <- function(par, data, pats, ind) {
     p  <- ncol(data)
     mu <- par[1:p]
     
-    ## Populate sigma from its cholesky factor:
+    ## Populate sigma from its Cholesky factor:
     sigma <- vecChol(tail(par, -p), p = p, revert = TRUE)
     
     ## Compute the pattern-wise contributions to the LL:
@@ -704,7 +704,7 @@ sigmaHat1 <- mle[4:9] %>% as.numeric() %>% vecChol(p = 3, revert = TRUE)
 \begin{frame}[fragile]{FIML Example}
 
   Just to make sure our results are plausible, we can do the same analysis using 
-  the \texttt{cfa} function from the \textbf{lavaan} package:
+  the \code{cfa()} function from the \textbf{lavaan} package:
 
 <<>>=
 ## Define the model in lavaan syntax:
@@ -763,7 +763,7 @@ print(xtable(sigmaHat2,
 
 \end{frame}
 
-%------------------------------------------------------------------------------%
+\watermarkon %-----------------------------------------------------------------%
 
 \sectionslide{Auxiliary Variables}
 
@@ -782,29 +782,28 @@ print(xtable(sigmaHat2,
   \item The MAR predictors must be included in the analysis model.
   \item Otherwise, FIML reduces to pairwise deletion.
   \end{itemize}
-  
-  \pagebreak
-  
+  \vb  
   If the MAR predictors are not substantively interesting variables, naively 
-  included them in the analysis model will change the model's meaning.
-  \vc
-  \begin{itemize}
-  \item Suppose we are interested in the effect of age on blood pressure.
-    \begin{itemize}
-    \item $Y_{BP} = \beta_0 + \beta_1 X_{age} + \varepsilon$
-      \vc
-    \item In this model, $\beta_1$ represents the effect of age on blood pressure.
-    \end{itemize}
-    \vc
-  \item If missingness in blood pressure depends on blood glucose and total 
-    cholesterol, we need to add those variables into our model.
-    \begin{itemize}
-    \item $Y_{BP} = \beta_0 + \beta_1 X_{age} + \beta_2 X_{glu} + \beta_3 X_{TC} + \varepsilon$
-      \vc
-    \item Now, $\beta_1$ represents the partial effect of age, after controlling 
-      for blood glucose and total cholesterol.
-    \end{itemize}
-  \end{itemize}
+  included them in the analysis model can change the model's meaning.
+  
+  %\vc
+  %\begin{itemize}
+  %\item Suppose we are interested in the effect of age on blood pressure.
+  %  \begin{itemize}
+  %  \item $Y_{BP} = \beta_0 + \beta_1 X_{age} + \varepsilon$
+  %    \vc
+  %  \item In this model, $\beta_1$ represents the effect of age on blood pressure.
+  %  \end{itemize}
+  %  \vc
+  %\item If missingness in blood pressure depends on blood glucose and total 
+  %  cholesterol, we need to add those variables into our model.
+  %  \begin{itemize}
+  %  \item $Y_{BP} = \beta_0 + \beta_1 X_{age} + \beta_2 X_{glu} + \beta_3 X_{TC} + \varepsilon$
+  %    \vc
+  %  \item Now, $\beta_1$ represents the partial effect of age, after controlling 
+  %    for blood glucose and total cholesterol.
+  %  \end{itemize}
+  %\end{itemize}
   
 \end{frame}
 
@@ -813,21 +812,22 @@ print(xtable(sigmaHat2,
 \begin{frame}{Saturated Correlates Technique}
 
   \citet{graham:2003} developed the \emph{saturated correlates} approach to 
-  satisfy two desiderata:
+  meet two desiderata:
   \vc
   \begin{enumerate}
   \item Satisfy the MAR assumption by incorporating MAR predictors into the 
     analysis model.
     \vc
-  \item Not affecting the meaning of the substantively interesting parameters.
+  \item Do not affect the fit or substantive meaning of the analysis model.
   \end{enumerate}
   \vb
-  Incorporate the MAR predictors via a fully-saturated covariance structure:
+  The approach entails incorporating the MAR predictors via a fully-saturated 
+  covariance structure:
   \vc
   \begin{enumerate}
-  \item Allow all MAR predictors to covary with all other MAR predictors.
+  \item Allow all MAR predictors to co-vary with all other MAR predictors.
     \vc
-  \item Allow all MAR predictors to covary with all observed variables in the
+  \item Allow all MAR predictors to co-vary with all observed variables in the
     analysis model (or their residuals).
   \end{enumerate}
   
