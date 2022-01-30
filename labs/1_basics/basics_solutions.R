@@ -1,7 +1,7 @@
 ### Title:    Missing Data in R: Missing Data Basics Suggested Solutions
 ### Author:   Kyle M. Lang
 ### Created:  2018-04-10
-### Modified: 2022-01-28
+### Modified: 2022-01-30
 
 
 ###-Overview-----------------------------------------------------------------###
@@ -14,13 +14,7 @@
 
 ###-Preliminaries------------------------------------------------------------###
 
-## 1) If you have not already done so, use the install.packages() function to
-##    install the "mice", "ggplot2", and "naniar" packages.
-
-install.packages(c("mice", "ggplot2", "naniar"),
-                 repos = "http://cloud.r-project.org")
-
-## 2) Use the library() function to load the "mice", "ggplot2", and "naniar"
+## 1) Use the library() function to load the "mice", "ggplot2", and "naniar"
 ##    packages.
 
 library(mice)
@@ -28,7 +22,7 @@ library(ggplot2)
 library(naniar)
 library(dplyr) # We'll also use this to streamline some answers
 
-## 3) Use the readRDS() function to load the "adams_klps_data-example.rds" and
+## 2) Use the readRDS() function to load the "adams_klps_data-example.rds" and
 ##    "bfiOE.rds" datasets.
 
 dataDir <- "../../data/"
@@ -117,9 +111,11 @@ vis_miss(adams)
 gg_miss_var(adams, show_pct = TRUE)
 
 ## 3a) Use naniar::geom_miss_point() to visualize the relative distribution of
-##     missing values between "raie1" and "wpriv1"
+##     missing values between "raie1" and "policy1"
 
-(p1 <- ggplot(adams, aes(riae1, wpriv1)) + geom_miss_point())
+head(adams)
+
+(p1 <- ggplot(adams, aes(riae1, policy1)) + geom_miss_point())
 
 ## 3b) Facet the plot you made in (3a) by "sex".
 

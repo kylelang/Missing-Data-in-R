@@ -1,7 +1,7 @@
 ### Title:    Missing Data in R: MI Demonstration
 ### Author:   Kyle M. Lang
 ### Created:  2015-10-04
-### Modified: 2022-01-28
+### Modified: 2022-01-30
 
 rm(list = ls(all = TRUE)) # Clear workspace
 
@@ -90,8 +90,8 @@ pdf(paste0(plotDir, "mice_trace-i10.pdf"), onefile = TRUE)
 plot(miceOut)
 dev.off()
 
-### The R-Hats and traceplots suggest potential nonstationarity. We should run
-### more iterations.
+### If the R-Hats or the traceplots suggest nonstationarity. We should run more
+### iterations.
 
 ## Use mice::mice.mids() to add more iterations to the Markov Chain we started
 ## with our previous mice() run:

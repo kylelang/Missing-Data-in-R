@@ -1,7 +1,7 @@
 ### Title:    Missing Data in R: FIML Demonstration
 ### Author:   Kyle M. Lang
 ### Created:  2015-10-26
-### Modified: 2022-01-28
+### Modified: 2022-01-30
 
 rm(list = ls(all = TRUE))
 
@@ -211,21 +211,21 @@ cfaFit3 <- cfa.auxiliary(model  = cfaMod1,
                          aux    = c("nori1", "nori4"),
                          std.lv = TRUE)
 
-summary(cfaFit3)
+summary(cfaFit3, fit.measures = TRUE, fmi = TRUE)
 
 semFit3 <- sem.auxiliary(model  = semMod1,
                          data   = missData,
                          aux    = c("nori1", "nori4"),
                          std.lv = TRUE)
 
-summary(semFit3)
+summary(semFit3, fit.measures = TRUE, fmi = TRUE)
 
 paFit3 <- sem.auxiliary(model  = paMod1,
                         data   = missData,
                         aux    = c("nori1", "nori4"),
                         std.lv = TRUE)
 
-summary(paFit3)
+summary(paFit3, fit.measures = TRUE, fmi = TRUE)
 
 
 ##----------------------------------------------------------------------------##
@@ -234,10 +234,6 @@ summary(paFit3)
 inspect(cfaFit3, "coef")$lambda - inspect(cfaFit2, "coef")$lambda
 inspect(cfaFit3, "theta") - inspect(cfaFit2, "theta")
 inspect(cfaFit3, "coef")$psi - inspect(cfaFit2, "coef")$psi
-
-## Fit indices are also equal:
-fitMeasures(cfaFit3)[c("chisq", "df", "rmsea", "aic", "bic")] -
-    fitMeasures(cfaFit2)[c("chisq", "df", "rmsea", "aic", "bic")]
 
 
 ###-END----------------------------------------------------------------------###
