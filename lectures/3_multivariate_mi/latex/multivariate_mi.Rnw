@@ -1,7 +1,7 @@
 %%% Title:    Missing Data in R: Multivariate MI
 %%% Author:   Kyle M. Lang
 %%% Created:  2017-09-12
-%%% Modified: 2022-01-25
+%%% Modified: 2022-01-30
 
 \documentclass[10pt]{beamer}
 \usetheme{Utrecht}
@@ -40,9 +40,7 @@ library(mvtnorm)
 library(xtable)
 library(pROC)
 library(dplyr)
-                                        #library(magrittr)
 library(naniar)
-                                        #library(ggpubr)
 library(LaplacesDemon)
 library(mitools)
 library(mgcv)
@@ -51,9 +49,6 @@ library(norm)
 
 source("../../../code/supportFunctions.R")
 source("../../../code/sim_missing/code/simMissingness.R")
-
-dataDir <- "../../../data/"
-figDir  <- "figures/"
 
 options(width = 60)
 opts_chunk$set(size = "footnotesize",
@@ -1070,7 +1065,7 @@ print(xtable(res2, caption = "NORM Version"),
 \begin{frame}[allowframebreaks]{References}
   
   \bibliographystyle{apacite}
-  \bibliography{../../../literature/bibtex/winter_school_refs.bib}
+  \bibliography{../../../bibtex/winter_school_refs.bib}
   
 \end{frame}
 

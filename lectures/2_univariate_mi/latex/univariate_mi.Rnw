@@ -1,7 +1,7 @@
 %%% Title:    Missing Data in R: Univariate MI
 %%% Author:   Kyle M. Lang
 %%% Created:  2017-09-12
-%%% Modified: 2021-01-24
+%%% Modified: 2022-01-30
 
 \documentclass[10pt]{beamer}
 \usetheme{Utrecht}
@@ -40,10 +40,7 @@ library(xtable)
 library(pROC)
 library(dplyr)
 library(magrittr)
-#library(naniar)
 library(ggpubr)
-#library(lme4)
-#library(lavaan)
 library(LaplacesDemon)
 library(mitools)
 
@@ -1287,7 +1284,7 @@ MIcombine(fits) %>% summary(digits = 3)
   \end{itemize}
   \vb
   One particularly useful donor-based method is \emph{Predictive Mean Matching} 
-  \citep{little:1988}.
+  \citep{little:1988_pmm}.
   \begin{itemize}
   \item The cases that make up the donor pool are matched based on their 
     predicted outcome values.
@@ -1446,7 +1443,7 @@ MIcombine(fits) %>% summary(digits = 3)
 \begin{frame}[allowframebreaks]{References}
   
   \bibliographystyle{apacite}
-  \bibliography{../../../literature/bibtex/winter_school_refs.bib}
+  \bibliography{../../../bibtex/winter_school_refs.bib}
   
 \end{frame}
 
