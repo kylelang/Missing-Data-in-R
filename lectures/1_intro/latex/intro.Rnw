@@ -1,7 +1,7 @@
 %%% Title:    Missing Data in R: Introduction
 %%% Author:   Kyle M. Lang
 %%% Created:  2015-11-06
-%%% Modified: 2022-01-23
+%%% Modified: 2022-01-30
 
 \documentclass{beamer}
 \usetheme{Utrecht}
@@ -41,7 +41,6 @@ library(pROC)
 library(dplyr)
 library(magrittr)
 library(naniar)
-                                        #library(gridExtra)
 library(ggpubr)
 library(lme4)
 library(lavaan)
@@ -768,7 +767,7 @@ ggplot(data = pDat, mapping = aes(x = x, y = y, color = g)) +
     \item Use a t-test to compare the subset of $Z_p$ that corresponds to
       $Y_{mis}$ to the subset corresponding to $Y_{obs}$.
       \vc
-    \item The \citet{little:1988} MCAR test is a multivariate version of this.
+    \item The \citet{little:1988_mcar} MCAR test is a multivariate version of this.
     \end{itemize}
   \end{itemize}
 
@@ -867,9 +866,9 @@ mnarData %$% t.test(z ~ m) %>% wrap()
 
 \watermarkon %-----------------------------------------------------------------%
 
-\begin{frame}[fragile]{\citet{little:1988} MCAR Test Example}
+\begin{frame}[fragile]{\citet{little:1988_mcar} MCAR Test Example}
 
-  Use the \citet{little:1988} MCAR test on MCAR data.
+  Use the \citet{little:1988_mcar} MCAR test on MCAR data.
 
 <<>>=
 mcarData %>% select(-m) %>% mcar_test()
@@ -879,9 +878,9 @@ mcarData %>% select(-m) %>% mcar_test()
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}[fragile]{\citet{little:1988} MCAR Test Example}
+\begin{frame}[fragile]{\citet{little:1988_mcar} MCAR Test Example}
 
-Use the \citet{little:1988} MCAR test on MAR data.
+Use the \citet{little:1988_mcar} MCAR test on MAR data.
 
 <<>>=
 marData %>% select(-m) %>% mcar_test()
@@ -891,9 +890,9 @@ marData %>% select(-m) %>% mcar_test()
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}[fragile]{\citet{little:1988} MCAR Test Example}
+\begin{frame}[fragile]{\citet{little:1988_mcar} MCAR Test Example}
 
-Use the \citet{little:1988} MCAR test on MNAR data.
+Use the \citet{little:1988_mcar} MCAR test on MNAR data.
 
 <<>>=
 mnarData %>% select(-m) %>% mcar_test()
@@ -2099,7 +2098,7 @@ parameterEstimates(fit, ci = FALSE)[1:4, ]
 \begin{frame}[allowframebreaks]{References}
 
   \bibliographystyle{apacite}
-  \bibliography{../../../literature/bibtex/statMethRefs.bib}
+  \bibliography{../../../bibtex/winter_school_refs.bib}
 
 \end{frame}
 
