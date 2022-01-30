@@ -39,6 +39,7 @@ library(mice)
 library(dplyr)
 library(naniar)
 library(norm)
+library(miceadds)
 
 source("../../../code/supportFunctions.R")
 source("../../../code/sim_missing/code/simMissingness.R")
@@ -164,10 +165,13 @@ knit_theme$set('edit-kwrite')
       
 <<echo = FALSE, cache = TRUE, out.width = "90%">>=
 missData <- readRDS(paste0(dataDir, "adams_klps_data-incomplete.rds"))
-nSams    <- 500
-dat0     <- missData %>% dplyr::select(-matches("policy\\d")) %>% as.matrix()
-muHat1   <- matrix(NA, nSams, ncol(dat0), dimnames = list(NULL, colnames(dat0)))
-s2Hat1   <- matrix(NA, nSams, ncol(dat0), dimnames = list(NULL, colnames(dat0)))
+dat0     <- missData %>% 
+    dplyr::select(-matches("policy\\d|wpriv\\d")) %>% 
+    as.matrix()
+
+nSams  <- 500
+muHat1 <- matrix(NA, nSams, ncol(dat0), dimnames = list(NULL, colnames(dat0)))
+s2Hat1 <- matrix(NA, nSams, ncol(dat0), dimnames = list(NULL, colnames(dat0)))
 
 ## Do preliminary manipulations:
 metaData <- prelim.norm(dat0) 
@@ -181,7 +185,7 @@ tmp$mu    <- tmp$mu - 1
 tmp$sigma <- tmp$sigma * 0.25
 thetaHat  <- makeparam.norm(metaData, tmp)
 
-muHat1[1, ]  <- getparam.norm(s = metaData, theta = thetaHat)$mu
+muHat1[1, ] <- getparam.norm(s = metaData, theta = thetaHat)$mu
 s2Hat1[1, ] <- getparam.norm(s = metaData, theta = thetaHat)$sigma %>% diag()
 
 ## Set random number generator seed:
@@ -192,7 +196,6 @@ for(s in 2 : nSams) {
     thetaHat    <- da.norm(s = metaData, start = thetaHat, steps = 1)
     muHat1[s, ] <- getparam.norm(s = metaData, theta = thetaHat)$mu
     s2Hat1[s, ] <- getparam.norm(s = metaData, theta = thetaHat)$sigma %>% diag()
-
 }
 
 muHat1 %<>% as.data.frame() %>% mutate(Iteration = 1:nSams)
@@ -200,17 +203,12 @@ s2Hat1 %<>% as.data.frame() %>% mutate(Iteration = 1:nSams)
 
 ggplot(s2Hat1, aes(Iteration, riae5)) + 
     geom_line() + 
-    ylab("Mean of RIAE5") +
-    ggtitle("Trace of Estimated Mean for RIAE5") +
+    ylab("Variance") +
+    ggtitle("Trace of Estimated Variance of RIAE5") +
     theme_classic() + 
     theme(text = element_text(family = "Courier"),
           plot.title = element_text(face = "bold", hjust = 0.5)
-          ) 
-                                        #plot(muHat1[ , "riae5"],
-                                        #     type = "l",
-                                        #     main = "Trace of Estimated Mean for RIAE5",
-                                        #     xlab = "Iteration",
-                                        #     ylab = "Mean of RIAE5")
+          )
 @ 
 
 \end{column}
@@ -218,19 +216,14 @@ ggplot(s2Hat1, aes(Iteration, riae5)) +
 \begin{column}{0.5\textwidth}
   
 <<echo = FALSE, cache = TRUE, out.width = "90%">>=
-ggplot(s2Hat1, aes(Iteration, wpriv3)) + 
+ggplot(s2Hat1, aes(Iteration, riae7)) + 
     geom_line() + 
-    ylab("Mean of WPRIV3") +
-    ggtitle("Trace of Estimated Mean for WPRIV3") +
+    ylab("Variance") +
+    ggtitle("Trace of Estimated Variance of RIAE7") +
     theme_classic() + 
     theme(text = element_text(family = "Courier"),
           plot.title = element_text(face = "bold", hjust = 0.5)
           ) 
-                                        #plot(muHat1[ , "wpriv3"],
-                                        #     type = "l",
-                                        #     main = "Trace of Estimated Mean for WPRIV3",
-                                        #     xlab = "Iteration",
-                                        #     ylab = "Mean of WPRIV3")
 @ 
 
 \end{column}
@@ -242,27 +235,46 @@ ggplot(s2Hat1, aes(Iteration, wpriv3)) +
 
 \begin{frame}{Potential Scale Reduction Factor}
   
-  Suppose we have two Markov chains for the same parameter.
+  Suppose we have $M$ length-$N$ Markov chains for the same parameter, $\theta$.
   \vc 
   \begin{itemize}
-  \item If these chains have converged, the average distance between any two
-    points on separate chains should be the same as the average distance 
-    between two points on the same chain.
+  \item If these chains have converged, all $M$ chains should be sampling from 
+    the same parameter space.
     \vc
-  \item The \emph{between-chain} variance should, on average, equal the 
-    \emph{within-chain} variance.
+  \item The pooled \emph{total variance} and the \emph{within-chain} variances 
+    should be about the same.
   \end{itemize}
   \vc
   The \citet{gelmanRubin:1992} \emph{Potential Scale Reduction Factor}, 
   $\widehat{R}$, quantifies this concept:
   \begin{align*}
-    \widehat{R} = \frac{\hat{\sigma}^2_{between}}{\hat{\sigma}^2_{within}}
+    \widehat{R} &= \sqrt{\frac{T}{W}}
+    %T &= \frac{N - 1}{N} W + \frac{1}{N} B\\
+    %W &= \frac{1}{M} \sum_{m = 1}^M var(\theta_m)\\
+    %B &= \frac{N}{M - 1} \sum_{m = 1}^M (\bar{\theta}_m - \bar{\theta})^2
   \end{align*}
   $\widehat{R}$ will approach 1.0 at convergence.
   \vc
   \begin{itemize}
   \item $\widehat{R} < $ 1.1 or 1.2 suggests acceptable convergence.
   \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Potential Scale Reduction Factor}
+  
+  \begin{align*}
+    \widehat{R} &= \sqrt{\frac{T}{W}}
+  \end{align*}
+  The total variance, $T$, is the weighted average of the within-chain 
+  variance, $W$, and the between-chain variance, $B$.
+  \begin{align*}
+    T &= \frac{N - 1}{N} W + \frac{1}{N} B\\[8pt]
+    W &= \frac{1}{M} \sum_{m = 1}^M \textrm{var} \left( \theta_m \right)\\[8pt]
+    B &= \frac{N}{M - 1} \sum_{m = 1}^M \left( \bar{\theta}_m - \bar{\theta} \right)^2
+  \end{align*}
   
 \end{frame}
 
@@ -304,24 +316,13 @@ chains <- data.frame(Iteration = rep(1:nSams, 2),
 
 ggplot(chains, aes(Iteration, chain, color = factor(run))) + 
     geom_line() + 
-    ylab("Mean of RIAE5") +
-    ggtitle("Multi-Chain Trace of Estimated Mean for RIAE5") +
+    ylab("Variance") +
+    ggtitle("Multi-Chain Trace of Variance of RIAE5") +
     theme_classic() + 
     theme(text = element_text(family = "Courier"),
           plot.title = element_text(face = "bold", hjust = 0.5),
           legend.position = "none") +
     scale_color_manual(values = c("red", "blue"))
-
-                                        #yRange <- range(chain1, chain2)
-
-                                        #plot(chain1,
-                                        #     type = "l",
-                                        #     ylim = yRange,
-                                        #     col  = "red",
-                                        #     main = "Multi-Chain Trace of Estimated Mean for RIAE5",
-                                        #     xlab = "Iteration",
-                                        #     ylab = "Mean of RIAE5")
-                                        #lines(chain2, col = "blue")
 @
 
 \end{frame}
@@ -331,21 +332,53 @@ ggplot(chains, aes(Iteration, chain, color = factor(run))) +
 \begin{frame}[fragile]{Example: Potential Scale Reduction Factor}
   
 <<cache = TRUE>>=
-## Pool chains:
-iterMat  <- cbind(chain1, chain2)
-burntMat <- tail(iterMat, nSams - 100)
+## Define a function to compute the between-chain variance:
+bVar <- function(x) {
+    (nrow(x) / (ncol(x) - 1)) * ((colMeans(x) - mean(x))^2 %>% sum())
+}
 
-## R-Hat from all iterations:
-wVar1 <- apply(iterMat, 2, var) %>% mean()
-bVar1 <- apply(iterMat, 1, var) %>% mean()
-rHat1 <- bVar1 / wVar1
-rHat1
+## Pool chains and exclude burn-in iterations:
+y <- x <- cbind(chain1, chain2)
+x <- tail(x, -100)
+n <- nrow(x)
 
-## Burnt-In R-Hat:
-wVar2 <- apply(burntMat, 2, var) %>% mean()
-bVar2 <- apply(burntMat, 1, var) %>% mean()
-rHat2 <- bVar2 / wVar2
-rHat2
+## Compute variance terms:
+w <- apply(x, 2, var) %>% mean()
+b <- bVar(x)
+t <- ((n - 1) / n) * w + (1 / n) * b
+
+## Compute the R-Hat:
+sqrt(t / w)
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example: Potential Scale Reduction Factor}
+
+We can compute $\hat{R}$ statistics for \code{mice()} models using the 
+\code{Rhat.mice()} function from the \pkg{miceadds} package.  
+
+<<eval = FALSE>>=
+## Impute missing values:
+miceOut <- mice(data   = incompleteData, 
+                m      = 25, 
+                maxit  = 50, 
+                method = "norm", 
+                seed   = 235711)
+
+## Compute PSR factors:
+Rhat.mice(miceOut)
+@ 
+
+<<cache = TRUE, include = FALSE>>=
+miceOut <- readRDS(paste0(dataDir, "adams_klps_data-mids.rds"))
+rHats   <- Rhat.mice(miceOut) %>% head()
+@ 
+
+<<echo = FALSE>>=
+rHats
 @ 
 
 \end{frame}
@@ -369,18 +402,19 @@ rHat2
   
 <<eval = FALSE>>=
 ## Impute missing values:
-miceOut <- mice(data   = dat3, 
+miceOut <- mice(data   = incompleteData, 
                 m      = 25, 
                 maxit  = 50, 
                 method = "norm", 
                 seed   = 235711)
 
 ## Create diagnostic traceplots:
-plot(miceOut1, c("riae5", "wpriv3", "policy2"))
+plot(miceOut, c("riae5", "wpriv3", "policy2"))
 @ 
 
+\pagebreak
+
 <<echo = FALSE, cache = TRUE, out.width = "65%">>=
-miceOut <- readRDS(paste0(dataDir, "adams_klps_data-mids.rds"))
 plot(miceOut, c("riae5", "wpriv3", "policy2"))
 @ 
 
