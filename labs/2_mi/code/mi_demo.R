@@ -1,7 +1,7 @@
 ### Title:    Missing Data in R: MI Demonstration
 ### Author:   Kyle M. Lang
 ### Created:  2015-10-04
-### Modified: 2022-01-30
+### Modified: 2022-02-02
 
 rm(list = ls(all = TRUE)) # Clear workspace
 
@@ -156,12 +156,18 @@ data.frame(names  = colnames(missData),
            pm     = round(pm, 3)
            )
 
+## Check in/outbound statistics:
+flux(missData)
+
+## Visualize in/outflux:
+fluxplot(missData)
+
 ## Use mice::quickpred() to construct a predictor matrix to select a subset of
 ## the possible predictors for use in each EIM:
 predMat <- quickpred(missData,
                      mincor  = 0.3,
                      exclude = "sex",
-                     include = c("nori1", "riae1")
+                     include = c("nori1", "nori4", "nori10")
                      )
 predMat
 
