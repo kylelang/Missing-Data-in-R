@@ -40,7 +40,7 @@ opts_knit$set(root.dir = "../../../")
 knit_theme$set('edit-kwrite')
 @
 
-<<r_setup, inclcude = FALSE>>=
+<<r_setup, inclcude = FALSE, echo = FALSE>>=
 options(width = 60)
 
 set.seed(235711)
@@ -726,22 +726,20 @@ source("code/sim_missing/code/simMissingness.R")
 \begin{frame}[fragile]{Example}
 
   <<>>=
-  ## Read in some data:
-  tmp <- readRDS(paste0(dataDir, "diabetes.rds")) %>%
-      select(bmi, bp, glu, age)
+  ## Read in some example data:
   diabetes1 <- diabetes2 <-
-      rmvnorm(500, colMeans(tmp), cov(tmp)) %>% data.frame()
-
+      readRDS(paste0(dataDir, "diabetes_norm.rds"))
+  
   ## Simulated missingness based on 'bmi':
   m <- simLinearMissingness(data  = diabetes2,
                             pm    = 0.30,
-                            preds = "bmi",
+                            preds = c("bmi", "age"),
                             auc   = 0.85)$r
   
   ## Impose missing on 'glu' according to the missingess above:
-  diabetes2[m, "glu"] <- NA
+  diabetes2[m, c("glu", "bp")] <- NA
   @ 
-
+  
 \end{frame}
 
 %------------------------------------------------------------------------------%
@@ -829,8 +827,8 @@ source("code/sim_missing/code/simMissingness.R")
 \begin{frame}[fragile]{Example}
 
   <<>>=
-  s1 <- lm(glu ~ bmi + bp + age, data = diabetes1) %>% summary()
-  s2 <- lm(glu ~ bmi + bp + age, data = diabetes2) %>% summary()
+  s1 <- lm(glu ~ bmi + bp, data = diabetes1) %>% summary()
+  s2 <- lm(glu ~ bmi + bp, data = diabetes2) %>% summary()
   
   s1$r.squared
   s2$r.squared
@@ -929,6 +927,7 @@ source("code/sim_missing/code/simMissingness.R")
   <<>>=
   imputed <- diabetes2
   imputed[m, "glu"] <- mean(imputed$glu, na.rm = TRUE)
+  imputed[m, "bp"]  <- mean(imputed$bp, na.rm = TRUE)
   
   diabetes1 %>% select(bmi, glu, bp) %>% cor()
   imputed %>% select(bmi, glu, bp) %>% cor()
@@ -954,8 +953,8 @@ source("code/sim_missing/code/simMissingness.R")
 \begin{frame}[fragile]{Example}
 
   <<>>=
-  s1 <- lm(glu ~ bmi + bp + age, data = diabetes1) %>% summary()
-  s2 <- lm(glu ~ bmi + bp + age, data = imputed) %>% summary()
+  s1 <- lm(glu ~ bmi + bp, data = diabetes1) %>% summary()
+  s2 <- lm(glu ~ bmi + bp, data = imputed) %>% summary()
   
   s1$r.squared
   s2$r.squared
@@ -1051,7 +1050,7 @@ source("code/sim_missing/code/simMissingness.R")
   <<>>=
   imputed <- mice(data      = diabetes2, 
                   m         = 1, 
-                  maxit     = 1,
+                  maxit     = 20,
                   printFlag = FALSE,
                   method    = "norm.predict") %>% 
       complete(1)
@@ -1088,8 +1087,8 @@ source("code/sim_missing/code/simMissingness.R")
 \begin{frame}[fragile]{Example}
 
   <<>>=
-  s1 <- lm(glu ~ bmi + bp + age, data = diabetes1) %>% summary()
-  s2 <- lm(glu ~ bmi + bp + age, data = imputed) %>% summary()
+  s1 <- lm(glu ~ bmi + bp, data = diabetes1) %>% summary()
+  s2 <- lm(glu ~ bmi + bp, data = imputed) %>% summary()
   
   s1$r.squared
   s2$r.squared
@@ -1419,7 +1418,7 @@ source("code/sim_missing/code/simMissingness.R")
   <<>>=
   imputed <- mice(data      = diabetes2, 
                   m         = 1, 
-                  maxit     = 1,
+                  maxit     = 20,
                   printFlag = FALSE,
                   method    = "norm.nob") %>% 
       complete(1)
@@ -1456,8 +1455,8 @@ source("code/sim_missing/code/simMissingness.R")
 \begin{frame}[fragile]{Example}
 
   <<>>=
-  s1 <- lm(glu ~ bmi + bp + age, data = diabetes1) %>% summary()
-  s2 <- lm(glu ~ bmi + bp + age, data = imputed) %>% summary()
+  s1 <- lm(glu ~ bmi + bp, data = diabetes1) %>% summary()
+  s2 <- lm(glu ~ bmi + bp, data = imputed) %>% summary()
 
   s1$r.squared
   s2$r.squared
@@ -1652,7 +1651,7 @@ source("code/sim_missing/code/simMissingness.R")
   <<>>=
   miceOut <- mice(data      = diabetes2, 
                   m         = 25, 
-                  maxit     = 1,
+                  maxit     = 20,
                   printFlag = FALSE,
                   method    = "norm")
   @ 
@@ -1688,8 +1687,8 @@ source("code/sim_missing/code/simMissingness.R")
 \begin{frame}[fragile]{Example}
 
   <<>>=
-  fit1 <- lm(glu ~ bmi + bp + age, data = diabetes1)
-  fit2 <- with(miceOut, lm(glu ~ bmi + bp + age))
+  fit1 <- lm(glu ~ bmi + bp, data = diabetes1)
+  fit2 <- with(miceOut, lm(glu ~ bmi + bp))
   
   summary(fit1)$r.squared
   pool.r.squared(fit2)
@@ -1783,7 +1782,7 @@ source("code/sim_missing/code/simMissingness.R")
 \begin{frame}[fragile]{Example}
 
   <<>>=
-  mod <- "glu ~ 1 + bmi + bp + age"
+  mod <- "glu ~ 1 + bmi + bp"
   fit <- sem(mod, data = diabetes2, missing = "fiml")
   
   summary(fit1)$r.squared
