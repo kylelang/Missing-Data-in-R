@@ -1,7 +1,7 @@
 %%% Title:    Missing Data in R: Introduction
 %%% Author:   Kyle M. Lang
 %%% Created:  2015-11-06
-%%% Modified: 2022-01-30
+%%% Modified: 2023-01-27
 
 \documentclass{beamer}
 \usetheme{Utrecht}
@@ -23,7 +23,7 @@
 \subtitle{Utrecht University Winter School: Missing Data in R}
 \author{Kyle M. Lang}
 \institute{Department of Methodology \& Statistics\\Utrecht University}
-\date{2022-02-03}
+\date{}
 
 %------------------------------------------------------------------------------%
 
@@ -122,7 +122,7 @@ knit_theme$set('edit-kwrite')
 %------------------------------------------------------------------------------%
 
 \begin{frame}{A Little Notation}
-
+  \vx{-18}
   \begin{align*}
     Y &\coloneqq \text{An $N \times P$ Matrix of Arbitrary Data}\\[8pt]
     Y_{mis} &\coloneqq \text{The \emph{missing} part of $Y$}\\[8pt]
@@ -150,45 +150,47 @@ knit_theme$set('edit-kwrite')
 
 \begin{frame}{Missing Data Pattern}
 
-<<echo = FALSE>>=
-tmpTab <- matrix(c("x", "x", ".", ".",
-                   "y", ".", "y", "."),
-                 ncol = 2,
-                 dimnames = list(NULL, c("X", "Y"))
-                 )
-
-patTab1 <- xtable(tmpTab, align = rep("c", 3), caption = "Patterns for $P = 2$")
-
-tmpTab <- matrix(c(rep("x", 3), ".", "x", rep(".", 3),
-                   "y", "y", ".", "y", ".", ".", "y", ".",
-                   "z", ".", "z", "z", ".", "z", ".", "."),
-                 ncol = 3,
-                 dimnames = list(NULL, c("X", "Y", "Z"))
-                 )
-
-patTab2 <- xtable(tmpTab, align = rep("c", 4), caption = "Patterns for $P = 3$")
-@
-
-Missing data (or response) patterns represent unique combinations of observed
-and missing items.
-\begin{itemize}
+  <<echo = FALSE>>=
+  tmpTab <- matrix(c("x", "x", ".", ".",
+                     "y", ".", "y", "."),
+                   ncol = 2,
+                   dimnames = list(NULL, c("X", "Y"))
+                   )
+  
+  patTab1 <-
+      xtable(tmpTab, align = rep("c", 3), caption = "Patterns for $P = 2$")
+  
+  tmpTab <- matrix(c(rep("x", 3), ".", "x", rep(".", 3),
+                     "y", "y", ".", "y", ".", ".", "y", ".",
+                     "z", ".", "z", "z", ".", "z", ".", "."),
+                   ncol = 3,
+                   dimnames = list(NULL, c("X", "Y", "Z"))
+                   )
+  
+  patTab2 <-
+      xtable(tmpTab, align = rep("c", 4), caption = "Patterns for $P = 3$")
+  @
+  
+  Missing data (or response) patterns represent unique combinations of observed
+  and missing items.
+  \begin{itemize}
   \item $P$ items $\Rightarrow$ $2^P$ possible patterns.
-\end{itemize}
-
-\begin{columns}
-  \begin{column}{0.45\textwidth}
-
-<<echo = FALSE, results = 'asis'>>=
-print(patTab1, booktabs = TRUE)
-@
-
-  \end{column}
-  \begin{column}{0.45\textwidth}
-\vx{-12}
-<<echo = FALSE, results = 'asis'>>=
-print(patTab2, booktabs = TRUE)
-@
-
+  \end{itemize}
+  
+  \begin{columns}
+    \begin{column}{0.45\textwidth}
+      
+      <<echo = FALSE, results = 'asis'>>=
+      print(patTab1, booktabs = TRUE)
+      @
+      
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \vx{-12}
+      <<echo = FALSE, results = 'asis'>>=
+      print(patTab2, booktabs = TRUE)
+      @
+      
     \end{column}
   \end{columns}
 
@@ -232,64 +234,64 @@ print(patTab2, booktabs = TRUE)
 
 \begin{frame}{Example Missing Data Patterns}
 
-<<echo = FALSE>>=
-tmpTab <- matrix(c(rep("x", 10),
-                   rep("y", 5), rep(".", 5),
-                   rep("z", 10)),
-                 ncol = 3)
-colnames(tmpTab) <- c("X", "Y", "Z")
-
-patTab1 <- xtable(tmpTab,
-                  align   = rep("c", 4),
-                  caption = "Univariate Pattern")
-
-tmpTab2 <- matrix(c(rep("x", 9), rep(".", 1),
-                    rep("y", 6), rep(".", 4),
-                    rep("z", 3), rep(".", 7)),
-                  ncol = 3)
-colnames(tmpTab2) <- c("X", "Y", "Z")
-
-patTab2 <- xtable(tmpTab2,
-                  align   = rep("c", 4),
-                  caption = "Monotone Pattern")
-
-tmpTab3 <- matrix(c(rep("x", 10),
-                    rep("y", 10),
-                    rep("z", 10)),
-                  ncol = 3)
-rMat <- matrix(as.logical(rbinom(30, 1, 0.3)), ncol = 3)
-tmpTab3[rMat] <- "."
-colnames(tmpTab3) <- c("X", "Y", "Z")
-
-patTab3 <- xtable(tmpTab3,
-                  align   = rep("c", 4),
-                  caption = "Arbitrary Pattern")
-@
-
-\begin{columns}[T]
-  \begin{column}{0.33\textwidth}
-
-<<echo = FALSE, results = 'asis'>>=
-print(patTab1, booktabs = TRUE)
-@
-
-\end{column}
-\begin{column}{0.33\textwidth}
-
-<<echo = FALSE, results = 'asis'>>=
-print(patTab2, booktabs = TRUE)
-@
-
-\end{column}
-\begin{column}{0.33\textwidth}
-
-<<echo = FALSE, results = 'asis'>>=
-print(patTab3, booktabs = TRUE)
-@
-
-\end{column}
-\end{columns}
-
+  <<echo = FALSE>>=
+  tmpTab <- matrix(c(rep("x", 10),
+                     rep("y", 5), rep(".", 5),
+                     rep("z", 10)),
+                   ncol = 3)
+  colnames(tmpTab) <- c("X", "Y", "Z")
+  
+  patTab1 <- xtable(tmpTab,
+                    align   = rep("c", 4),
+                    caption = "Univariate Pattern")
+  
+  tmpTab2 <- matrix(c(rep("x", 9), rep(".", 1),
+                      rep("y", 6), rep(".", 4),
+                      rep("z", 3), rep(".", 7)),
+                    ncol = 3)
+  colnames(tmpTab2) <- c("X", "Y", "Z")
+  
+  patTab2 <- xtable(tmpTab2,
+                    align   = rep("c", 4),
+                    caption = "Monotone Pattern")
+  
+  tmpTab3 <- matrix(c(rep("x", 10),
+                      rep("y", 10),
+                      rep("z", 10)),
+                    ncol = 3)
+  rMat <- matrix(as.logical(rbinom(30, 1, 0.3)), ncol = 3)
+  tmpTab3[rMat] <- "."
+  colnames(tmpTab3) <- c("X", "Y", "Z")
+  
+  patTab3 <- xtable(tmpTab3,
+                    align   = rep("c", 4),
+                    caption = "Arbitrary Pattern")
+  @
+  
+  \begin{columns}[T]
+    \begin{column}{0.33\textwidth}
+      
+      <<echo = FALSE, results = 'asis'>>=
+      print(patTab1, booktabs = TRUE)
+      @
+      
+    \end{column}
+    \begin{column}{0.33\textwidth}
+      
+      <<echo = FALSE, results = 'asis'>>=
+      print(patTab2, booktabs = TRUE)
+      @
+      
+    \end{column}
+    \begin{column}{0.33\textwidth}
+      
+      <<echo = FALSE, results = 'asis'>>=
+      print(patTab3, booktabs = TRUE)
+      @
+      
+    \end{column}
+  \end{columns}
+  
 \end{frame}
 
 \watermarkon %-----------------------------------------------------------------%
@@ -397,87 +399,7 @@ print(patTab3, booktabs = TRUE)
 
 \end{frame}
 
-\watermarkoff %----------------------------------------------------------------%
-
-\begin{frame}{Examples}
-
-  \begin{columns}
-    \begin{column}{0.61\textwidth}
-
-      \begin{enumerate}
-      \item What is the coverage for $cov(X, Y)$?
-        \vb
-      \item What is the coverage for $cov(W, Y)$?
-        \vb
-      \item What is the coverage for $cov(X, Z)$?
-        \vb
-      \item What is the outflux coefficient for $W$?
-        \vb
-      \item What is the influx coefficient for $W$?
-      \end{enumerate}
-
-    \end{column}
-    \begin{column}{0.39\textwidth}
-
-<<echo = FALSE, results = 'asis'>>=
-tmpTab4 <- matrix(c(rep("w", 10),
-                    rep("x", 5), rep(".", 5),
-                    rep("y", 10),
-                    rep(".", 5), rep("z", 5)),
-                 ncol = 4)
-colnames(tmpTab4) <- c("W", "X", "Y", "Z")
-
-patTab4 <- xtable(tmpTab4, align = rep("c", 5))
-print(patTab4, booktabs = TRUE)
-@
-
-\end{column}
-\end{columns}
-
-\end{frame}
-
 %------------------------------------------------------------------------------%
-
-\begin{frame}{Examples}
-
-  \begin{columns}
-    \begin{column}{0.6\textwidth}
-
-      \begin{enumerate}
-        \item What is the percent missing at T2?
-          \vb
-        \item What is the attrition rate at T3?
-          \vb
-        \item What is the inbound statistic $I_{32}$?
-          \vb
-        \item What is the outbound statistic $O_{42}$?
-          \vb
-        \item What is the influx coefficient $I_3$?
-          \vb
-        \item What is the outflux coefficient $O_2$?
-      \end{enumerate}
-
-    \end{column}
-    \begin{column}{0.4\textwidth}
-
-<<echo = FALSE, results = 'asis'>>=
-tmpTab5 <- matrix(c(rep("x1", 10),
-                    rep("x2", 7), rep(".", 3),
-                    rep("x3", 5), rep(".", 5),
-                    rep("x4", 3), rep(".", 7)),
-                 ncol = 4)
-colnames(tmpTab5) <- c("T1", "T2", "T3", "T4")
-
-patTab5 <- xtable(tmpTab5, align = rep("c", 5))
-print(patTab5, booktabs = TRUE)
-@
-
-\end{column}
-\end{columns}
-
-\end{frame}
-
-\watermarkon %-----------------------------------------------------------------%
 
 \sectionslide{Missing Data Mechanisms}
 
@@ -525,101 +447,105 @@ print(patTab5, booktabs = TRUE)
 
 \begin{frame}[fragile]{Simulate Some Toy Data}
 
-<<>>=
-nObs <- 5000 # Sample Size
-pm   <- 0.3  # Proportion Missing
-
-sigma <- matrix(c(1.0, 0.5, 0.3,
-                  0.5, 1.0, 0.0,
-                  0.3, 0.0, 1.0),
-                ncol = 3)
-tmp <- rmvnorm(nObs, c(0, 0, 0), sigma)
-
-x0 <- tmp[ , 1]
-y0 <- tmp[ , 2]
-z0 <- tmp[ , 3]
-
-cor(y0, x0) # Check correlation between X and Y
-@
-
+  <<>>=
+  library(mvtnorm)
+  library(dplyr)
+  library(magrittr)
+  
+  nObs <- 5000 # Sample Size
+  pm   <- 0.3  # Proportion Missing
+  
+  sigma <- matrix(c(1.0, 0.5, 0.3,
+                    0.5, 1.0, 0.0,
+                    0.3, 0.0, 1.0),
+                  ncol = 3)
+  dat0 <- rmvnorm(nObs, c(0, 0, 0), sigma) %>% data.frame()
+  colnames(dat0) <- c("x", "y", "z")
+  
+  dat0 %$% cor(y, x)
+  @
+  
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile, allowframebreaks]{MCAR Example}
+  
+  <<>>=
+  ## Simulate MCAR Missingness:
+  m <- sample(1:nObs, size = pm * nObs)
 
-<<>>=
-## Simulate MCAR Missingness:
-mVec <- sample(1 : length(y0), size = pm * length(y0))
+  ## Impose MCAR missing on Y:
+  mcarData         <- dat0
+  mcarData[m, "y"] <- NA
 
-yMcar       <- y0
-yMcar[mVec] <- NA
-
-cor(yMcar, x0, use = "pairwise") # Look at correlation
-@
-
-\pagebreak
-
-<<echo = FALSE, out.width = "65%">>=
-y0Den <- density(y0)
-yDen  <- density(yMcar, na.rm = TRUE)
-
-pDat <- data.frame(y = c(y0Den$y, yDen$y),
-                   x = c(y0Den$x, yDen$x),
-                   g = rep(c("Complete", "MCAR w/ Deletion"),
-                           each = length(yDen$y)
-                           )
-                   )
-
-ggplot(data = pDat, mapping = aes(x = x, y = y, color = g)) +
-    geom_line(size = 1) +
-    theme_classic() +
-    theme(text = element_text(family = "Courier", size = 16)) +
-    ylab("Density") +
-    xlab("Value of Y") +
-    scale_color_manual(values = c("blue", "red")) +
-    theme(legend.position = c(0.8, 0.95), legend.title = element_blank())
-@
-
+  ## Check the correlation between X & Y:
+  mcarData %$% cor(y, x, use = "pairwise")
+  @
+  
+  \pagebreak
+  
+  <<echo = FALSE, out.width = "65%">>=
+  y0Den <- dat0 %$% density(y)
+  yDen  <- mcarData %$% density(y, na.rm = TRUE)
+  
+  pDat <- data.frame(y = c(y0Den$y, yDen$y),
+                     x = c(y0Den$x, yDen$x),
+                     g = rep(c("Complete", "MCAR w/ Deletion"),
+                             each = length(yDen$y)
+                             )
+                     )
+  
+  ggplot(data = pDat, mapping = aes(x = x, y = y, color = g)) +
+      geom_line(size = 1) +
+      theme_classic() +
+      theme(text = element_text(family = "Courier", size = 16)) +
+      ylab("Density") +
+      xlab("Value of Y") +
+      scale_color_manual(values = c("blue", "red")) +
+      theme(legend.position = c(0.8, 0.95), legend.title = element_blank())
+  @
+  
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile, allowframebreaks]{MAR Example}
 
-<<>>=
-## Simulate MAR Missingness:
-mVec <- x0 < quantile(x0, probs = pm)
-mean(mVec)
-
-yMar       <- y0
-yMar[mVec] <- NA
-
-cor(yMar, x0, use = "pairwise") # Not looking so good :(
-@
-
-\pagebreak
-
-<<echo = FALSE, out.width = "65%">>=
-yDen <- density(yMar, na.rm = TRUE)
-
-pDat <- data.frame(y = c(y0Den$y, yDen$y),
-                   x = c(y0Den$x, yDen$x),
-                   g = rep(c("Complete", "MAR w/ Deletion"),
-                           each = length(yDen$y)
-                           )
-                   )
-
-marP <- ggplot(data = pDat, mapping = aes(x = x, y = y, color = g)) +
-    geom_line(size = 1) +
-    theme_classic() +
-    theme(text = element_text(family = "Courier", size = 16)) +
-    ylab("Density") +
-    xlab("Value of Y") +
-    scale_color_manual(values = c("blue", "red")) +
-    theme(legend.position = c(0.8, 0.95), legend.title = element_blank())
-marP
-@
+  <<>>=
+  ## Simulate MAR Missingness:
+  m <- with(dat0, x < quantile(x, probs = pm))
+  
+  ## Impose MAR missing on Y:
+  marData         <- dat0
+  marData[m, "y"] <- NA
+  
+  ## Check the correlation between X & Y:
+  marData %$% cor(y, x, use = "pairwise")
+  @
+  
+  \pagebreak
+  
+  <<echo = FALSE, out.width = "65%">>=
+  yDen <- marData %$% density(y, na.rm = TRUE)
+  
+  pDat <- data.frame(y = c(y0Den$y, yDen$y),
+                     x = c(y0Den$x, yDen$x),
+                     g = rep(c("Complete", "MAR w/ Deletion"),
+                             each = length(yDen$y)
+                             )
+                     )
+  
+  marP <- ggplot(data = pDat, mapping = aes(x = x, y = y, color = g)) +
+      geom_line(size = 1) +
+      theme_classic() +
+      theme(text = element_text(family = "Courier", size = 16)) +
+      ylab("Density") +
+      xlab("Value of Y") +
+      scale_color_manual(values = c("blue", "red")) +
+      theme(legend.position = c(0.8, 0.95), legend.title = element_blank())
+  marP
+  @
 
 \end{frame}
 
@@ -627,38 +553,39 @@ marP
 
 \begin{frame}[fragile, allowframebreaks]{MNAR Example}
 
-<<>>=
-## Simulate MNAR Missingness:
-mVec <- y0 < quantile(y0, probs = pm)
-mean(mVec)
+  <<>>=
+  ## Simulate MNAR Missingness:
+  m <- with(dat0, y < quantile(y, probs = pm))
 
-yMnar       <- y0
-yMnar[mVec] <- NA
+  ## Impose MNAR missing on Y:
+  mnarData         <- dat0
+  mnarData[m, "y"] <- NA
 
-cor(yMnar, x0, use = "pairwise") # Hmm...looks pretty bad.
-@
-
-\pagebreak
-
-<<echo = FALSE, out.width = "65%">>=
-yDen <- density(yMnar, na.rm = TRUE)
-
-pDat <- data.frame(y = c(y0Den$y, yDen$y),
-                   x = c(y0Den$x, yDen$x),
-                   g = rep(c("Complete", "MNAR w/ Deletion"),
-                           each = length(yDen$y)
-                           )
-                   )
-
-ggplot(data = pDat, mapping = aes(x = x, y = y, color = g)) +
-    geom_line(size = 1) +
-    theme_classic() +
-    theme(text = element_text(family = "Courier", size = 16)) +
-    ylab("Density") +
-    xlab("Value of Y") +
-    scale_color_manual(values = c("blue", "red")) +
-    theme(legend.position = c(0.8, 0.95), legend.title = element_blank())
-@
+  ## Check the correlation between X & Y:
+  mnarData %$% cor(y, x, use = "pairwise")
+  @
+  
+  \pagebreak
+  
+  <<echo = FALSE, out.width = "65%">>=
+  yDen <- mnarData %$% density(y, na.rm = TRUE)
+  
+  pDat <- data.frame(y = c(y0Den$y, yDen$y),
+                     x = c(y0Den$x, yDen$x),
+                     g = rep(c("Complete", "MNAR w/ Deletion"),
+                             each = length(yDen$y)
+                             )
+                     )
+  
+  ggplot(data = pDat, mapping = aes(x = x, y = y, color = g)) +
+      geom_line(size = 1) +
+      theme_classic() +
+      theme(text = element_text(family = "Courier", size = 16)) +
+      ylab("Density") +
+      xlab("Value of Y") +
+      scale_color_manual(values = c("blue", "red")) +
+      theme(legend.position = c(0.8, 0.95), legend.title = element_blank())
+  @
 
 \end{frame}
 
@@ -677,61 +604,61 @@ ggplot(data = pDat, mapping = aes(x = x, y = y, color = g)) +
 
   \pause
 
-<<>>=
-mVec <- z0 < quantile(z0, probs = pm)
-
-y       <- y0
-y[mVec] <- NA
-
-cor(y, x0, use = "pairwise")
-@
-
-\rmsc{Answer:} We get back to MCAR :)
-
+  <<>>=
+  m <- with(dat0, z < quantile(z, probs = pm))
+  
+  mcarData2         <- dat0
+  mcarData2[m, "y"] <- NA
+  
+  mcarData2 %$% cor(y, x, use = "pairwise")
+  @
+  
+  \rmsc{Answer:} We get back to MCAR :)
+  
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Crucial Nuance}
-
+  
   The missing data mechanisms are not simply characteristics of an incomplete
   dataset; we also need to account for the analysis.
   \vb
   \begin{columns}
     \begin{column}{0.5\textwidth}
-
-<<echo = FALSE, out.width = "100%", message = FALSE>>=
-marP + scale_color_manual(values = c("blue", "red"),
-                          labels = c("Complete", "Indirect MNAR")
-                          )
-@
-
-\end{column}
-\begin{column}{0.5\textwidth}
-
-<<echo = FALSE, out.width = "100%">>=
-yDen <- density(y, na.rm = TRUE)
-
-pDat <- data.frame(y = c(y0Den$y, yDen$y),
-                   x = c(y0Den$x, yDen$x),
-                   g = rep(c("Complete", "MCAR2"),
-                           each = length(yDen$y)
-                           )
-                   )
-
-ggplot(data = pDat, mapping = aes(x = x, y = y, color = g)) +
-    geom_line(size = 1) +
-    theme_classic() +
-    theme(text = element_text(family = "Courier", size = 16)) +
-    ylab("Density") +
-    xlab("Value of Y") +
-    scale_color_manual(values = c("blue", "red")) +
-    theme(legend.position = c(0.8, 0.95), legend.title = element_blank())
-@
-
-\end{column}
-\end{columns}
-
+      
+      <<echo = FALSE, out.width = "100%", message = FALSE>>=
+      marP + scale_color_manual(values = c("blue", "red"),
+                                labels = c("Complete", "Indirect MNAR")
+                                )
+      @
+      
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      
+      <<echo = FALSE, out.width = "100%">>=
+      yDen <- mcarData2 %$% density(y, na.rm = TRUE)
+      
+      pDat <- data.frame(y = c(y0Den$y, yDen$y),
+                         x = c(y0Den$x, yDen$x),
+                         g = rep(c("Complete", "MCAR2"),
+                                 each = length(yDen$y)
+                                 )
+                         )
+      
+      ggplot(data = pDat, mapping = aes(x = x, y = y, color = g)) +
+          geom_line(size = 1) +
+          theme_classic() +
+          theme(text = element_text(family = "Courier", size = 16)) +
+          ylab("Density") +
+          xlab("Value of Y") +
+          scale_color_manual(values = c("blue", "red")) +
+          theme(legend.position = c(0.8, 0.95), legend.title = element_blank())
+      @
+      
+    \end{column}
+  \end{columns}
+  
 \end{frame}
 
 \watermarkon %-----------------------------------------------------------------%
@@ -742,8 +669,12 @@ ggplot(data = pDat, mapping = aes(x = x, y = y, color = g)) +
   \begin{itemize}
   \item To do so would require knowing the values of the missing data.
     \vc
-  \item We can find observed predictors of missingness, but we can never know
-    that we have them all.
+  \item We can find observed predictors of missingness.
+    \begin{itemize}
+    \item Use classification algorithms to predict missingness from $Y_{obs}$.
+      \vc
+    \item We can never know that we have discovered all MAR predictors.
+    \end{itemize}
     \vc
   \item In practice, MAR and MNAR live on the ends of a continuum.
     \begin{itemize}
@@ -756,7 +687,7 @@ ggplot(data = pDat, mapping = aes(x = x, y = y, color = g)) +
 
   \pagebreak
 
-  We can test the MCAR assumption.
+  We can (partially) test the MCAR assumption.
   \begin{itemize}
   \item With MCAR, the missing data and the observed data should have the same
     distribution.
@@ -770,174 +701,17 @@ ggplot(data = pDat, mapping = aes(x = x, y = y, color = g)) +
     \item The \citet{little:1988_mcar} MCAR test is a multivariate version of this.
     \end{itemize}
   \end{itemize}
-
-\end{frame}
-
-\watermarkoff %----------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example}
-
-  Create some toy datasets from the variables we generated above.
-
-<<>>=
-mcarData <- data.frame(y = yMcar, x = x0, z = z0,
-                       m = as.numeric(is.na(yMcar))
-                       )
-marData  <- data.frame(y = yMar, x = x0, z = z0,
-                       m = as.numeric(is.na(yMar))
-                       )
-mnarData <- data.frame(y = yMnar, x = x0, z = z0,
-                       m = as.numeric(is.na(yMnar))
-                       )
-@
+  \vc
+  These procedures actually test if the data are \emph{observed} completely at
+  random.
 
 \end{frame}
 
 %------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{T-Test Example}
-
-  Test for dependence between $X$ and $M_Y$ in MCAR data.
-
-<<>>=
-mcarData %$% t.test(x ~ m) %>% wrap()
-@
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{T-Test Example}
-
-  Test for dependence between $Z$ and $M_Y$ in MCAR data.
-
-<<>>=
-mcarData %$% t.test(z ~ m) %>% wrap()
-@
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{T-Test Example}
-
-  Test for dependence between $X$ and $M_Y$ in MAR data.
-
-<<>>=
-marData %$% t.test(x ~ m) %>% wrap()
-@
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{T-Test Example}
-
-  Test for dependence between $Z$ and $M_Y$ in MAR data.
-
-<<>>=
-marData %$% t.test(z ~ m) %>% wrap()
-@
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-\begin{frame}[fragile]{T-Test Example}
-
-  Test for dependence between $X$ and $M_Y$ in MNAR data.
-
-<<>>=
-mnarData %$% t.test(x ~ m) %>% wrap()
-@
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{T-Test Example}
-
-  Test for dependence between $Z$ and $M_Y$ in MNAR data.
-
-<<>>=
-mnarData %$% t.test(z ~ m) %>% wrap()
-@
-
-\end{frame}
-
-\watermarkon %-----------------------------------------------------------------%
-
-\begin{frame}[fragile]{\citet{little:1988_mcar} MCAR Test Example}
-
-  Use the \citet{little:1988_mcar} MCAR test on MCAR data.
-
-<<>>=
-mcarData %>% select(-m) %>% mcar_test()
-@
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{\citet{little:1988_mcar} MCAR Test Example}
-
-Use the \citet{little:1988_mcar} MCAR test on MAR data.
-
-<<>>=
-marData %>% select(-m) %>% mcar_test()
-@
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{\citet{little:1988_mcar} MCAR Test Example}
-
-Use the \citet{little:1988_mcar} MCAR test on MNAR data.
-
-<<>>=
-mnarData %>% select(-m) %>% mcar_test()
-@
-
-\end{frame}
-
-\watermarkoff %----------------------------------------------------------------%
-
-\begin{frame}[fragile]{Logistic Regression Example}
-
-<<cache = TRUE>>=
-## Read in some data:
-diabetes1 <- readRDS(paste0(dataDir, "diabetes.rds"))
-
-## Generate MAR missingness:
-diabetes1$m <- simLogisticMissingness0(data    = diabetes1,
-                                       pm      = 0.25,
-                                       preds   = c("bmi", "tc"),
-                                       type    = "high",
-                                       stdData = TRUE)$r
-
-## Predict the missingness using logistic regression:
-fit <- diabetes1 %>%
-    select(-glu) %>%
-    glm(m ~ ., data = ., family = "binomial")
-@
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Logistic Regression Example}
-
-<<>>=
-partSummary(fit, 3)
-@
-
-\end{frame}
-
-\watermarkon %-----------------------------------------------------------------%
 
 \sectionslide{Missing Data Treatments}
 
-\watermarkoff %----------------------------------------------------------------%
+%------------------------------------------------------------------------------%
 
 \begin{frame}[fragile]{Bad Methods (These almost never work)}
 
@@ -960,60 +734,71 @@ partSummary(fit, 3)
     \item Can cause computational issues
     \end{itemize}
   \end{itemize}
-  
-<<>>=
-diabetes2 <- diabetes1
-mVec <- simLogisticMissingness0(data    = diabetes1,
-                                pm      = 0.25,
-                                preds   = "bmi",
-                                stdData = TRUE)$r
-diabetes2[mVec, "glu"] <- NA
-@ 
 
 \end{frame}
 
 \watermarkoff %----------------------------------------------------------------%
 
 \begin{frame}[fragile]{Example}
+
+  <<>>=
+  ## Read in some data:
+  diabetes1 <- diabetes2 <- readRDS(paste0(dataDir, "diabetes.rds"))
+
+  ## Simulated missingness based on 'bmi':
+  m <- simLogisticMissingness0(data    = diabetes2,
+                               pm      = 0.25,
+                               preds   = "bmi",
+                               stdData = TRUE)$r
+
+  ## Impose missing on 'glu' according to the missingess above:
+  diabetes2[m, "glu"] <- NA
+  @ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
  
-<<echo = FALSE, cache = TRUE, fig.asp = 0.55>>=
-diabetes1$Response <- factor(mVec, labels = c("Observed", "Missing"))
-
-p0 <- ggplot(data = diabetes1, mapping = aes(x = bmi, y = glu)) +
-    theme_classic() +
-    theme(text = element_text(family = "Courier", size = 16)) +
-    xlab("BMI") +
-    ylab("Blood Glucose")
-
-ggarrange(
-    p0 + 
-    geom_point(size = 0.75) + 
-    ggtitle("Fully Observed Data") +
-    theme(text = element_text(size = 8),
-          axis.title = element_blank(),
-          plot.title = element_text(face = "bold", hjust = 0.5)
-          ),
-    
-    p0 + 
-    geom_point(aes(color = Response), size = 0.75) + 
-    scale_color_manual(values = c("black", "gray")) +
-    ggtitle("Incomplete Data") +
-    theme(text = element_text(size = 8),
-          axis.title = element_blank(),
-          axis.text.y = element_blank(),
-          plot.title = element_text(face = "bold", hjust = 0.5),
-          legend.position = "none"),
-    
-    ncol = 2,
-    widths = c(1.05, 1)
-) %>%
-    annotate_figure(left = text_grob("Blood Glucose", 
-                                     family = "Courier", 
-                                     size = 10,
-                                     rot = 90),
-                    bottom = text_grob("BMI", family = "Courier", size = 10)
-                    )
-@
+  <<echo = FALSE, cache = TRUE, fig.asp = 0.55>>=
+  diabetes1$Response <- factor(m, labels = c("Observed", "Missing"))
+  
+  p0 <- ggplot(data = diabetes1, mapping = aes(x = bmi, y = glu)) +
+      theme_classic() +
+      theme(text = element_text(family = "Courier", size = 16)) +
+      xlab("BMI") +
+      ylab("Blood Glucose")
+  
+  ggarrange(
+      p0 + 
+      geom_point(size = 0.75) + 
+      ggtitle("Fully Observed Data") +
+      theme(text = element_text(size = 8),
+            axis.title = element_blank(),
+            plot.title = element_text(face = "bold", hjust = 0.5)
+            ),
+      
+      p0 + 
+      geom_point(aes(color = Response), size = 0.75) + 
+      scale_color_manual(values = c("black", "gray")) +
+      ggtitle("Incomplete Data") +
+      theme(text = element_text(size = 8),
+            axis.title = element_blank(),
+            axis.text.y = element_blank(),
+            plot.title = element_text(face = "bold", hjust = 0.5),
+            legend.position = "none"),
+      
+      ncol = 2,
+      widths = c(1.05, 1)
+  ) %>%
+      annotate_figure(left = text_grob("Blood Glucose", 
+                                       family = "Courier", 
+                                       size = 10,
+                                       rot = 90),
+                      bottom = text_grob("BMI", family = "Courier", size = 10)
+                      )
+  @
 
 \end{frame}
 
@@ -1021,10 +806,21 @@ ggarrange(
 
 \begin{frame}[fragile]{Example}
 
-<<>>=
-diabetes1 %>% select(bmi, glu, bp) %>% cor()
-diabetes2 %>% select(bmi, glu, bp) %>% cor(use = "complete")
-@ 
+  <<>>=
+  diabetes1 %>% select(bmi, glu, bp) %>% cor()
+  diabetes2 %>% select(bmi, glu, bp) %>% cor(use = "complete")
+  @ 
+  
+\end{frame}
+
+%------------------------------------------------------------------------------
+
+\begin{frame}[fragile]{Example}
+
+  <<>>=
+  diabetes1 %>% select(bmi, glu, bp) %>% cor()
+  diabetes2 %>% select(bmi, glu, bp) %>% cor(use = "pairwise")
+  @ 
 
 \end{frame}
 
@@ -1032,23 +828,12 @@ diabetes2 %>% select(bmi, glu, bp) %>% cor(use = "complete")
 
 \begin{frame}[fragile]{Example}
 
-<<>>=
-diabetes1 %>% select(bmi, glu, bp) %>% cor()
-diabetes2 %>% select(bmi, glu, bp) %>% cor(use = "pairwise")
-@ 
-
-\end{frame}
-
-%------------------------------------------------------------------------------
-
-\begin{frame}[fragile]{Example}
-
-<<>>=
-mean(diabetes1$glu)
-mean(diabetes2$glu, na.rm = TRUE)
-var(diabetes1$glu)
-var(diabetes2$glu, na.rm = TRUE)
-@ 
+  <<>>=
+  mean(diabetes1$glu)
+  mean(diabetes2$glu, na.rm = TRUE)
+  var(diabetes1$glu)
+  var(diabetes2$glu, na.rm = TRUE)
+  @ 
 
 \end{frame}
 
@@ -1056,13 +841,13 @@ var(diabetes2$glu, na.rm = TRUE)
 
 \begin{frame}[fragile]{Example}
 
-<<>>=
-s1 <- lm(glu ~ bmi + bp + age, data = diabetes1) %>% summary()
-s2 <- lm(glu ~ bmi + bp + age, data = diabetes2) %>% summary()
-
-s1$r.squared
-s2$r.squared
-@ 
+  <<>>=
+  s1 <- lm(glu ~ bmi + bp + age, data = diabetes1) %>% summary()
+  s2 <- lm(glu ~ bmi + bp + age, data = diabetes2) %>% summary()
+  
+  s1$r.squared
+  s2$r.squared
+  @ 
 
 \end{frame}
 
@@ -1070,10 +855,10 @@ s2$r.squared
 
 \begin{frame}[fragile]{Example}
 
-<<>>=
-s1$coef
-s2$coef
-@
+  <<>>=
+  s1$coef
+  s2$coef
+  @
   
 \end{frame}
 
@@ -1097,83 +882,70 @@ s2$coef
     \begin{column}{0.5\textwidth}
 
       \only<1>{
-
-<<echo = FALSE, cache = TRUE>>=
-p1 <- p0 + 
-    geom_point(aes(color = Response)) + 
-    scale_color_manual(values = c("black", "gray")) +
-    theme(legend.position = "none")
-   
-p1
-@
-
-}
+        
+        <<echo = FALSE, cache = TRUE>>=
+        p1 <- p0 + 
+            geom_point(aes(color = Response)) + 
+            scale_color_manual(values = c("black", "gray")) +
+            theme(legend.position = "none")
+        
+        p1
+        @
+        
+      }
       \only<2>{
-
-<<echo = FALSE, cache = TRUE>>=
-miceM <- mice(data      = diabetes2[ , c("bmi", "glu")],
-              m         = 1,
-              maxit     = 1,
-              method    = "mean",
-              printFlag = FALSE)
-
-datM0 <- datM <- complete(miceM, 1)
-datM[!mVec, ] <- NA
-
-p2 <- p1 + geom_point(data    = datM,
-                      mapping = aes(y = glu, x = bmi),
-                      colour  = "red")
-p2
-@
-
-}
-
+        
+        <<echo = FALSE, cache = TRUE>>=
+        miceM <- mice(data      = diabetes2[ , c("bmi", "glu")],
+                      m         = 1,
+                      maxit     = 1,
+                      method    = "mean",
+                      printFlag = FALSE)
+        
+        datM0 <- datM <- complete(miceM, 1)
+        datM[!m, ] <- NA
+        
+        p2 <- p1 + geom_point(data    = datM,
+                              mapping = aes(y = glu, x = bmi),
+                              colour  = "red")
+        p2
+        @
+        
+      }
+      
       \only<3>{
-
-<<echo = FALSE, cache = TRUE>>=
-p2 + geom_smooth(data    = diabetes1,
-                 mapping = aes(y = glu, x = bmi),
-                 method  = "lm",
-                 color   = "blue",
-                 se      = FALSE) +
-    geom_smooth(data    = datM0,
-                mapping = aes(y = glu, x = bmi),
-                method  = "lm",
-                color   = "red",
-                se      = FALSE)
-@
-
-}
-
-\end{column}
-\end{columns}
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example}
- 
-<<>>=
-diabetes3              <- diabetes2
-diabetes3[mVec, "glu"] <- mean(diabetes3$glu, na.rm = TRUE)
-
-diabetes1 %>% select(bmi, glu, bp) %>% cor()
-diabetes3 %>% select(bmi, glu, bp) %>% cor()
-@ 
+        
+        <<echo = FALSE, cache = TRUE>>=
+        p2 + geom_smooth(data    = diabetes1,
+                         mapping = aes(y = glu, x = bmi),
+                         method  = "lm",
+                         color   = "blue",
+                         se      = FALSE) +
+            geom_smooth(data    = datM0,
+                        mapping = aes(y = glu, x = bmi),
+                        method  = "lm",
+                        color   = "red",
+                        se      = FALSE)
+        @
+        
+      }
+      
+    \end{column}
+  \end{columns}
 
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile]{Example}
-
-<<>>=
-mean(diabetes1$glu)
-mean(diabetes3$glu, na.rm = TRUE)
-var(diabetes1$glu)
-var(diabetes3$glu, na.rm = TRUE)
-@ 
+  
+  <<>>=
+  imputed <- diabetes2
+  imputed[m, "glu"] <- mean(imputed$glu, na.rm = TRUE)
+  
+  diabetes1 %>% select(bmi, glu, bp) %>% cor()
+  imputed %>% select(bmi, glu, bp) %>% cor()
+  @ 
 
 \end{frame}
 
@@ -1181,13 +953,26 @@ var(diabetes3$glu, na.rm = TRUE)
 
 \begin{frame}[fragile]{Example}
 
-<<>>=
-s1 <- lm(glu ~ bmi + bp + age, data = diabetes1) %>% summary()
-s3 <- lm(glu ~ bmi + bp + age, data = diabetes3) %>% summary()
+  <<>>=
+  mean(diabetes1$glu)
+  mean(imputed$glu, na.rm = TRUE)
+  var(diabetes1$glu)
+  var(imputed$glu, na.rm = TRUE)
+  @ 
+  
+\end{frame}
 
-s1$r.squared
-s3$r.squared
-@ 
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+  <<>>=
+  s1 <- lm(glu ~ bmi + bp + age, data = diabetes1) %>% summary()
+  s2 <- lm(glu ~ bmi + bp + age, data = imputed) %>% summary()
+  
+  s1$r.squared
+  s2$r.squared
+  @ 
 
 \end{frame}
 
@@ -1195,10 +980,10 @@ s3$r.squared
 
 \begin{frame}[fragile]{Example}
 
-<<>>=
-s1$coef
-s3$coef
-@
+  <<>>=
+  s1$coef
+  s2$coef
+  @
   
 \end{frame}
 
@@ -1225,138 +1010,76 @@ s3$coef
 
       \only<1>{
         
-<<echo = FALSE>>=
-p1
-@ 
-
-}
+        <<echo = FALSE>>=
+        p1
+        @ 
+        
+      }
       
       \only<2>{
+
+        <<echo = FALSE, cache = TRUE>>=
+        miceD <- mice(data      = diabetes2[ , c("bmi", "glu")],
+                      m         = 1,
+                      maxit     = 1,
+                      method    = "norm.predict",
+                      printFlag = FALSE)
+
+        datD0 <- datD <- complete(miceD, 1)
+        datD[!m, ] <- NA
         
-<<echo = FALSE, cache = TRUE>>=
-miceD <- mice(data      = diabetes2[ , c("bmi", "glu")],
-              m         = 1,
-              maxit     = 1,
-              method    = "norm.predict",
-              printFlag = FALSE)
+        p2 <- p1 + geom_point(data = datD,
+                              mapping = aes(y = glu, x = bmi),
+                              colour = "red")
+        p2
+        @
 
-datD0 <- datD <- complete(miceD, 1)
-datD[!mVec, ] <- NA
-
-p2 <- p1 + geom_point(data = datD,
-                      mapping = aes(y = glu, x = bmi),
-                      colour = "red")
-p2
-@
-
-}
+      }
       \only<3>{
+        
+        <<echo = FALSE, cache = TRUE>>=
+        p2 + geom_smooth(data    = diabetes1,
+                         mapping = aes(y = glu, x = bmi),
+                         method  = "lm",
+                         color   = "blue",
+                         se      = FALSE) +
+            geom_smooth(data    = datD0,
+                        mapping = aes(y = glu, x = bmi),
+                        method  = "lm",
+                        color   = "red",
+                        se      = FALSE)
+        @
 
-<<echo = FALSE, cache = TRUE>>=
-p2 + geom_smooth(data    = diabetes1,
-                 mapping = aes(y = glu, x = bmi),
-                 method  = "lm",
-                 color   = "blue",
-                 se      = FALSE) +
-    geom_smooth(data    = datD0,
-                mapping = aes(y = glu, x = bmi),
-                method  = "lm",
-                color   = "red",
-                se      = FALSE)
-@
-
-}
-
-\end{column}
-\end{columns}
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-\comment{%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{frame}{Bad Methods (These almost never work)}
-
-  \begin{columns}
-    \begin{column}{0.5\textwidth}
-
-      Deterministic Regression Imputation\\
-      (Conditional Mean Substitution)
-      \begin{itemize}
-      \item Replace $Y_{mis}$ with $\widehat{Y}_{mis}$ from some regression
-        equation
-        \begin{itemize}
-        \item Positively biases regression slopes and correlations
-        \item Inflates measures of linear association
-        \end{itemize}
-      \end{itemize}
-
+      }
+      
     \end{column}
-    \begin{column}{0.5\textwidth}
-
-      \only<1>{
-
-<<echo = FALSE, cache = TRUE>>=
-miceD <- mice(data      = diabetes2,
-              m         = 1,
-              maxit     = 1,
-              method    = "norm.predict",
-              printFlag = FALSE)
-
-datD0 <- datD <- complete(miceD, 1)
-datD[!mVec, ] <- NA
-
-p2 <- p1 + geom_point(data = datD,
-                      mapping = aes(y = glu, x = bmi),
-                      colour = "red")
-p2
-@
-
-}
-      \only<2>{
-
-<<echo = FALSE, cache = TRUE>>=
-p2 + geom_smooth(data    = diabetes1,
-                 mapping = aes(y = glu, x = bmi),
-                 method  = "lm",
-                 color   = "black",
-                 se      = FALSE) +
-    geom_smooth(data    = datD0,
-                mapping = aes(y = glu, x = bmi),
-                method  = "lm",
-                color   = "red",
-                se      = FALSE)
-@
-
-}
-
-\end{column}
-\end{columns}
-
+  \end{columns}
+  
 \end{frame}
-}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \watermarkon %-----------------------------------------------------------------%
 
 \begin{frame}[fragile]{Example}
  
-<<>>=
-diabetes3 <- mice(data      = diabetes2, 
+  <<>>=
+  imputed <- mice(data      = diabetes2, 
                   m         = 1, 
                   maxit     = 1,
                   printFlag = FALSE,
                   method    = "norm.predict") %>% 
-    complete(1)
-@ 
-
+      complete(1)
+  @ 
+  
 \end{frame}
 
 \watermarkoff %----------------------------------------------------------------%
 
 \begin{frame}[fragile]{Example}
 
-<<>>=
-diabetes1 %>% select(bmi, glu, bp) %>% cor()
-diabetes3 %>% select(bmi, glu, bp) %>% cor()
-@ 
+  <<>>=
+  diabetes1 %>% select(bmi, glu, bp) %>% cor()
+  imputed %>% select(bmi, glu, bp) %>% cor()
+  @ 
 
 \end{frame}
 
@@ -1364,12 +1087,12 @@ diabetes3 %>% select(bmi, glu, bp) %>% cor()
 
 \begin{frame}[fragile]{Example}
 
-<<>>=
-mean(diabetes1$glu)
-mean(diabetes3$glu, na.rm = TRUE)
-var(diabetes1$glu)
-var(diabetes3$glu, na.rm = TRUE)
-@ 
+  <<>>=
+  mean(diabetes1$glu)
+  mean(imputed$glu, na.rm = TRUE)
+  var(diabetes1$glu)
+  var(imputed$glu, na.rm = TRUE)
+  @ 
 
 \end{frame}
 
@@ -1377,13 +1100,13 @@ var(diabetes3$glu, na.rm = TRUE)
 
 \begin{frame}[fragile]{Example}
 
-<<>>=
-s1 <- lm(glu ~ bmi + bp + age, data = diabetes1) %>% summary()
-s3 <- lm(glu ~ bmi + bp + age, data = diabetes3) %>% summary()
-
-s1$r.squared
-s3$r.squared
-@ 
+  <<>>=
+  s1 <- lm(glu ~ bmi + bp + age, data = diabetes1) %>% summary()
+  s2 <- lm(glu ~ bmi + bp + age, data = imputed) %>% summary()
+  
+  s1$r.squared
+  s2$r.squared
+  @ 
 
 \end{frame}
 
@@ -1391,10 +1114,10 @@ s3$r.squared
 
 \begin{frame}[fragile]{Example}
 
-<<>>=
-s1$coef
-s3$coef
-@
+  <<>>=
+  s1$coef
+  s2$coef
+  @
   
 \end{frame}
 
@@ -1453,179 +1176,179 @@ s3$coef
 \watermarkoff %----------------------------------------------------------------%
 
 \begin{frame}{LOCF}
-
-<<echo = FALSE, cache = TRUE>>=
-## Simulate some longitudinal data with random slopes:
-n1 <- 5
-n2 <- 50
-
-s     <- 1.0
-gamma <- c(1.5, 1.25)
-tau   <- matrix(c(1.0, -0.3, -0.3, 1.0), 2, 2)
-
-U    <- rmvnorm(n2, gamma, tau)
-time <- matrix(1:n1 - 1)
-tmp  <- U[ , 1] + U[ , 2] %*% t(time)
-
-dat1 <- dat2 <- dat3 <-
-    data.frame(y = as.numeric(tmp) + rnorm(n1 * n2, 0, s),
-               t = rep(0:(n1 - 1), each = n2),
-               id = rep(1:n2, n1)
-               ) %>%
-    arrange(id)
-
-## Apply random attrition:
-dat2$y <- dat1 %$% tapply(y, id, attrit, pComp = 0.25) %>% unlist()
-
-## Treat attrition with LOCF:
-dat3$y <- dat2 %$% tapply(y, id, locf) %>% unlist()
-
-## Create some missingness indicators for plotting purposes:
-dat3$m  <- is.na(dat2$y)
-dat3$m2 <- dat3 %$% tapply(m,
-                           id,
-                           function(x) {
-                               tmp <- (which(x) - 1)[1]
-                               x[tmp] <- TRUE
-                               x
-                           }
-                           ) %>% unlist()
-
-p00 <- ggplot(data = dat1, mapping = aes(y = y, x = t)) +
-    ylab("Y") +
-    xlab("Time") +
-    theme_classic() +
-    theme(text = element_text(size = 8, family = "Courier"),
-          plot.title = element_text(face = "bold", hjust = 0.5),
-          axis.title = element_blank(),
-          legend.position = "none") +
-    ylim(range(dat1$y))
-
-p01 <- p00 + scale_color_manual(values = c("black", "red"))
-@ 
-
-\only<1>{
   
-<<echo = FALSE, cache = TRUE, fig.asp = 0.5>>=
-ggarrange(
-    p00 + 
-    geom_line(aes(group = id), alpha = 0.3) + 
-    geom_point(size = 0.75) +
-    ggtitle("Fully Observed Data"),
-    
-    p00 + 
-    geom_line(data = dat2, mapping = aes(group = id), alpha = 0.3) +
-    geom_point(data = dat2, size = 0.75) +
-    ggtitle("Data with Attrition") +
-    theme(axis.text.y = element_blank()),
-    
-    ncol = 2) %>%
-    annotate_figure(left = text_grob("Y", 
-                                     family = "Courier", 
-                                     size = 10,
-                                     rot = 90),
-                    bottom = text_grob("Time", family = "Courier", size = 10)
-                    )
-@
-
-}
-
-\only<2>{
+  <<echo = FALSE, cache = TRUE>>=
+  ## Simulate some longitudinal data with random slopes:
+  n1 <- 5
+  n2 <- 50
   
-<<echo = FALSE, cache = TRUE, fig.asp = 0.5>>=
-ggarrange(
-    p01 + 
-    geom_line(data = dat3, aes(group = id, color = m2), alpha = 0.3) +
-    geom_point(data = dat3, aes(color = m), size = 0.75) +
-    ggtitle("Data Treated with LOCF"),
+  s     <- 1.0
+  gamma <- c(1.5, 1.25)
+  tau   <- matrix(c(1.0, -0.3, -0.3, 1.0), 2, 2)
+  
+  U    <- rmvnorm(n2, gamma, tau)
+  time <- matrix(1:n1 - 1)
+  tmp  <- U[ , 1] + U[ , 2] %*% t(time)
+  
+  dat1 <- dat2 <- dat3 <-
+      data.frame(y = as.numeric(tmp) + rnorm(n1 * n2, 0, s),
+                 t = rep(0:(n1 - 1), each = n2),
+                 id = rep(1:n2, n1)
+                 ) %>%
+      arrange(id)
+  
+  ## Apply random attrition:
+  dat2$y <- dat1 %$% tapply(y, id, attrit, pComp = 0.25) %>% unlist()
+  
+  ## Treat attrition with LOCF:
+  dat3$y <- dat2 %$% tapply(y, id, locf) %>% unlist()
+  
+  ## Create some missingness indicators for plotting purposes:
+  dat3$m  <- is.na(dat2$y)
+  dat3$m2 <- dat3 %$% tapply(m,
+                             id,
+                             function(x) {
+                                 tmp <- (which(x) - 1)[1]
+                                 x[tmp] <- TRUE
+                                 x
+                             }
+                             ) %>% unlist()
+  
+  p00 <- ggplot(data = dat1, mapping = aes(y = y, x = t)) +
+      ylab("Y") +
+      xlab("Time") +
+      theme_classic() +
+      theme(text = element_text(size = 8, family = "Courier"),
+            plot.title = element_text(face = "bold", hjust = 0.5),
+            axis.title = element_blank(),
+            legend.position = "none") +
+      ylim(range(dat1$y))
+  
+  p01 <- p00 + scale_color_manual(values = c("black", "red"))
+  @ 
+  
+  \only<1>{
     
-    p01 + 
-    geom_line(data = dat3, aes(group = id, color = m2), alpha = 0.1) +
-    geom_point(data = dat3, aes(color = m), alpha = 0.1, size = 0.75) +
-    geom_smooth(data = dat3,
-                method = "lm",
-                se = FALSE,
-                color = "red",
-                size = 1) +
-    geom_smooth(data = dat1,
-                method = "lm",
-                se = FALSE,
-                color = "black",
-                size = 1) +
-    ggtitle("Correct vs. Imputed Trends") +
-    theme(axis.text.y = element_blank()),
+    <<echo = FALSE, cache = TRUE, fig.asp = 0.5>>=
+    ggarrange(
+        p00 + 
+        geom_line(aes(group = id), alpha = 0.3) + 
+        geom_point(size = 0.75) +
+        ggtitle("Fully Observed Data"),
+        
+        p00 + 
+        geom_line(data = dat2, mapping = aes(group = id), alpha = 0.3) +
+        geom_point(data = dat2, size = 0.75) +
+        ggtitle("Data with Attrition") +
+        theme(axis.text.y = element_blank()),
+        
+        ncol = 2) %>%
+        annotate_figure(left = text_grob("Y", 
+                                         family = "Courier", 
+                                         size = 10,
+                                         rot = 90),
+                        bottom = text_grob("Time", family = "Courier", size = 10)
+                        )
+    @
     
-    ncol = 2) %>%
-    annotate_figure(left = text_grob("Y", 
-                                     family = "Courier", 
-                                     size = 10,
-                                     rot = 90),
-                    bottom = text_grob("Time", family = "Courier", size = 10)
-                    )
-@
-
-}
-
+  }
+  
+  \only<2>{
+    
+    <<echo = FALSE, cache = TRUE, fig.asp = 0.5>>=
+    ggarrange(
+        p01 + 
+        geom_line(data = dat3, aes(group = id, color = m2), alpha = 0.3) +
+        geom_point(data = dat3, aes(color = m), size = 0.75) +
+        ggtitle("Data Treated with LOCF"),
+        
+        p01 + 
+        geom_line(data = dat3, aes(group = id, color = m2), alpha = 0.1) +
+        geom_point(data = dat3, aes(color = m), alpha = 0.1, size = 0.75) +
+        geom_smooth(data = dat3,
+                    method = "lm",
+                    se = FALSE,
+                    color = "red",
+                    size = 1) +
+        geom_smooth(data = dat1,
+                    method = "lm",
+                    se = FALSE,
+                    color = "black",
+                    size = 1) +
+        ggtitle("Correct vs. Imputed Trends") +
+        theme(axis.text.y = element_blank()),
+        
+        ncol = 2) %>%
+        annotate_figure(left = text_grob("Y", 
+                                         family = "Courier", 
+                                         size = 10,
+                                         rot = 90),
+                        bottom = text_grob("Time", family = "Courier", size = 10)
+                        )
+    @
+    
+  }
+  
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile]{Example}
  
-<<>>=
-## Fit some multilevel regression models
-fit1 <- lmer(y ~ t + (t | id), data = dat1) # Full data
-fit2 <- lmer(y ~ t + (t | id), data = dat3) # LOCF data
-@ 
+  <<>>=
+  ## Fit some multilevel regression models
+  fit1 <- lmer(y ~ t + (t | id), data = dat1) # Full data
+  fit2 <- lmer(y ~ t + (t | id), data = dat3) # LOCF data
+  @ 
+  
+  <<echo = FALSE, fig.asp = 0.5>>=
+  rf1 <- ranef(fit1)[[1]]
+  rf2 <- ranef(fit2)[[1]]
 
-<<echo = FALSE, fig.asp = 0.5>>=
-rf1 <- ranef(fit1)[[1]]
-rf2 <- ranef(fit2)[[1]]
+  rf <- data.frame(Data = rep(c("Full", "LOCF"), each = nrow(rf1)),
+                   x = c(rf1$t, rf2$t)
+                   )
 
-rf <- data.frame(Data = rep(c("Full", "LOCF"), each = nrow(rf1)),
-                 x = c(rf1$t, rf2$t)
-                 )
+  ff1 <- coef(fit1)[[1]]
+  ff2 <- coef(fit2)[[1]]
 
-ff1 <- coef(fit1)[[1]]
-ff2 <- coef(fit2)[[1]]
-
-ff <- data.frame(Data = rep(c("Full", "LOCF"), each = nrow(ff1)),
-                 x = c(ff1$t, ff2$t)
-                 )
-
-ggarrange(
-    ggplot(data = rf, mapping = aes(x = x, color = Data)) + 
-    geom_density() +
-    ggtitle("Random Effects") +
-    scale_color_manual(values = c("black", "red")) +
-    theme_classic() +
-    theme(text = element_text(size = 8, family = "Courier"),
-          plot.title = element_text(face = "bold", hjust = 0.5),
-          axis.title = element_blank()
-          ),
+  ff <- data.frame(Data = rep(c("Full", "LOCF"), each = nrow(ff1)),
+                   x = c(ff1$t, ff2$t)
+                   )
+  
+  ggarrange(
+      ggplot(data = rf, mapping = aes(x = x, color = Data)) + 
+      geom_density() +
+      ggtitle("Random Effects") +
+      scale_color_manual(values = c("black", "red")) +
+      theme_classic() +
+      theme(text = element_text(size = 8, family = "Courier"),
+            plot.title = element_text(face = "bold", hjust = 0.5),
+            axis.title = element_blank()
+            ),
     
-    ggplot(data = ff, mapping = aes(x = x, color = Data)) + 
-    geom_density() +
-    ggtitle("Fixed Effects") +
-    scale_color_manual(values = c("black", "red")) +
-    theme_classic() +
-    theme(text = element_text(size = 8, family = "Courier"),
-          plot.title = element_text(face = "bold", hjust = 0.5),
-          axis.title = element_blank(),
-          axis.text.y = element_blank()
-          ),
-    
-    ncol = 2,
-    common.legend = TRUE,
-    legend = "right") %>%
-    annotate_figure(left = text_grob("Density", 
-                                     family = "Courier", 
-                                     size = 10,
-                                     rot = 90),
-                    bottom = text_grob("Effect", family = "Courier", size = 10)
-                    )
-@
-
+      ggplot(data = ff, mapping = aes(x = x, color = Data)) + 
+      geom_density() +
+      ggtitle("Fixed Effects") +
+      scale_color_manual(values = c("black", "red")) +
+      theme_classic() +
+      theme(text = element_text(size = 8, family = "Courier"),
+            plot.title = element_text(face = "bold", hjust = 0.5),
+            axis.title = element_blank(),
+            axis.text.y = element_blank()
+            ),
+      
+      ncol = 2,
+      common.legend = TRUE,
+      legend = "right") %>%
+      annotate_figure(left = text_grob("Density", 
+                                       family = "Courier", 
+                                       size = 10,
+                                       rot = 90),
+                      bottom = text_grob("Effect", family = "Courier", size = 10)
+                      )
+  @
+  
 \end{frame}
 
 %------------------------------------------------------------------------------%
@@ -1656,49 +1379,49 @@ ggarrange(
 
       \only<1>{
         
-<<echo = FALSE>>=
-p1
-@ 
-
-}
+        <<echo = FALSE>>=
+        p1
+        @ 
+        
+      }
       \only<2>{
         
-<<echo = FALSE, cache = TRUE>>=
-miceS <- mice(data      = diabetes2[ , c("bmi", "glu")],
-              m         = 1,
-              maxit     = 1,
-              method    = "norm.nob",
-              printFlag = FALSE)
-
-datS0 <- datS <- complete(miceS, 1)
-datS[!mVec, ] <- NA
-
-p2 <- p1 + geom_point(data = datS,
-                      mapping = aes(y = glu, x = bmi),
-                      colour = "red")
-p2
-@
-
-}
+        <<echo = FALSE, cache = TRUE>>=
+        miceS <- mice(data      = diabetes2[ , c("bmi", "glu")],
+                      m         = 1,
+                      maxit     = 1,
+                      method    = "norm.nob",
+                      printFlag = FALSE)
+        
+        datS0 <- datS <- complete(miceS, 1)
+        datS[!m, ] <- NA
+        
+        p2 <- p1 + geom_point(data = datS,
+                              mapping = aes(y = glu, x = bmi),
+                              colour = "red")
+        p2
+        @
+        
+      }
       \only<3>{
-
-<<echo = FALSE, cache = TRUE>>=
-p2 + geom_smooth(data    = diabetes1,
-                 mapping = aes(y = glu, x = bmi),
-                 method  = "lm",
-                 color   = "blue",
-                 se      = FALSE) +
-    geom_smooth(data    = datD0,
-                mapping = aes(y = glu, x = bmi),
-                method  = "lm",
-                color   = "red",
-                se      = FALSE)
-@
-
-}
-
-\end{column}
-\end{columns}
+        
+        <<echo = FALSE, cache = TRUE>>=
+        p2 + geom_smooth(data    = diabetes1,
+                         mapping = aes(y = glu, x = bmi),
+                         method  = "lm",
+                         color   = "blue",
+                         se      = FALSE) +
+            geom_smooth(data    = datD0,
+                        mapping = aes(y = glu, x = bmi),
+                        method  = "lm",
+                        color   = "red",
+                        se      = FALSE)
+        @
+        
+      }
+      
+    \end{column}
+  \end{columns}
 
 \end{frame}
 
@@ -1706,14 +1429,14 @@ p2 + geom_smooth(data    = diabetes1,
 
 \begin{frame}[fragile]{Example}
  
-<<>>=
-diabetes3 <- mice(data      = diabetes2, 
+  <<>>=
+  imputed <- mice(data      = diabetes2, 
                   m         = 1, 
                   maxit     = 1,
                   printFlag = FALSE,
                   method    = "norm.nob") %>% 
-    complete(1)
-@ 
+      complete(1)
+  @ 
 
 \end{frame}
 
@@ -1721,10 +1444,10 @@ diabetes3 <- mice(data      = diabetes2,
 
 \begin{frame}[fragile]{Example}
 
-<<>>=
-diabetes1 %>% select(bmi, glu, bp) %>% cor()
-diabetes3 %>% select(bmi, glu, bp) %>% cor()
-@ 
+  <<>>=
+  diabetes1 %>% select(bmi, glu, bp) %>% cor()
+  imputed %>% select(bmi, glu, bp) %>% cor()
+  @ 
 
 \end{frame}
 
@@ -1732,12 +1455,12 @@ diabetes3 %>% select(bmi, glu, bp) %>% cor()
 
 \begin{frame}[fragile]{Example}
 
-<<>>=
-mean(diabetes1$glu)
-mean(diabetes3$glu)
-var(diabetes1$glu)
-var(diabetes3$glu)
-@ 
+  <<>>=
+  mean(diabetes1$glu)
+  mean(imputed$glu)
+  var(diabetes1$glu)
+  var(imputed$glu)
+  @ 
 
 \end{frame}
 
@@ -1745,13 +1468,13 @@ var(diabetes3$glu)
 
 \begin{frame}[fragile]{Example}
 
-<<>>=
-s1 <- lm(glu ~ bmi + bp + age, data = diabetes1) %>% summary()
-s3 <- lm(glu ~ bmi + bp + age, data = diabetes3) %>% summary()
+  <<>>=
+  s1 <- lm(glu ~ bmi + bp + age, data = diabetes1) %>% summary()
+  s2 <- lm(glu ~ bmi + bp + age, data = imputed) %>% summary()
 
-s1$r.squared
-s3$r.squared
-@ 
+  s1$r.squared
+  s2$r.squared
+  @ 
 
 \end{frame}
 
@@ -1759,10 +1482,10 @@ s3$r.squared
 
 \begin{frame}[fragile]{Example}
 
-<<>>=
-s1$coef
-s3$coef
-@
+  <<>>=
+  s1$coef
+  s2$coef
+  @
   
 \end{frame}
 
@@ -1817,121 +1540,121 @@ s3$coef
     work)}
 
   What happens when we apply MI to our previous MAR example?
-<<>>=
-## Estimate imputation model:
-miceOut <- mice(data      = data.frame(y = yMar, x = x0),
-                m         = 25,
-                maxit     = 1,
-                method    = "norm",
-                printFlag = FALSE)
+  <<>>=
+  ## Estimate imputation model:
+  miceOut <- mice(data      = marData,
+                  m         = 25,
+                  maxit     = 1,
+                  method    = "norm",
+                  printFlag = FALSE)
+  
+  ## Estimate and pool M correlations:
+  with(miceOut, cor(y, x))$analyses %>% unlist() %>% mean()
+  @
+  
+  The MI-based parameter estimate looks good.
+  \begin{itemize}
+  \item MI produces unbiased estimates of the parameter when data are MAR.
+  \end{itemize}
 
-## Estimate and pool M correlations:
-with(miceOut, cor(y, x))$analyses %>% unlist() %>% mean()
-@
-
-The MI-based parameter estimate looks good.
-\begin{itemize}
-\item MI produces unbiased estimates of the parameter when data are MAR.
-\end{itemize}
-
-\pagebreak
-
-<<echo = FALSE, out.width = "65%">>=
-impX <- impY <- list()
-for(m in 1 : miceOut$m) {
-    tmp       <- density(complete(miceOut, m)$y)
-    impX[[m]] <- tmp$x
-    impY[[m]] <- tmp$y
-}
-
-pDat <- data.frame(x = unlist(impX),
-                   y = unlist(impY),
-                   g = rep(1 : miceOut$m, each = length(impX[[1]])),
-                   c = "MAR w/ MI")
-
-pDat <- rbind.data.frame(pDat,
-                         data.frame(x = yDen$x, 
-                                    y = yDen$y, 
-                                    g = miceOut$m + 1, 
-                                    c = "Complete")
-                         )
-
-ggplot(data    = pDat, 
-       mapping = aes(x = x, y = y, color = c, group = g, size = c)
-       ) +
-    geom_line() +
-    theme_classic() +
-    theme(text = element_text(family = "Courier", size = 16)) +
-    ylab("Density") +
-    xlab("Value of Y") +
-    scale_color_manual(values = c("black", "red")) +
-    scale_size_manual(values = c(1, 0.5)) +
-    theme(legend.position = c(0.8, 0.95), legend.title = element_blank())
-@
+  \pagebreak
+  
+  <<echo = FALSE, out.width = "65%">>=
+  impX <- impY <- list()
+  for(m in 1 : miceOut$m) {
+      tmp       <- density(complete(miceOut, m)$y)
+      impX[[m]] <- tmp$x
+      impY[[m]] <- tmp$y
+  }
+  
+  pDat <- data.frame(x = unlist(impX),
+                     y = unlist(impY),
+                     g = rep(1 : miceOut$m, each = length(impX[[1]])),
+                     c = "MAR w/ MI")
+  
+  pDat <- rbind.data.frame(pDat,
+                           data.frame(x = yDen$x, 
+                                      y = yDen$y, 
+                                      g = miceOut$m + 1, 
+                                      c = "Complete")
+                           )
+  
+  ggplot(data    = pDat, 
+         mapping = aes(x = x, y = y, color = c, group = g, size = c)
+         ) +
+      geom_line() +
+      theme_classic() +
+      theme(text = element_text(family = "Courier", size = 16)) +
+      ylab("Density") +
+      xlab("Value of Y") +
+      scale_color_manual(values = c("black", "red")) +
+      scale_size_manual(values = c(1, 0.5)) +
+      theme(legend.position = c(0.8, 0.95), legend.title = element_blank())
+  @
 
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile, allowframebreaks]{Good Methods (These \emph{almost} always work)}
-
+  
   What about applying MI to our MNAR example?
-<<>>=
-## Estimate imputation model:
-miceOut <- mice(data      = data.frame(y = yMnar, x = x0),
-                m         = 25,
-                maxit     = 1,
-                method    = "norm",
-                printFlag = FALSE)
-
-## Estimate and pool M correlations:
-with(miceOut, cor(y, x))$analyses %>% unlist() %>% mean()
-@
-
-The MI-based parameter estimate is still biased.
-\begin{itemize}
-\item MI cannot correct bias in parameter estimates when data are MNAR.
-\end{itemize}
-
-\pagebreak
-
-<<echo = FALSE, out.width = "65%">>=
-mnarDen <- density(yMnar, na.rm = TRUE)
-
-impX <- impY <- list()
-for(m in 1 : miceOut$m) {
-    tmp       <- density(complete(miceOut, m)$y)
-    impX[[m]] <- tmp$x
-    impY[[m]] <- tmp$y
-}
-
-pDat <- data.frame(x = unlist(impX),
-                   y = unlist(impY),
-                   g = rep(1:miceOut$m, each = length(impX[[1]])),
-                   c = "MNAR w/ MI")
-
-pDat <- rbind.data.frame(pDat,
-                         data.frame(x = mnarDen$x, 
-                                    y = mnarDen$y, 
-                                    g = miceOut$m + 1, 
-                                    c = "MNAR w/ Deletion"),
-                         data.frame(x = yDen$x, 
-                                    y = yDen$y, 
-                                    g = miceOut$m + 2,
-                                    c = "Complete")
-                         )
-
-ggplot(data = pDat, mapping = aes(x = x, y = y, color = c, group = g, size = c)) +
-    geom_line() +
-    theme_classic() +
-    theme(text = element_text(family = "Courier", size = 16)) +
-    ylab("Density") +
-    xlab("Value of Y") +
-    scale_color_manual(values = c("black", "blue", "red")) +
-    scale_size_manual(values = c(1, 1, 0.5)) +
-    theme(legend.position = c(0.8, 0.95), legend.title = element_blank())
-@
-
+  <<>>=
+  ## Estimate imputation model:
+  miceOut <- mice(data      = mnarData,
+                  m         = 25,
+                  maxit     = 1,
+                  method    = "norm",
+                  printFlag = FALSE)
+  
+  ## Estimate and pool M correlations:
+  with(miceOut, cor(y, x))$analyses %>% unlist() %>% mean()
+  @
+  
+  The MI-based parameter estimate is still biased.
+  \begin{itemize}
+  \item MI cannot correct bias in parameter estimates when data are MNAR.
+  \end{itemize}
+  
+  \pagebreak
+  
+  <<echo = FALSE, out.width = "65%">>=
+  mnarDen <- mnarData %$% density(y, na.rm = TRUE)
+  
+  impX <- impY <- list()
+  for(m in 1 : miceOut$m) {
+      tmp       <- density(complete(miceOut, m)$y)
+      impX[[m]] <- tmp$x
+      impY[[m]] <- tmp$y
+  }
+  
+  pDat <- data.frame(x = unlist(impX),
+                     y = unlist(impY),
+                     g = rep(1:miceOut$m, each = length(impX[[1]])),
+                     c = "MNAR w/ MI")
+  
+  pDat <- rbind.data.frame(pDat,
+                           data.frame(x = mnarDen$x, 
+                                      y = mnarDen$y, 
+                                      g = miceOut$m + 1, 
+                                      c = "MNAR w/ Deletion"),
+                           data.frame(x = yDen$x, 
+                                      y = yDen$y, 
+                                      g = miceOut$m + 2,
+                                      c = "Complete")
+                           )
+  
+  ggplot(data = pDat, mapping = aes(x = x, y = y, color = c, group = g, size = c)) +
+      geom_line() +
+      theme_classic() +
+      theme(text = element_text(family = "Courier", size = 16)) +
+      ylab("Density") +
+      xlab("Value of Y") +
+      scale_color_manual(values = c("black", "blue", "red")) +
+      scale_size_manual(values = c(1, 1, 0.5)) +
+      theme(legend.position = c(0.8, 0.95), legend.title = element_blank())
+  @
+  
 \end{frame}
 
 \watermarkon %-----------------------------------------------------------------%
@@ -1939,13 +1662,13 @@ ggplot(data = pDat, mapping = aes(x = x, y = y, color = c, group = g, size = c))
 
 \begin{frame}[fragile]{Example}
  
-<<>>=
-miceOut <- mice(data      = diabetes2, 
-                m         = 25, 
-                maxit     = 1,
-                printFlag = FALSE,
-                method    = "norm")
-@ 
+  <<>>=
+  miceOut <- mice(data      = diabetes2, 
+                  m         = 25, 
+                  maxit     = 1,
+                  printFlag = FALSE,
+                  method    = "norm")
+  @ 
 
 \end{frame}
 
@@ -1953,10 +1676,10 @@ miceOut <- mice(data      = diabetes2,
 
 \begin{frame}[fragile]{Example}
 
-<<>>=
-diabetes1 %>% select(bmi, glu, bp) %>% cor()
-pooledCorMat(miceOut, c("bmi", "glu", "bp"))
-@ 
+  <<>>=
+  diabetes1 %>% select(bmi, glu, bp) %>% cor()
+  pooledCorMat(miceOut, c("bmi", "glu", "bp"))
+  @ 
 
 \end{frame}
 
@@ -1964,12 +1687,12 @@ pooledCorMat(miceOut, c("bmi", "glu", "bp"))
 
 \begin{frame}[fragile]{Example}
 
-<<>>=
-mean(diabetes1$glu)
-with(miceOut, mean(glu))$analyses %>% unlist() %>% mean()
-var(diabetes1$glu)
-with(miceOut, var(glu))$analyses %>% unlist() %>% mean()
-@ 
+  <<>>=
+  mean(diabetes1$glu)
+  with(miceOut, mean(glu))$analyses %>% unlist() %>% mean()
+  var(diabetes1$glu)
+  with(miceOut, var(glu))$analyses %>% unlist() %>% mean()
+  @ 
 
 \end{frame}
 
@@ -1977,13 +1700,13 @@ with(miceOut, var(glu))$analyses %>% unlist() %>% mean()
 
 \begin{frame}[fragile]{Example}
 
-<<>>=
-fit1 <- lm(glu ~ bmi + bp + age, data = diabetes1)
-fit2 <- with(miceOut, lm(glu ~ bmi + bp + age))
-
-summary(fit1)$r.squared
-pool.r.squared(fit2)
-@ 
+  <<>>=
+  fit1 <- lm(glu ~ bmi + bp + age, data = diabetes1)
+  fit2 <- with(miceOut, lm(glu ~ bmi + bp + age))
+  
+  summary(fit1)$r.squared
+  pool.r.squared(fit2)
+  @ 
 
 \end{frame}
 
@@ -1991,10 +1714,10 @@ pool.r.squared(fit2)
 
 \begin{frame}[fragile]{Example}
 
-<<>>=
-summary(fit1)$coef
-pool(fit2) %>% summary() %>% select(-df)
-@
+  <<>>=
+  summary(fit1)$coef
+  pool(fit2) %>% summary() %>% select(-df)
+  @
   
 \end{frame}
 
@@ -2046,25 +1769,14 @@ pool(fit2) %>% summary() %>% select(-df)
 
 \begin{frame}[fragile]{Example}
   
-<<>>=
-fit <- diabetes2 %>% 
-    select(bmi, glu, bp) %>% 
-    lavCor(missing = "fiml", output = "sampstat")
-
-mean(diabetes1$glu)
-fit$mean["glu"]
-@   
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example}
-
-<<>>=
-diabetes1 %>% select(bmi, glu, bp) %>% cov()
-fit$cov
-@
+  <<>>=
+  fit <- diabetes2 %>% 
+      select(bmi, glu, bp) %>% 
+      lavCor(missing = "fiml", output = "sampstat")
+  
+  mean(diabetes1$glu)
+  fit$mean["glu"]
+  @   
 
 \end{frame}
 
@@ -2072,13 +1784,10 @@ fit$cov
 
 \begin{frame}[fragile]{Example}
 
-<<>>=
-mod <- "glu ~ 1 + bmi + bp + age"
-fit <- sem(mod, data = diabetes2, missing = "fiml")
-
-summary(fit1)$r.squared
-inspect(fit, "r2")
-@
+  <<>>=
+  diabetes1 %>% select(bmi, glu, bp) %>% cov()
+  fit$cov
+  @
 
 \end{frame}
 
@@ -2086,10 +1795,24 @@ inspect(fit, "r2")
 
 \begin{frame}[fragile]{Example}
 
-<<>>=
-summary(fit1)$coef %>% round(3)
-parameterEstimates(fit, ci = FALSE)[1:4, ]
-@
+  <<>>=
+  mod <- "glu ~ 1 + bmi + bp + age"
+  fit <- sem(mod, data = diabetes2, missing = "fiml")
+  
+  summary(fit1)$r.squared
+  inspect(fit, "r2")
+  @
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+  <<>>=
+  summary(fit1)$coef %>% round(3)
+  parameterEstimates(fit, ci = FALSE)[1:4, ]
+  @
 
 \end{frame}
 
