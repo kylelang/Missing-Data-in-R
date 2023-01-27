@@ -1,0 +1,27 @@
+
+<<manual_mi, echo = FALSE, eval = FALSE, cache = TRUE>>=
+## Define iteration numbers:
+nImps <- 100
+nSams <- 5000
+
+## Get the expected betas:
+fit0  <- lm(y ~ ., data = yObs)
+beta0 <- coef(fit0)
+
+## Sample sigma:
+sigScale  <- (1 / fit0$df) * crossprod(resid(fit0))
+sigmaSams <- 
+    rinvchisq(nSams, df = fit0$df, scale = sigScale)
+
+## Partition the predictor matrix:
+xMis <- as.matrix(cbind(1, yMis[ , c("x", "z")]))
+xObs <- as.matrix(cbind(1, yObs[ , c("x", "z")]))
+
+## Sample beta:
+betaSams <- matrix(NA, nSams, ncol(xObs))
+for(i in 1 : nSams) {
+    betaVar       <- sigmaSams[i] * solve(crossprod(xObs))
+    betaSams[i, ] <- 
+        rmvnorm(1, mean = beta0, sigma = betaVar)
+}
+@ 
