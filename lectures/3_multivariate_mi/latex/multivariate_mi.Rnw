@@ -1,7 +1,7 @@
 %%% Title:    Missing Data in R: Multivariate MI
 %%% Author:   Kyle M. Lang
 %%% Created:  2017-09-12
-%%% Modified: 2022-01-30
+%%% Modified: 2023-01-27
 
 \documentclass[10pt]{beamer}
 \usetheme{Utrecht}
@@ -24,7 +24,7 @@
 \subtitle{Utrecht University Winter School: Missing Data in R}
 \author{Kyle M. Lang}
 \institute{Department of Methodology \& Statistics\\Utrecht University}
-\date{2022-02-03}
+\date{}
 
 %------------------------------------------------------------------------------%
 
@@ -246,93 +246,6 @@ knit_theme$set('edit-kwrite')
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}{Aside: Gibbs Sampling}
-  
-  Up to this point, most of the models we've explored could be approximated by 
-  sampling directly from their posterior distributions.
-  \vc
-  \begin{itemize}
-    \item This won't be true with arbitrary, multivariate missing data.
-  \end{itemize}
-  \va 
-  To make inference regarding a multivariate distribution with multiple, 
-  interrelated, unknown parameters, we can use \emph{Gibbs sampling}.
-  \vc
-  \begin{itemize}
-  \item Sample from the conditional distribution of each parameter, conditioning 
-    on the current best guesses of all other parameters.
-  \end{itemize}
-  
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}{Aside: Gibbs Sampling}
-  
-  Suppose the following:
-  \vb
-  \begin{enumerate}
-  \item I want to make some inference about the tri-variate mean of
-    $X, Y, Z = \mu_X, \mu_Y, \mu_Z \sim P(\mu | \theta)$
-    \vb
-  \item $P(\mu | \theta)$ is super hairy and difficult to sample
-    \vb
-  \item I can easily sample from the conditional distributions:
-    $P(\mu_X | \hat{\mu}_Y, \hat{\mu}_Z, \theta)$,
-    $P(\mu_Y | \hat{\mu}_X, \hat{\mu}_Z, \theta)$, and
-    $P(\mu_Z | \hat{\mu}_X, \hat{\mu}_Y, \theta)$.
-  \end{enumerate}
-  \va
-  Then, I can approximate the full joint distribution $P(\mu | \theta)$ by 
-  sequentially sampling from
-  $P(\mu_X | \hat{\mu}_Y, \hat{\mu}_Z, \theta)$, 
-  $P(\mu_Y | \hat{\mu}_X, \hat{\mu}_Z, \theta)$, and 
-  $P(\mu_Z | \hat{\mu}_X, \hat{\mu}_Y, \theta)$.
-
-\end{frame}
-  
-%------------------------------------------------------------------------------%
-
-\begin{frame}{Aside: Gibbs Sampling}
-  
-  Starting with initial guesses of $\mu_Y$, $\hat{\mu}_Y^{(0)}$, and
-  $\mu_Z$, $\hat{\mu}_Z^{(0)}$, and assuming $\theta$ is known, Gibbs
-  sampling proceeds as follows:
-  \begin{align*}
-    \hat{\mu}_X^{(1)} &\sim P(\mu_X | \hat{\mu}_Y^{(0)}, \hat{\mu}_Z^{(0)}, \theta)\\
-    \hat{\mu}_Y^{(1)} &\sim P(\mu_Y | \hat{\mu}_X^{(1)}, \hat{\mu}_Z^{(0)}, \theta)\\
-    \hat{\mu}_Z^{(1)} &\sim P(\mu_Z | \hat{\mu}_Y^{(1)}, \hat{\mu}_X^{(1)}, \theta)\\
-    \\
-    \hat{\mu}_X^{(2)} &\sim P(\mu_X | \hat{\mu}_Y^{(1)}, \hat{\mu}_Z^{(1)}, \theta)\\
-    \hat{\mu}_Y^{(2)} &\sim P(\mu_Y | \hat{\mu}_X^{(2)}, \hat{\mu}_Z^{(1)}, \theta)\\
-    \hat{\mu}_Z^{(2)} &\sim P(\mu_Z | \hat{\mu}_Y^{(2)}, \hat{\mu}_X^{(2)}, \theta)
-  \end{align*}
-  \vspace{-40pt}
-  \begin{center}\huge{$\vdots$}\end{center}
-  
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}{Why do we care?}
-  
-  Multivariate MI employs the same logic as Gibbs sampling.
-  \vb
-  \begin{itemize}
-  \item The imputations are created by conditioning on the current estimates of 
-    the imputation model parameters.
-    \vb
-  \item The imputation model parameters are updated by conditioning on the most 
-    recent imputations.
-    \vb
-  \item With FCS, each variable is imputed by conditioning on the most recent 
-    imputations of all other variables.
-  \end{itemize}
-  
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
 \sectionslide{Fully Conditional Specification}
 
 %------------------------------------------------------------------------------%
@@ -361,17 +274,17 @@ knit_theme$set('edit-kwrite')
 \watermarkoff %----------------------------------------------------------------%
 
 \begin{frame}[fragile]{Example: Data Generation}
-
+  
   First we'll simulate some synthetic data.
   
-<<>>=
-## Simulate some data:
-simData <- 
-    simCovData(nObs = 1000, sigma = 0.25, nVars = 4)
-
-head(simData, 10)
-@ 
-
+  <<>>=
+  ## Simulate some data:
+  simData <- 
+      simCovData(nObs = 1000, sigma = 0.25, nVars = 4)
+  
+  head(simData, 10)
+  @ 
+  
 \end{frame}
 
 %------------------------------------------------------------------------------%
@@ -379,17 +292,17 @@ head(simData, 10)
 \begin{frame}[fragile]{Example: Data Generation}
 
   Next, we impose some missing values on the simulated data.
-
-<<>>=
-targets  <- paste0("x", 1:3)
-missData <- imposeMissData(data    = simData,
-                           targets = targets,
-                           preds   = "x4",
-                           pm      = 0.3,
-                           types = c("low", "center", "high")
-                           )
-@ 
-
+  
+  <<>>=
+  targets  <- paste0("x", 1:3)
+  missData <- imposeMissData(data    = simData,
+                             targets = targets,
+                             preds   = "x4",
+                             pm      = 0.3,
+                             types = c("low", "center", "high")
+                             )
+  @ 
+  
 \end{frame}
 
 %------------------------------------------------------------------------------%
@@ -413,252 +326,21 @@ head(missData, 10)
       
       Use the \code{naniar::vis\_missing()} function to visualize the pattern of 
       missing values.
-     
-<<eval = FALSE>>=
-vis_miss(missData)
-@ 
-
+      
+      <<eval = FALSE>>=
+      vis_miss(missData)
+      @ 
+      
     \end{column}
     \begin{column}{0.5\textwidth}
       
-<<echo = FALSE>>=
-vis_miss(missData)
-@ 
-
+      <<echo = FALSE>>=
+      vis_miss(missData)
+      @ 
+      
     \end{column}
   \end{columns}
   
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile, allowframebreaks]{Example: Data Visualization}
-
-  \begin{columns}
-    \begin{column}{0.5\textwidth}
-      
-      Use \code{naniar::geom\_miss\_point()} to visualize the response pattern.
-      
-<<eval = FALSE>>=
-ggplot(missData, aes(x4, x1)) +
-    geom_miss_point()
-@         
-
-    \end{column}
-    \begin{column}{0.5\textwidth}
-     
-<<echo = FALSE>>=
-ggplot(missData, aes(x4, x1)) +
-    geom_miss_point()
-@         
-
-    \end{column}
-  \end{columns}
-    
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile, allowframebreaks]{Example: Data Visualization}
-
-  \begin{columns}
-    \begin{column}{0.5\textwidth}
-      
-      Use \code{naniar::geom\_miss\_point()} to visualize the response pattern.
-      
-<<eval = FALSE>>=
-ggplot(missData, aes(x4, x2)) +
-    geom_miss_point()
-@         
-
-    \end{column}
-    \begin{column}{0.5\textwidth}
-     
-<<echo = FALSE>>=
-ggplot(missData, aes(x4, x2)) +
-    geom_miss_point()
-@         
-
-    \end{column}
-  \end{columns}
-    
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile, allowframebreaks]{Example: Data Visualization}
-
-  \begin{columns}
-    \begin{column}{0.5\textwidth}
-      
-      Use \code{naniar::geom\_miss\_point()} to visualize the response pattern.
-      
-<<eval = FALSE>>=
-ggplot(missData, aes(x4, x3)) +
-    geom_miss_point()
-@         
-
-    \end{column}
-    \begin{column}{0.5\textwidth}
-     
-<<echo = FALSE>>=
-ggplot(missData, aes(x4, x3)) +
-    geom_miss_point()
-@         
-
-    \end{column}
-  \end{columns}
-    
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example: Fully Conditional Specification}
-  
-<<>>=
-## Define iteration numbers:
-nImps <- 100
-nBurn <- 500
-nSams <- nBurn + nImps
-
-## Summarize missingness:
-rMat <- !is.na(missData)
-nObs <- colSums(rMat)
-nMis <- colSums(!rMat)
-
-## Fill the missingness with initial (bad) guesses:
-mean0  <- colMeans(missData, na.rm = TRUE)
-sigma0 <- cov(missData, use = "pairwise")
-draws0 <- rmvnorm(nrow(missData), mean0, sigma0)
-
-impData        <- missData
-impData[!rMat] <- draws0[!rMat]
-@ 
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example: Fully Conditional Specification}
-  
-  Define an elementary imputation function:
-  
-<<size = "scriptsize">>=
-eif <- function(data, rVec, v) {
-    ## Get the expected model parameters:
-    fit  <- lm(paste(v, "~ ."), data = data[rVec, ])
-    beta <- coef(fit)
-    s2   <- summary(fit)$sigma^2
-    
-    ## Partition data:
-    vars <- setdiff(colnames(data), v)
-    data <- as.matrix(data)
-    xObs <- cbind(1, data[rVec, vars])
-    xMis <- cbind(1, data[!rVec, vars])
-    
-    ## Sample sigma:
-    sigmaSam <- rinvchisq(1, df = fit$df, scale = s2)
-        
-    ## Sample beta:
-    betaVar <- sigmaSam * solve(crossprod(xObs))
-    betaSam <- rmvnorm(1, mean = beta, sigma = betaVar)
-    
-    ## Return a randomly sampled imputation:
-    xMis %*% t(betaSam) + rnorm(nrow(xMis), 0, sqrt(sigmaSam))
-}
-@ 
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example: Fully Conditional Specification}
-  
-  Apply the elementary imputation function to each incomplete variable:
-  
-<<cache = TRUE>>=
-## Iterate through the FCS algorithm:
-impList <- list()
-for(s in 1 : nSams) {
-    for(v in targets) {
-        rVec              <- rMat[ , v]
-        impData[!rVec, v] <- eif(impData, rVec, v)
-    }
-    
-    ## If the chains are burnt-in, save imputed datasets:
-    if(s > nBurn) impList[[s - nBurn]] <- impData
-}
-@ 
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example: Fully Conditional Specification}
-  
-  Analyze the multiply imputed datasets:
-
-<<cache = TRUE>>=
-## First, our manual version:
-fits1 <- lapply(impList, 
-                function(x) lm(x1 ~ x2 + x3, data = x)
-                )
-pool1 <- MIcombine(fits1)
-
-## Do the same analysis with mice::mice():
-miceOut <- mice(data      = missData,
-                m         = 100,
-                method    = "norm",
-                printFlag = FALSE)
-fits2 <- with(miceOut, lm(x1 ~ x2 + x3))
-pool2 <- pool(fits2)
-@ 
-
-\end{frame}
-
-\watermarkon %-----------------------------------------------------------------%
-
-\begin{frame}{Example: Fully Conditional Specification}
-
-  Compare approaches:\\
-  \vb
-  
-<<echo = FALSE, results = "asis">>=
-cf1  <- coef(pool1)
-se1  <- sqrt(diag(vcov(pool1)))
-t1   <- cf1 / se1
-df1  <- pool1$df
-p1   <- 2 * pt(t1, df1, lower.tail = FALSE)
-fmi1 <- pool1$missinfo
-
-res1 <- round(cbind(cf1, se1, t1, p1, fmi1), 3)
-colnames(res1) <- c("Est", "SE", "t", "p", "FMI")
-
-flag            <- res1[ , "p"] < 0.001
-res1[flag, "p"] <- "<0.001"
-
-cf2  <- pool2$pooled$estimate
-se2  <- sqrt(pool2$pooled$t)
-t2   <- cf2 / se2
-df2  <- pool2$pooled$df
-p2   <- 2 * pt(t2, df2, lower.tail = FALSE)
-fmi2 <- pool2$pooled$fmi
-
-res2 <- round(cbind(cf2, se2, t2, p2, fmi2), 3)
-colnames(res2) <- c("Est", "SE", "t", "p", "FMI")
-rownames(res2) <- rownames(res1)
-
-flag            <- res2[ , "p"] < 0.001
-res2[flag, "p"] <- "<0.001"
-
-print(xtable(res1, caption = "Manual Version"), 
-      booktabs = TRUE, 
-      scalebox = 0.85)
-print(xtable(res2, caption = "MICE Version"), 
-      booktabs = TRUE, 
-      scalebox = 0.85)
-@ 
-
 \end{frame}
 
 %------------------------------------------------------------------------------%
@@ -698,13 +380,12 @@ print(xtable(res2, caption = "MICE Version"),
   Previously, we saw examples of univariate Bayesian regression which used the 
   following model:
   \begin{align*}
-    \beta &\sim \text{MVN} \left( \hat{\beta}_{ls}, ~ 
-    \sigma^2 (\mathbf{X}^T \mathbf{X})^{-1} \right)\\
-    \sigma^2 &\sim \text{Inv-}\chi^2 \left(N - P, MSE \right)
+    \sigma^2 &\sim \text{Inv-}\chi^2 \left(N - P, MSE \right)\\[8pt]
+    \beta &\sim \text{MVN} \left( \hat{\beta}_{ls}, ~ \sigma^2 (\mathbf{X}^T \mathbf{X})^{-1} \right)
   \end{align*}
   We can directly extend the above to the multivariate case:
   \begin{align*}
-    \Sigma^{(i)} &\sim \text{Inv-W} \left(N - 1, (N - 1) \Sigma^{(i - 1)} \right)\\
+    \Sigma^{(i)} &\sim \text{Inv-W} \left(N - 1, (N - 1) \Sigma^{(i - 1)} \right)\\[8pt]
     \mu^{(i)} &\sim \text{MVN} \left(\mu^{(i - 1)}, N^{-1}\Sigma^{(i)} \right)
   \end{align*}
   We get $\alpha$, $\beta$, and $\Sigma_{\varepsilon}$ via the calculations on the 
@@ -747,249 +428,23 @@ print(xtable(res2, caption = "MICE Version"),
   \begin{columns}
     \begin{column}{0.5\textwidth}
       
-      Use \code{mice::md.pattern()} to visualize the response patterns.
+      Use \code{ggmice::plot\_pattern()} to visualize the response patterns.
       
-<<eval = FALSE>>=
-pats <- md.pattern(missData)
-@         
-
+      <<eval = FALSE>>=
+      library(ggmice)
+      plot_pattern(missData)
+      @         
+      
     \end{column}
     \begin{column}{0.5\textwidth}
-     
-<<echo = FALSE>>=
-pats <- md.pattern(missData)
-@         
-
+      
+      <<echo = FALSE>>=
+      ggmice::plot_pattern(missData)
+      @         
+      
     \end{column}
   \end{columns}
     
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example: Joint Modeling}
- 
-<<>>=
-iStep <- function(data, pats, ind, pars) {
-    ## Loop over non-trivial response patterns:
-    for(i in 1:nrow(pats)) {
-        ## Define the current response pattern:
-        p1 <- pats[i, ]
-                
-        ## Replace missing data with imputations:
-        data[ind == i, !p1] <- getImps(data  = data[ind == i, ], 
-                                       mu    = pars$mu, 
-                                       sigma = pars$sigma, 
-                                       p1    = p1)
-    }
-    
-    ## Return the imputed data:
-    data
-}
-@ 
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example: Joint Modeling}
-
-<<>>=
-getImps <- function(data, mu, sigma, p1) {
-    ## Partition the parameter matrices:
-    mY  <- matrix(mu[!p1])
-    mX  <- matrix(mu[p1])
-    sY  <- sigma[!p1, !p1]
-    sX  <- sigma[p1, p1]
-    cXY <- sigma[p1, !p1]
-    
-    ## Compute the imputation model parameters:
-    beta  <- solve(sX) %*% cXY
-    alpha <- mY - t(beta) %*% mX
-    sE    <- sY - t(beta) %*% sX %*% beta
-    
-    ## Pull out predictors:
-    X <- as.matrix(data[ , p1])
-    
-    ## Generate and return the imputations:
-    n <- nrow(X)
-    matrix(1, n) %*% t(alpha) + X %*% beta + rmvnorm(n, sigma = sE)
-}
-@ 
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example: Joint Modeling}
-
-<<>>=
-pStep <- function(data) {
-    ## Update the complete-data sufficient statistics:
-    n <- nrow(data)
-    m <- colMeans(data)
-    s <- (n - 1) * cov(data)
-    
-    ## Sample the covariance matrix and mean vector:
-    sigma <- riwish((n - 1), s)
-    mu    <- rmvnorm(1, m, (sigma / n))
-    
-    ## Return the updated parameters:
-    list(mu = mu, sigma = sigma)
-}
-@
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example: Joint Modeling}
-
-  Now that we've defined the necessary functions, do the imputation:
-  
-<<>>=
-## Some preliminaries:
-impData <- missData
-nIter   <- 50
-nImps   <- 100
-
-## Summarize response patterns:
-rMat <- !is.na(impData)
-pats <- uniquecombs(rMat, ordered = TRUE)
-ind  <- attr(pats, "index")
-
-## Exclude the fully observed pattern:
-if(tail(pats, 1) %>% all())
-    pats <- pats[-nrow(pats), ]
-
-## Get starting values for the parameters:
-theta0 <- list(mu    = colMeans(impData, na.rm = TRUE),
-               sigma = cov(impData, use = "pairwise")
-               )
-@ 
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example: Joint Modeling}
-
-<<cache = TRUE>>=
-## Iterate over I- and P-Steps to generate imputations:
-impList1 <- list()
-for(m in 1:nImps) {
-    ## Initialize the parameter vector:
-    theta1 <- theta0
-    for(rp in 1:nIter) {
-        ## Do one I-Step:
-        impData <- iStep(data = impData,
-                         pats = pats,
-                         ind  = ind,
-                         pars = theta1)
-        
-        ## Do one P-Step:
-        theta1 <- pStep(impData)
-    }
-    ## Save the final imputed dataset:
-    impList1[[m]] <- impData
-}
-@ 
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example: Joint Modeling}
-  
-  Do the same type of imputation with \pkg{norm}:
-  
-<<cache = TRUE>>=
-missData <- as.matrix(missData)
-
-## Pre-process the data and get starting values via EM:
-meta   <- prelim.norm(missData)
-theta0 <- em.norm(meta, showits = FALSE)
-
-rngseed(235711)   
-
-impList2 <- list()
-for(m in 1 : nImps) {
-    ## Estimate the imputation model via data augmentation:
-    theta1 <- da.norm(s = meta, start = theta0, steps = nIter)
-    
-    ## Impute missing values via a final I-Step of DA:
-    impList2[[m]] <- imp.norm(s = meta, theta = theta1, x = missData)
-}
-@ 
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example: Joint Modeling}
-
-  Analyze the multiply imputed data:
-
-<<>>=
-## Manual implementation:
-fits1 <- lapply(impList1, 
-                function(x) lm(x1 ~ x2 + x3, data = x)
-                )
-pool1 <- MIcombine(fits1)
-
-## Imputation using norm:
-fits2 <- lapply(impList2, 
-                function(x) lm(x1 ~ x2 + x3, 
-                               data = as.data.frame(x)
-                               )
-                )
-pool2 <- MIcombine(fits2)
-@ 
-
-\end{frame}
-
-\watermarkon %-----------------------------------------------------------------%
-
-\begin{frame}{Example: Joint Modeling}
-
-  Compare approaches:\\
-  \vb
-  
-<<echo = FALSE, results = "asis">>=
-cf1  <- coef(pool1)
-se1  <- sqrt(diag(vcov(pool1)))
-t1   <- cf1 / se1
-df1  <- pool1$df
-p1   <- 2 * pt(t1, df1, lower.tail = FALSE)
-fmi1 <- pool1$missinfo
-
-res1 <- round(cbind(cf1, se1, t1, p1, fmi1), 3)
-colnames(res1) <- c("Est", "SE", "t", "p", "FMI")
-
-flag            <- res1[ , "p"] < 0.001
-res1[flag, "p"] <- "<0.001"
-
-cf2  <- coef(pool2)
-se2  <- sqrt(diag(vcov(pool2)))
-t2   <- cf2 / se2
-df2  <- pool2$df
-p2   <- 2 * pt(t2, df2, lower.tail = FALSE)
-fmi2 <- pool2$missinfo
-
-res2 <- round(cbind(cf2, se2, t2, p2, fmi2), 3)
-colnames(res2) <- c("Est", "SE", "t", "p", "FMI")
-
-flag            <- res2[ , "p"] < 0.001
-res2[flag, "p"] <- "<0.001"
-
-print(xtable(res1, caption = "Manual Version"), 
-      booktabs = TRUE, 
-      scalebox = 0.85)
-print(xtable(res2, caption = "NORM Version"), 
-      booktabs = TRUE, 
-      scalebox = 0.85)
-@ 
-
 \end{frame}
 
 %------------------------------------------------------------------------------%

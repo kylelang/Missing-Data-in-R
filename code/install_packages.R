@@ -3,7 +3,7 @@
 ### Created:  2022-01-29
 ### Modified: 2022-01-30
 
-install.packages(c("mice",  
+install.packages(c("mice",
                    "naniar",
                    "dplyr",
                    "ggplot2",
@@ -16,3 +16,8 @@ install.packages(c("mice",
                    "mvtnorm"),
                  repos = "http://cloud.r-project.org",
                  dependencies = TRUE)
+
+install.packages("MCMCpack",
+                 repos = "http://cloud.r-project.org",
+                 dependencies = TRUE)
+
