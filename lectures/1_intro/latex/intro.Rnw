@@ -29,7 +29,20 @@
 
 \begin{document}
 
-<<setup, include = FALSE, cache = FALSE>>=
+<<knitr_setup, include = FALSE, cache = FALSE>>=
+opts_chunk$set(size = "footnotesize",
+               fig.align = "center",
+               fig.path = "figure/intro-",
+               message = FALSE,
+               warning = FALSE,
+               comment = "")
+opts_knit$set(root.dir = "../../../")
+knit_theme$set('edit-kwrite')
+@
+
+<<r_setup, inclcude = FALSE>>=
+options(width = 60)
+
 set.seed(235711)
 
 library(knitr)
@@ -45,19 +58,10 @@ library(ggpubr)
 library(lme4)
 library(lavaan)
 
-source("../../../code/supportFunctions.R")
-source("../../../code/sim_missing/code/simMissingness.R")
+dataDir <- "data/"
 
-dataDir <- "../../../data/"
-
-options(width = 60)
-opts_chunk$set(size = "footnotesize",
-               fig.align = "center",
-               fig.path = "figure/intro-",
-               message = FALSE,
-               warning = FALSE,
-               comment = "")
-knit_theme$set('edit-kwrite')
+source("code/supportFunctions.R")
+source("code/sim_missing/code/simMissingness.R")
 @
 
 %------------------------------------------------------------------------------%
@@ -66,26 +70,6 @@ knit_theme$set('edit-kwrite')
   \titlepage
 \end{frame}
 
-%------------------------------------------------------------------------------%
-\comment{%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{frame}{Introduction}
-
-  \begin{enumerate}
-  \item What's your name?
-    \vc
-  \item Where are you from/where do you work?
-    \vc
-  \item What type of research do you do?
-    \vc
-  \item What type of missing data problems do you encounter in your research?
-    \vc
-  \item What statistical software do you use/do you have programming experience?
-    \vc
-  \item What's your math background?
-  \end{enumerate}
-
-\end{frame}
-}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Outline}
@@ -743,14 +727,17 @@ knit_theme$set('edit-kwrite')
 
   <<>>=
   ## Read in some data:
-  diabetes1 <- diabetes2 <- readRDS(paste0(dataDir, "diabetes.rds"))
+  tmp <- readRDS(paste0(dataDir, "diabetes.rds")) %>%
+      select(bmi, bp, glu, age)
+  diabetes1 <- diabetes2 <-
+      rmvnorm(500, colMeans(tmp), cov(tmp)) %>% data.frame()
 
   ## Simulated missingness based on 'bmi':
-  m <- simLogisticMissingness0(data    = diabetes2,
-                               pm      = 0.25,
-                               preds   = "bmi",
-                               stdData = TRUE)$r
-
+  m <- simLinearMissingness(data  = diabetes2,
+                            pm    = 0.30,
+                            preds = "bmi",
+                            auc   = 0.85)$r
+  
   ## Impose missing on 'glu' according to the missingess above:
   diabetes2[m, "glu"] <- NA
   @ 
