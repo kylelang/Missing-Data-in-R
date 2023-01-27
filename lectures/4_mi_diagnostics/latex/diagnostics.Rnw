@@ -1,7 +1,7 @@
 %%% Title:    Missing Data in R: MI Diagnostics
 %%% Author:   Kyle M. Lang
 %%% Created:  2017-09-12
-%%% Modified: 2022-01-30
+%%% Modified: 2023-01-27
 
 \documentclass[10pt]{beamer}
 \usetheme{Utrecht}
@@ -24,7 +24,7 @@
 \subtitle{Utrecht University Winter School: Missing Data in R}
 \author{Kyle M. Lang}
 \institute{Department of Methodology \& Statistics\\Utrecht University}
-\date{2022-02-03}
+\date{}
 
 %------------------------------------------------------------------------------%
 
@@ -163,72 +163,121 @@ knit_theme$set('edit-kwrite')
   \begin{columns}
     \begin{column}{0.5\textwidth}
       
-<<echo = FALSE, cache = TRUE, out.width = "90%">>=
-missData <- readRDS(paste0(dataDir, "adams_klps_data-incomplete.rds"))
-dat0     <- missData %>% 
-    dplyr::select(-matches("policy\\d|wpriv\\d")) %>% 
-    as.matrix()
-
-nSams  <- 500
-muHat1 <- matrix(NA, nSams, ncol(dat0), dimnames = list(NULL, colnames(dat0)))
-s2Hat1 <- matrix(NA, nSams, ncol(dat0), dimnames = list(NULL, colnames(dat0)))
-
-## Do preliminary manipulations:
-metaData <- prelim.norm(dat0) 
-
-## Find the MLE:
-mle <- em.norm(metaData, showits = FALSE)
-
-## Add some bias to the means to get some variation in plots:
-tmp       <- getparam.norm(metaData, mle)
-tmp$mu    <- tmp$mu - 1
-tmp$sigma <- tmp$sigma * 0.25
-thetaHat  <- makeparam.norm(metaData, tmp)
-
-muHat1[1, ] <- getparam.norm(s = metaData, theta = thetaHat)$mu
-s2Hat1[1, ] <- getparam.norm(s = metaData, theta = thetaHat)$sigma %>% diag()
-
-## Set random number generator seed:
-rngseed(235711)   
-
-## Run the DA algorithm, and store the result of each P-Step for plotting:
-for(s in 2 : nSams) {
-    thetaHat    <- da.norm(s = metaData, start = thetaHat, steps = 1)
-    muHat1[s, ] <- getparam.norm(s = metaData, theta = thetaHat)$mu
-    s2Hat1[s, ] <- getparam.norm(s = metaData, theta = thetaHat)$sigma %>% diag()
-}
-
-muHat1 %<>% as.data.frame() %>% mutate(Iteration = 1:nSams)
-s2Hat1 %<>% as.data.frame() %>% mutate(Iteration = 1:nSams)
-
-ggplot(s2Hat1, aes(Iteration, riae5)) + 
-    geom_line() + 
-    ylab("Variance") +
-    ggtitle("Trace of Estimated Variance of RIAE5") +
-    theme_classic() + 
-    theme(text = element_text(family = "Courier"),
-          plot.title = element_text(face = "bold", hjust = 0.5)
-          )
-@ 
-
-\end{column}
-
-\begin{column}{0.5\textwidth}
+      <<echo = FALSE, cache = TRUE, out.width = "90%">>=
+      missData <- readRDS(paste0(dataDir, "adams_klps_data-incomplete.rds"))
+      dat0     <- missData %>% 
+          dplyr::select(-matches("policy\\d|wpriv\\d")) %>% 
+          as.matrix()
+      
+      nSams  <- 500
+      muHat1 <- matrix(NA, nSams, ncol(dat0), dimnames = list(NULL, colnames(dat0)))
+      s2Hat1 <- matrix(NA, nSams, ncol(dat0), dimnames = list(NULL, colnames(dat0)))
+      
+      ## Do preliminary manipulations:
+      metaData <- prelim.norm(dat0) 
+      
+      ## Find the MLE:
+      mle <- em.norm(metaData, showits = FALSE)
+      
+      ## Add some bias to the means to get some variation in plots:
+      tmp       <- getparam.norm(metaData, mle)
+      tmp$mu    <- tmp$mu - 1
+      tmp$sigma <- tmp$sigma * 0.25
+      thetaHat  <- makeparam.norm(metaData, tmp)
+      
+      muHat1[1, ] <- getparam.norm(s = metaData, theta = thetaHat)$mu
+      s2Hat1[1, ] <- getparam.norm(s = metaData, theta = thetaHat)$sigma %>% diag()
+      
+      ## Set random number generator seed:
+      rngseed(235711)   
+      
+      ## Run the DA algorithm, and store the result of each P-Step for plotting:
+      for(s in 2 : nSams) {
+          thetaHat    <- da.norm(s = metaData, start = thetaHat, steps = 1)
+          muHat1[s, ] <- getparam.norm(s = metaData, theta = thetaHat)$mu
+          s2Hat1[s, ] <- getparam.norm(s = metaData, theta = thetaHat)$sigma %>% diag()
+      }
+      
+      muHat1 %<>% as.data.frame() %>% mutate(Iteration = 1:nSams)
+      s2Hat1 %<>% as.data.frame() %>% mutate(Iteration = 1:nSams)
+      
+      ggplot(s2Hat1, aes(Iteration, riae5)) + 
+          geom_line() + 
+          ylab("Variance") +
+          ggtitle("Trace of Estimated Variance of RIAE5") +
+          theme_classic() + 
+          theme(text = element_text(family = "Courier"),
+                plot.title = element_text(face = "bold", hjust = 0.5)
+                )
+      @ 
+      
+    \end{column}
+    
+    \begin{column}{0.5\textwidth}
+      
+      <<echo = FALSE, cache = TRUE, out.width = "90%">>=
+      ggplot(s2Hat1, aes(Iteration, riae7)) + 
+          geom_line() + 
+          ylab("Variance") +
+          ggtitle("Trace of Estimated Variance of RIAE7") +
+          theme_classic() + 
+          theme(text = element_text(family = "Courier"),
+                plot.title = element_text(face = "bold", hjust = 0.5)
+                ) 
+      @ 
+      
+    \end{column}
+  \end{columns}
   
-<<echo = FALSE, cache = TRUE, out.width = "90%">>=
-ggplot(s2Hat1, aes(Iteration, riae7)) + 
-    geom_line() + 
-    ylab("Variance") +
-    ggtitle("Trace of Estimated Variance of RIAE7") +
-    theme_classic() + 
-    theme(text = element_text(family = "Courier"),
-          plot.title = element_text(face = "bold", hjust = 0.5)
-          ) 
-@ 
+\end{frame}
 
-\end{column}
-\end{columns}
+%------------------------------------------------------------------------------%
 
+\begin{frame}{Traceplots}
+   
+  <<echo = FALSE, cache = TRUE, out.width = "65%">>=
+  muHat2 <- matrix(NA, nSams, ncol(dat0), dimnames = list(NULL, colnames(dat0)))
+  s2Hat2 <- matrix(NA, nSams, ncol(dat0), dimnames = list(NULL, colnames(dat0)))
+  
+  ## Add some bias to the means to get some variation in plots:
+  tmp       <- getparam.norm(metaData, mle)
+  tmp$mu    <- tmp$mu + 1
+  tmp$sigma <- tmp$sigma * 3
+  thetaHat  <- makeparam.norm(metaData, tmp)
+  
+  muHat2[1, ] <- getparam.norm(s = metaData, theta = thetaHat)$mu
+  s2Hat2[1, ] <- getparam.norm(s = metaData, theta = thetaHat)$sigma %>% diag()
+  
+  ## Set random number generator seed:
+  rngseed(314159)   
+  
+  ## Run the DA algorithm, and store the result of each P-Step for plotting:
+  for(s in 2 : nSams) {
+      thetaHat    <- da.norm(s = metaData, start = thetaHat, steps = 1)
+      muHat2[s, ] <- getparam.norm(s = metaData, theta = thetaHat)$mu
+      s2Hat2[s, ] <- getparam.norm(s = metaData, theta = thetaHat)$sigma %>% diag()
+  }
+  
+  ## Visualize the results:
+  chain1 <- s2Hat1[ , "riae5"]
+  chain2 <- s2Hat2[ , "riae5"]
+  
+  chains <- data.frame(Iteration = rep(1:nSams, 2),
+                       chain = c(chain1, chain2),
+                       run = rep(1:2, each = nSams)
+                       )
+  
+  ggplot(chains, aes(Iteration, chain, color = factor(run))) + 
+      geom_line() + 
+      ylab("Variance") +
+      ggtitle("Multi-Chain Trace of Variance of RIAE5") +
+      theme_classic() + 
+      theme(text = element_text(family = "Courier"),
+            plot.title = element_text(face = "bold", hjust = 0.5),
+            legend.position = "none") +
+      scale_color_manual(values = c("red", "blue"))
+  @
+  
 \end{frame}
 
 \watermarkon %-----------------------------------------------------------------%
@@ -268,8 +317,8 @@ ggplot(s2Hat1, aes(Iteration, riae7)) +
   \begin{align*}
     \widehat{R} &= \sqrt{\frac{T}{W}}
   \end{align*}
-  The total variance, $T$, is the weighted average of the within-chain 
-  variance, $W$, and the between-chain variance, $B$.
+  The total variance, $T$, is the weighted average of the within-chain variance,
+  $W$, and the between-chain variance, $B$.
   \begin{align*}
     T &= \frac{N - 1}{N} W + \frac{1}{N} B\\[8pt]
     W &= \frac{1}{M} \sum_{m = 1}^M \textrm{var} \left( \theta_m \right)\\[8pt]
@@ -280,120 +329,44 @@ ggplot(s2Hat1, aes(Iteration, riae7)) +
 
 \watermarkoff %----------------------------------------------------------------%
 
-\begin{frame}{Example: Potential Scale Reduction Factor}
-   
-<<echo = FALSE, cache = TRUE, out.width = "65%">>=
-muHat2 <- matrix(NA, nSams, ncol(dat0), dimnames = list(NULL, colnames(dat0)))
-s2Hat2 <- matrix(NA, nSams, ncol(dat0), dimnames = list(NULL, colnames(dat0)))
-
-## Add some bias to the means to get some variation in plots:
-tmp       <- getparam.norm(metaData, mle)
-tmp$mu    <- tmp$mu + 1
-tmp$sigma <- tmp$sigma * 3
-thetaHat  <- makeparam.norm(metaData, tmp)
-
-muHat2[1, ] <- getparam.norm(s = metaData, theta = thetaHat)$mu
-s2Hat2[1, ] <- getparam.norm(s = metaData, theta = thetaHat)$sigma %>% diag()
-
-## Set random number generator seed:
-rngseed(314159)   
-
-## Run the DA algorithm, and store the result of each P-Step for plotting:
-for(s in 2 : nSams) {
-    thetaHat    <- da.norm(s = metaData, start = thetaHat, steps = 1)
-    muHat2[s, ] <- getparam.norm(s = metaData, theta = thetaHat)$mu
-    s2Hat2[s, ] <- getparam.norm(s = metaData, theta = thetaHat)$sigma %>% diag()
-}
-
-## Visualize the results:
-chain1 <- s2Hat1[ , "riae5"]
-chain2 <- s2Hat2[ , "riae5"]
-
-chains <- data.frame(Iteration = rep(1:nSams, 2),
-                     chain = c(chain1, chain2),
-                     run = rep(1:2, each = nSams)
-                     )
-
-ggplot(chains, aes(Iteration, chain, color = factor(run))) + 
-    geom_line() + 
-    ylab("Variance") +
-    ggtitle("Multi-Chain Trace of Variance of RIAE5") +
-    theme_classic() + 
-    theme(text = element_text(family = "Courier"),
-          plot.title = element_text(face = "bold", hjust = 0.5),
-          legend.position = "none") +
-    scale_color_manual(values = c("red", "blue"))
-@
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
 \begin{frame}[fragile]{Example: Potential Scale Reduction Factor}
+
+  We can compute $\hat{R}$ statistics for \code{mice()} models using the 
+  \code{Rhat.mice()} function from the \pkg{miceadds} package.  
   
-<<cache = TRUE>>=
-## Define a function to compute the between-chain variance:
-bVar <- function(x) {
-    (nrow(x) / (ncol(x) - 1)) * ((colMeans(x) - mean(x))^2 %>% sum())
-}
-
-## Pool chains and exclude burn-in iterations:
-y <- x <- cbind(chain1, chain2)
-x <- tail(x, -100)
-n <- nrow(x)
-
-## Compute variance terms:
-w <- apply(x, 2, var) %>% mean()
-b <- bVar(x)
-t <- ((n - 1) / n) * w + (1 / n) * b
-
-## Compute the R-Hat:
-sqrt(t / w)
-@ 
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example: Potential Scale Reduction Factor}
-
-We can compute $\hat{R}$ statistics for \code{mice()} models using the 
-\code{Rhat.mice()} function from the \pkg{miceadds} package.  
-
-<<eval = FALSE>>=
-## Impute missing values:
-miceOut <- mice(data   = incompleteData, 
-                m      = 25, 
-                maxit  = 50, 
-                method = "norm", 
-                seed   = 235711)
-
-## Compute PSR factors:
-Rhat.mice(miceOut)
-@ 
-
-<<cache = TRUE, include = FALSE>>=
-miceOut <- readRDS(paste0(dataDir, "adams_klps_data-mids.rds"))
-rHats   <- Rhat.mice(miceOut) %>% head()
-@ 
-
-<<echo = FALSE>>=
-rHats
-@ 
-
+  <<eval = FALSE>>=
+  ## Impute missing values:
+  miceOut <- mice(data   = incompleteData, 
+                  m      = 25, 
+                  maxit  = 50, 
+                  method = "norm", 
+                  seed   = 235711)
+  
+  ## Compute PSR factors:
+  Rhat.mice(miceOut)
+  @ 
+  
+  <<cache = TRUE, include = FALSE>>=
+  miceOut <- readRDS(paste0(dataDir, "adams_klps_data-mids.rds"))
+  rHats   <- Rhat.mice(miceOut) %>% head()
+  @ 
+  
+  <<echo = FALSE>>=
+  rHats
+  @ 
+  
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile, allowframebreaks]{More Imputation Model Convergence}
   
-  A convergent imputation model will produce imputed values that
-  fluctuate around an equilibrium point. 
+  A convergent imputation model will produce imputed values that fluctuate
+  around an equilibrium point. 
   \vc
   \begin{itemize}
-  \item Imputation model convergence can be assessed indirectly by
-    looking at plots of the item-level sufficient statistics for each
-    imputation.
+  \item Imputation model convergence can be assessed indirectly by looking at
+    plots of the item-level sufficient statistics for each imputation.
   \end{itemize}
   \vb
   This approach is automated for \textbf{mice} via \code{plot.mice()}.

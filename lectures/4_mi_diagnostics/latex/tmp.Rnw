@@ -1,0 +1,28 @@
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example: Potential Scale Reduction Factor}
+  
+  <<cache = TRUE>>=
+  ## Define a function to compute the between-chain variance:
+  bVar <- function(x) {
+      (nrow(x) / (ncol(x) - 1)) * ((colMeans(x) - mean(x))^2 %>% sum())
+  }
+  
+  ## Pool chains and exclude burn-in iterations:
+  y <- x <- cbind(chain1, chain2)
+  x <- tail(x, -100)
+  n <- nrow(x)
+  
+  ## Compute variance terms:
+  w <- apply(x, 2, var) %>% mean()
+  b <- bVar(x)
+  t <- ((n - 1) / n) * w + (1 / n) * b
+  
+  ## Compute the R-Hat:
+  sqrt(t / w)
+  @ 
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
