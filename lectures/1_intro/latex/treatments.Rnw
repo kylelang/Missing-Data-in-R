@@ -1,7 +1,7 @@
-%%% Title:    Missing Data in R: Introduction
+%%% Title:    Missing Data in R: Missing Data Treatments
 %%% Author:   Kyle M. Lang
 %%% Created:  2015-11-06
-%%% Modified: 2023-01-27
+%%% Modified: 2023-01-28
 
 \documentclass{beamer}
 \usetheme{Utrecht}
@@ -18,8 +18,7 @@
 
 \newcommand{\rmsc}[1]{\textrm{\textsc{#1}}}
 
-
-\title{Missing Data Basics}
+\title{Simple Missing Data Treatments}
 \subtitle{Utrecht University Winter School: Missing Data in R}
 \author{Kyle M. Lang}
 \institute{Department of Methodology \& Statistics\\Utrecht University}
@@ -78,622 +77,11 @@ source("code/sim_missing/code/simMissingness.R")
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}{What are Missing Data?}
-
-  Missing data are empty cells in a dataset where there should be observed
-  values.
-  \vc
-  \begin{itemize}
-  \item The missing cells correspond to true population values, but we haven't
-    observed those values.
-  \end{itemize}
-  \vb
-  \pause
-  Not every empty cell is a missing datum.
-  \vc
-  \begin{itemize}
-  \item Quality-of-life ratings for dead patients in a mortality study
-    \vc
-  \item Firm profitability after the company goes out of business
-    \vc
-  \item Self-reported severity of menstrual cramping for men
-    \vc
-  \item Empty blocks of data following ``gateway'' items
-  \end{itemize}
-
-\end{frame}
+\section{Bad Methods}
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}{A Little Notation}
-  \vx{-18}
-  \begin{align*}
-    Y &\coloneqq \text{An $N \times P$ Matrix of Arbitrary Data}\\[8pt]
-    Y_{mis} &\coloneqq \text{The \emph{missing} part of $Y$}\\[8pt]
-    Y_{obs} &\coloneqq \text{The \emph{observed} part of $Y$}\\[8pt]
-    R &\coloneqq \text{An $N \times P$ response matrix}\\[8pt]
-    M &\coloneqq \text{An $N \times P$ missingness matrix}
-  \end{align*}
-
-  The $R$ and $M$ matrices are complementary.
-  \begin{itemize}
-  \item $r_{np} = 1$ means $y_{np}$ is observed; $m_{np} = 1$ means $y_{np}$ is
-    missing.
-  \item $r_{np} = 0$ means $y_{np}$ is missing; $m_{np} = 0$ means $y_{np}$ is
-    observed.
-  \item $M_p$ is the \emph{missingness} of $Y_p$.
-  \end{itemize}
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\sectionslide{Missing Data Descriptives}
-
-\watermarkoff %----------------------------------------------------------------%
-
-\begin{frame}{Missing Data Pattern}
-
-  <<echo = FALSE>>=
-  tmpTab <- matrix(c("x", "x", ".", ".",
-                     "y", ".", "y", "."),
-                   ncol = 2,
-                   dimnames = list(NULL, c("X", "Y"))
-                   )
-  
-  patTab1 <-
-      xtable(tmpTab, align = rep("c", 3), caption = "Patterns for $P = 2$")
-  
-  tmpTab <- matrix(c(rep("x", 3), ".", "x", rep(".", 3),
-                     "y", "y", ".", "y", ".", ".", "y", ".",
-                     "z", ".", "z", "z", ".", "z", ".", "."),
-                   ncol = 3,
-                   dimnames = list(NULL, c("X", "Y", "Z"))
-                   )
-  
-  patTab2 <-
-      xtable(tmpTab, align = rep("c", 4), caption = "Patterns for $P = 3$")
-  @
-  
-  Missing data (or response) patterns represent unique combinations of observed
-  and missing items.
-  \begin{itemize}
-  \item $P$ items $\Rightarrow$ $2^P$ possible patterns.
-  \end{itemize}
-  
-  \begin{columns}
-    \begin{column}{0.45\textwidth}
-      
-      <<echo = FALSE, results = 'asis'>>=
-      print(patTab1, booktabs = TRUE)
-      @
-      
-    \end{column}
-    \begin{column}{0.45\textwidth}
-      \vx{-12}
-      <<echo = FALSE, results = 'asis'>>=
-      print(patTab2, booktabs = TRUE)
-      @
-      
-    \end{column}
-  \end{columns}
-
-\end{frame}
-
-\watermarkon %-----------------------------------------------------------------%
-
-\begin{frame}{Missing Data Pattern}
-
- The concept of a ``missing data pattern'' can also be used to classify the
-  spatial arrangement of missing cells on a data set.\\
-
-  \vc
-
-  \begin{itemize}
-  \item Univariate
-    \begin{itemize}
-      \item Missing data occur on only one variable
-    \end{itemize}
-
-    \vb
-
-  \item Monotone
-    \begin{itemize}
-    \item The proportion of complete elements, in both rows and columns,
-      decreases when traversing the data set.
-    \item The observed cells can be arranged into a ``staircase'' pattern.
-    \end{itemize}
-
-    \vb
-
-  \item Arbitrary
-    \begin{itemize}
-    \item Missing values are ``randomly'' scattered throughout the data set.
-    \end{itemize}
-  \end{itemize}
-
-\end{frame}
-
-\watermarkoff %----------------------------------------------------------------%
-
-\begin{frame}{Example Missing Data Patterns}
-
-  <<echo = FALSE>>=
-  tmpTab <- matrix(c(rep("x", 10),
-                     rep("y", 5), rep(".", 5),
-                     rep("z", 10)),
-                   ncol = 3)
-  colnames(tmpTab) <- c("X", "Y", "Z")
-  
-  patTab1 <- xtable(tmpTab,
-                    align   = rep("c", 4),
-                    caption = "Univariate Pattern")
-  
-  tmpTab2 <- matrix(c(rep("x", 9), rep(".", 1),
-                      rep("y", 6), rep(".", 4),
-                      rep("z", 3), rep(".", 7)),
-                    ncol = 3)
-  colnames(tmpTab2) <- c("X", "Y", "Z")
-  
-  patTab2 <- xtable(tmpTab2,
-                    align   = rep("c", 4),
-                    caption = "Monotone Pattern")
-  
-  tmpTab3 <- matrix(c(rep("x", 10),
-                      rep("y", 10),
-                      rep("z", 10)),
-                    ncol = 3)
-  rMat <- matrix(as.logical(rbinom(30, 1, 0.3)), ncol = 3)
-  tmpTab3[rMat] <- "."
-  colnames(tmpTab3) <- c("X", "Y", "Z")
-  
-  patTab3 <- xtable(tmpTab3,
-                    align   = rep("c", 4),
-                    caption = "Arbitrary Pattern")
-  @
-  
-  \begin{columns}[T]
-    \begin{column}{0.33\textwidth}
-      
-      <<echo = FALSE, results = 'asis'>>=
-      print(patTab1, booktabs = TRUE)
-      @
-      
-    \end{column}
-    \begin{column}{0.33\textwidth}
-      
-      <<echo = FALSE, results = 'asis'>>=
-      print(patTab2, booktabs = TRUE)
-      @
-      
-    \end{column}
-    \begin{column}{0.33\textwidth}
-      
-      <<echo = FALSE, results = 'asis'>>=
-      print(patTab3, booktabs = TRUE)
-      @
-      
-    \end{column}
-  \end{columns}
-  
-\end{frame}
-
-\watermarkon %-----------------------------------------------------------------%
-
-\begin{frame}[allowframebreaks]{Nonresponse Rates}
-
-  \rmsc{Proportion Missing}
-  %\begin{align*}
-  %  PM_p = N^{-1} \sum_{n = 1}^N r_{np}
-  %\end{align*}
-  \begin{itemize}
-  \item The proportion of cells containing missing data
-  \item Good early screening measure
-  \item Should be computed for each variable, not for the entire dataset
-  \end{itemize}
-
-  \va
-
-  \rmsc{Attrition Rate}
-  \begin{itemize}
-  \item The proportion of participants that drop-out of a study at each
-    measurement occasion
-  \end{itemize}
-
-  \pagebreak
-
-  \rmsc{Proportion of Complete Cases}
-  \begin{itemize}
-  \item The proportion of observations with no missing data
-  \item Often reported but nearly useless quantity
-  \end{itemize}
-
-  \va
-
-  \rmsc{Fraction of Missing Information}
-  \begin{itemize}
-  \item Associated with an estimated parameter, not with an incomplete variable
-  \item Like an $R^2$ for the missing data
-  \item Most important diagnostic value for missing data problems
-  \item Can only be computed after treating the missing data
-  \end{itemize}
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[allowframebreaks]{Coverage Measures}
-
-  \rmsc{Covariance Coverage}
-  \begin{align*}
-    CC_{jk} = N^{-1} \sum_{n = 1}^N r_{nj}r_{nk}
-  \end{align*}
-  \begin{itemize}
-  \item The proportion of cases available to estimate a given pairwise
-    relationship (e.g., a covariance between two variables)
-  \item Very important to have adequate coverage of the parameters you
-    want to estimate
-  \end{itemize}
-
-  \pagebreak
-
-  \rmsc{Inbound Statistic}
-  \begin{align*}
-    I_{jk} = \frac{\sum_{n = 1}^N (1 - r_{nj})r_{nk}}{\sum_{n = 1}^N (1 - r_{nj})}
-  \end{align*}
-  \begin{itemize}
-  \item The proportion of missing cases in $Y_{j}$ for which $Y_{k}$ is observed
-  \end{itemize}
-
-  \va
-
-  \rmsc{Outbound Statistic}
-  \begin{align*}
-    O_{jk} = \frac{\sum_{n = 1}^N r_{nj}(1 - r_{nk})}{\sum_{n = 1}^N r_{nj}}
-  \end{align*}
-  \begin{itemize}
-  \item The proportion of observed cases in $Y_{j}$ for which $Y_{k}$ is missing
-  \end{itemize}
-
-  \pagebreak
-
-  \rmsc{Influx Coefficient}
-  \begin{align*}
-    I_j = \frac{\sum_{k = 1}^P \sum_{n = 1}^N (1 - r_{nj})r_{nk}}{\sum_{k = 1}^P \sum_{n = 1}^N r_{nk}}
-  \end{align*}
-  \begin{itemize}
-  \item The proportion of observed cells in $Y$ that exists in cases for which
-    $Y_j$ is missing
-  \item How well the missing values in $Y_j$ connect to the observed values in
-    $Y_{-j}$
-  \end{itemize}
-
-  \pagebreak
-
-  \rmsc{Outflux Coefficient}
-  \begin{align*}
-    O_j = \frac{\sum_{k = 1}^P \sum_{n = 1}^N r_{nj}(1 - r_{nk})}{\sum_{k = 1}^P \sum_{n = 1}^N (1 - r_{nk})}
-  \end{align*}
-  \begin{itemize}
-  \item The proportion of missing cells in $Y$ that exists in cases for which
-    $Y_j$ is observed
-  \item How well the observed values in $Y_j$ connect to the missing values in
-    $Y_{-j}$
-  \end{itemize}
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\sectionslide{Missing Data Mechanisms}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}{Missing Data Mechanisms}
-
-  Missing Completely at Random (MCAR)
-  \begin{itemize}
-  \item $P(R | Y_{mis}, Y_{obs}) = P(R)$
-    \vc
-  \item Missingness is unrelated to any study variables.
-  \end{itemize}
-  \vb
-  %\begin{align*}
-  %  P(R | Y_{mis}, Y_{obs}) = P(R)
-  %\end{align*}
-
-  Missing at Random (MAR)
-  \begin{itemize}
-  \item $P(R | Y_{mis}, Y_{obs}) = P(R | Y_{obs})$
-    \vc
-  \item Missingness is related to only the \emph{observed} parts of study
-      variables.
-  \end{itemize}
-  \vb
-  %\begin{align*}
-  %  P(R | Y_{mis}, Y_{obs}) = P(R | Y_{obs})
-  %\end{align*}
-
-  Missing not at Random (MNAR)
-  \begin{itemize}
-  \item $P(R | Y_{mis}, Y_{obs}) \neq P(R | Y_{obs})$
-    \vc
-  \item Missingness is related to the \emph{unobserved} parts of study
-    variables.
-  \end{itemize}
-  %\begin{align*}
-  %  P(R | Y_{mis}, Y_{obs}) \neq P(R | Y_{obs})
-  %\end{align*}
-
-\end{frame}
-
-\watermarkoff %----------------------------------------------------------------%
-
-\begin{frame}[fragile]{Simulate Some Toy Data}
-
-  <<>>=
-  library(mvtnorm)
-  library(dplyr)
-  library(magrittr)
-  
-  nObs <- 5000 # Sample Size
-  pm   <- 0.3  # Proportion Missing
-  
-  sigma <- matrix(c(1.0, 0.5, 0.3,
-                    0.5, 1.0, 0.0,
-                    0.3, 0.0, 1.0),
-                  ncol = 3)
-  dat0 <- rmvnorm(nObs, c(0, 0, 0), sigma) %>% data.frame()
-  colnames(dat0) <- c("x", "y", "z")
-  
-  dat0 %$% cor(y, x)
-  @
-  
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile, allowframebreaks]{MCAR Example}
-  
-  <<>>=
-  ## Simulate MCAR Missingness:
-  m <- sample(1:nObs, size = pm * nObs)
-
-  ## Impose MCAR missing on Y:
-  mcarData         <- dat0
-  mcarData[m, "y"] <- NA
-
-  ## Check the correlation between X & Y:
-  mcarData %$% cor(y, x, use = "pairwise")
-  @
-  
-  \pagebreak
-  
-  <<echo = FALSE, out.width = "65%">>=
-  y0Den <- dat0 %$% density(y)
-  yDen  <- mcarData %$% density(y, na.rm = TRUE)
-  
-  pDat <- data.frame(y = c(y0Den$y, yDen$y),
-                     x = c(y0Den$x, yDen$x),
-                     g = rep(c("Complete", "MCAR w/ Deletion"),
-                             each = length(yDen$y)
-                             )
-                     )
-  
-  ggplot(data = pDat, mapping = aes(x = x, y = y, color = g)) +
-      geom_line(size = 1) +
-      theme_classic() +
-      theme(text = element_text(family = "Courier", size = 16)) +
-      ylab("Density") +
-      xlab("Value of Y") +
-      scale_color_manual(values = c("blue", "red")) +
-      theme(legend.position = c(0.8, 0.95), legend.title = element_blank())
-  @
-  
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile, allowframebreaks]{MAR Example}
-
-  <<>>=
-  ## Simulate MAR Missingness:
-  m <- with(dat0, x < quantile(x, probs = pm))
-  
-  ## Impose MAR missing on Y:
-  marData         <- dat0
-  marData[m, "y"] <- NA
-  
-  ## Check the correlation between X & Y:
-  marData %$% cor(y, x, use = "pairwise")
-  @
-  
-  \pagebreak
-  
-  <<echo = FALSE, out.width = "65%">>=
-  yDen <- marData %$% density(y, na.rm = TRUE)
-  
-  pDat <- data.frame(y = c(y0Den$y, yDen$y),
-                     x = c(y0Den$x, yDen$x),
-                     g = rep(c("Complete", "MAR w/ Deletion"),
-                             each = length(yDen$y)
-                             )
-                     )
-  
-  marP <- ggplot(data = pDat, mapping = aes(x = x, y = y, color = g)) +
-      geom_line(size = 1) +
-      theme_classic() +
-      theme(text = element_text(family = "Courier", size = 16)) +
-      ylab("Density") +
-      xlab("Value of Y") +
-      scale_color_manual(values = c("blue", "red")) +
-      theme(legend.position = c(0.8, 0.95), legend.title = element_blank())
-  marP
-  @
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile, allowframebreaks]{MNAR Example}
-
-  <<>>=
-  ## Simulate MNAR Missingness:
-  m <- with(dat0, y < quantile(y, probs = pm))
-
-  ## Impose MNAR missing on Y:
-  mnarData         <- dat0
-  mnarData[m, "y"] <- NA
-
-  ## Check the correlation between X & Y:
-  mnarData %$% cor(y, x, use = "pairwise")
-  @
-  
-  \pagebreak
-  
-  <<echo = FALSE, out.width = "65%">>=
-  yDen <- mnarData %$% density(y, na.rm = TRUE)
-  
-  pDat <- data.frame(y = c(y0Den$y, yDen$y),
-                     x = c(y0Den$x, yDen$x),
-                     g = rep(c("Complete", "MNAR w/ Deletion"),
-                             each = length(yDen$y)
-                             )
-                     )
-  
-  ggplot(data = pDat, mapping = aes(x = x, y = y, color = g)) +
-      geom_line(size = 1) +
-      theme_classic() +
-      theme(text = element_text(family = "Courier", size = 16)) +
-      ylab("Density") +
-      xlab("Value of Y") +
-      scale_color_manual(values = c("blue", "red")) +
-      theme(legend.position = c(0.8, 0.95), legend.title = element_blank())
-  @
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Crucial Nuance}
-
-  In our previous MAR example, ignoring the predictor of missingness actually
-  produces \emph{Indirect MNAR}.\\
-
-  \pause
-  \va
-
-  \rmsc{Question:} What happens if we ignore the predictor of missingness, but
-  that predictor is independent of our study variables?
-
-  \pause
-
-  <<>>=
-  m <- with(dat0, z < quantile(z, probs = pm))
-  
-  mcarData2         <- dat0
-  mcarData2[m, "y"] <- NA
-  
-  mcarData2 %$% cor(y, x, use = "pairwise")
-  @
-  
-  \rmsc{Answer:} We get back to MCAR :)
-  
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}{Crucial Nuance}
-  
-  The missing data mechanisms are not simply characteristics of an incomplete
-  dataset; we also need to account for the analysis.
-  \vb
-  \begin{columns}
-    \begin{column}{0.5\textwidth}
-      
-      <<echo = FALSE, out.width = "100%", message = FALSE>>=
-      marP + scale_color_manual(values = c("blue", "red"),
-                                labels = c("Complete", "Indirect MNAR")
-                                )
-      @
-      
-    \end{column}
-    \begin{column}{0.5\textwidth}
-      
-      <<echo = FALSE, out.width = "100%">>=
-      yDen <- mcarData2 %$% density(y, na.rm = TRUE)
-      
-      pDat <- data.frame(y = c(y0Den$y, yDen$y),
-                         x = c(y0Den$x, yDen$x),
-                         g = rep(c("Complete", "MCAR2"),
-                                 each = length(yDen$y)
-                                 )
-                         )
-      
-      ggplot(data = pDat, mapping = aes(x = x, y = y, color = g)) +
-          geom_line(size = 1) +
-          theme_classic() +
-          theme(text = element_text(family = "Courier", size = 16)) +
-          ylab("Density") +
-          xlab("Value of Y") +
-          scale_color_manual(values = c("blue", "red")) +
-          theme(legend.position = c(0.8, 0.95), legend.title = element_blank())
-      @
-      
-    \end{column}
-  \end{columns}
-  
-\end{frame}
-
-\watermarkon %-----------------------------------------------------------------%
-
-\begin{frame}[allowframebreaks]{Testing the Missing Data Mechanism}
-
-  We cannot fully test the MAR or MNAR assumptions.
-  \begin{itemize}
-  \item To do so would require knowing the values of the missing data.
-    \vc
-  \item We can find observed predictors of missingness.
-    \begin{itemize}
-    \item Use classification algorithms to predict missingness from $Y_{obs}$.
-      \vc
-    \item We can never know that we have discovered all MAR predictors.
-    \end{itemize}
-    \vc
-  \item In practice, MAR and MNAR live on the ends of a continuum.
-    \begin{itemize}
-    \item Our missing data problem exists at some unknown point along this
-      continuum.
-      \vc
-    \item We can do a lot to nudge our problem towards the MAR side.
-    \end{itemize}
-  \end{itemize}
-
-  \pagebreak
-
-  We can (partially) test the MCAR assumption.
-  \begin{itemize}
-  \item With MCAR, the missing data and the observed data should have the same
-    distribution.
-    \vc
-  \item We can test for MCAR by testing the distributions of \emph{auxiliary
-    variables}, $\mathbf{Z}$.
-    \begin{itemize}
-    \item Use a t-test to compare the subset of $Z_p$ that corresponds to
-      $Y_{mis}$ to the subset corresponding to $Y_{obs}$.
-      \vc
-    \item The \citet{little:1988_mcar} MCAR test is a multivariate version of this.
-    \end{itemize}
-  \end{itemize}
-  \vc
-  These procedures actually test if the data are \emph{observed} completely at
-  random.
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\sectionslide{Missing Data Treatments}
+\subsection{Deletion-Based Methods}
 
 %------------------------------------------------------------------------------%
 
@@ -727,17 +115,16 @@ source("code/sim_missing/code/simMissingness.R")
 
   <<>>=
   ## Read in some example data:
-  diabetes1 <- diabetes2 <-
-      readRDS(paste0(dataDir, "diabetes_norm.rds"))
+  dat0 <- dat1 <- readRDS(paste0(dataDir, "diabetes_norm.rds"))
   
   ## Simulated missingness based on 'bmi':
-  m <- simLinearMissingness(data  = diabetes2,
+  m <- simLinearMissingness(data  = dat1,
                             pm    = 0.30,
-                            preds = c("bmi", "age"),
+                            preds = "bmi",
                             auc   = 0.85)$r
   
   ## Impose missing on 'glu' according to the missingess above:
-  diabetes2[m, c("glu", "bp")] <- NA
+  dat1[m, "glu"] <- NA
   @ 
   
 \end{frame}
@@ -747,9 +134,10 @@ source("code/sim_missing/code/simMissingness.R")
 \begin{frame}[fragile]{Example}
  
   <<echo = FALSE, cache = TRUE, fig.asp = 0.55>>=
-  diabetes1$Response <- factor(m, labels = c("Observed", "Missing"))
+  dat00 <- dat0
+  dat0$Response <- factor(m, labels = c("Observed", "Missing"))
   
-  p0 <- ggplot(data = diabetes1, mapping = aes(x = bmi, y = glu)) +
+  p0 <- ggplot(data = dat0, mapping = aes(x = bmi, y = glu)) +
       theme_classic() +
       theme(text = element_text(family = "Courier", size = 16)) +
       xlab("BMI") +
@@ -757,7 +145,7 @@ source("code/sim_missing/code/simMissingness.R")
   
   ggarrange(
       p0 + 
-      geom_point(size = 0.75) + 
+      geom_point(size = 0.5) + 
       ggtitle("Fully Observed Data") +
       theme(text = element_text(size = 8),
             axis.title = element_blank(),
@@ -765,13 +153,14 @@ source("code/sim_missing/code/simMissingness.R")
             ),
       
       p0 + 
-      geom_point(aes(color = Response), size = 0.75) +
-      geom_smooth(method = "lm", se = FALSE, color = "blue") + 
-      geom_smooth(data = diabetes2,
+      geom_point(aes(color = Response), size = 0.5) +
+      geom_smooth(method = "lm", se = FALSE, color = "blue", linewidth = 0.5) + 
+      geom_smooth(data = dat1,
                   mapping = aes(bmi, glu),
                   method = "lm",
                   se = FALSE,
-                  color = "red") + 
+                  color = "red",
+                  linewidth = 0.5) + 
       scale_color_manual(values = c("black", "gray")) +
       ggtitle("Incomplete Data") +
       theme(text = element_text(size = 8),
@@ -789,6 +178,7 @@ source("code/sim_missing/code/simMissingness.R")
                                        rot = 90),
                       bottom = text_grob("BMI", family = "Courier", size = 10)
                       )
+
   @
 
 \end{frame}
@@ -797,61 +187,49 @@ source("code/sim_missing/code/simMissingness.R")
 
 \begin{frame}[fragile]{Example}
 
-  <<>>=
-  diabetes1 %>% select(bmi, glu, bp) %>% cor()
-  diabetes2 %>% select(bmi, glu, bp) %>% cor(use = "complete")
-  @ 
-  
-\end{frame}
-
-%------------------------------------------------------------------------------
-
-\begin{frame}[fragile]{Example}
-
-  <<>>=
-  diabetes1 %>% select(bmi, glu, bp) %>% cor()
-  diabetes2 %>% select(bmi, glu, bp) %>% cor(use = "pairwise")
-  @ 
-
-\end{frame}
-
-%------------------------------------------------------------------------------
-
-\begin{frame}[fragile]{Example}
-
-  <<>>=
-  mean(diabetes1$glu)
-  mean(diabetes2$glu, na.rm = TRUE)
-  var(diabetes1$glu)
-  var(diabetes2$glu, na.rm = TRUE)
-  @ 
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example}
-
-  <<>>=
-  s1 <- lm(glu ~ bmi + bp, data = diabetes1) %>% summary()
-  s2 <- lm(glu ~ bmi + bp, data = diabetes2) %>% summary()
-  
-  s1$r.squared
-  s2$r.squared
-  @ 
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      <<echo = FALSE, cache = TRUE>>=
+      dat00 %<>% data.frame(g = "Fully Observed")
+      dat1 %<>% data.frame(g = "MAR w/ Deletion")
+      
+      rbind(dat00, dat1) %>%
+          ggplot(aes(x = glu, color = g)) +
+          geom_density(size = 1) +
+          theme_classic() +
+          theme(text = element_text(family = "Courier", size = 16)) +
+          ylab("Density") +
+          xlab("Blood Glucose") +
+          scale_color_manual(values = c("blue", "red")) +
+          theme(legend.position = c(0.8, 0.95), legend.title = element_blank())
+      @
+      
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      
+      <<echo = FALSE, cache = TRUE>>=
+      rbind(dat00, dat1) %>%
+          ggplot(aes(x = bmi, y = glu, color = g)) +
+          geom_density_2d(bins = 15) +
+          theme_classic() +
+          theme(text = element_text(family = "Courier", size = 16)) +
+          xlab("BMI") +
+          ylab("Blood Glucose") +
+          scale_color_manual(values = c("blue", "red")) +
+          theme(legend.position = c(0.85, 0.075),
+                legend.title = element_blank()
+                )
+      @
+      
+    \end{column}
+  \end{columns}
 
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}[fragile]{Example}
-
-  <<>>=
-  s1$coef
-  s2$coef
-  @
-  
-\end{frame}
+\subsection{Deterministic Imputation Methods}
 
 %------------------------------------------------------------------------------%
 
@@ -887,16 +265,15 @@ source("code/sim_missing/code/simMissingness.R")
       \only<2>{
         
         <<echo = FALSE, cache = TRUE>>=
-        miceM <- mice(data      = diabetes2[ , c("bmi", "glu")],
-                      m         = 1,
-                      maxit     = 1,
-                      method    = "mean",
-                      printFlag = FALSE)
+        imputed <- dat1 %>%
+            dplyr::select(bmi, glu) %>%
+            mice(m         = 1,
+                 maxit     = 1,
+                 method    = "mean",
+                 printFlag = FALSE) %>%
+            complete(1)
         
-        datM0 <- datM <- complete(miceM, 1)
-        datM[!m, ] <- NA
-        
-        p2 <- p1 + geom_point(data    = datM,
+        p2 <- p1 + geom_point(data    = imputed[m, ],
                               mapping = aes(y = glu, x = bmi),
                               colour  = "red")
         p2
@@ -907,12 +284,12 @@ source("code/sim_missing/code/simMissingness.R")
       \only<3>{
         
         <<echo = FALSE, cache = TRUE>>=
-        p2 + geom_smooth(data    = diabetes1,
+        p2 + geom_smooth(data    = dat0,
                          mapping = aes(y = glu, x = bmi),
                          method  = "lm",
                          color   = "blue",
                          se      = FALSE) +
-            geom_smooth(data    = datM0,
+            geom_smooth(data    = imputed,
                         mapping = aes(y = glu, x = bmi),
                         method  = "lm",
                         color   = "red",
@@ -930,52 +307,57 @@ source("code/sim_missing/code/simMissingness.R")
 
 \begin{frame}[fragile]{Example}
   
-  <<>>=
-  imputed <- diabetes2
-  imputed[m, "glu"] <- mean(imputed$glu, na.rm = TRUE)
-  imputed[m, "bp"]  <- mean(imputed$bp, na.rm = TRUE)
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      <<echo = FALSE, cache = TRUE>>=
+      imputed <- dat1 %>%
+          dplyr::select(-bmi, -glu, -g) %>%
+          data.frame(imputed, g = "Mean Sub.")
+      
+      rbind(dat00, imputed) %>%
+          ggplot(aes(x = glu, color = g)) +
+          geom_density(size = 1) +
+          theme_classic() +
+          theme(text = element_text(family = "Courier", size = 16)) +
+          ylab("Density") +
+          xlab("Blood Glucose") +
+          scale_color_manual(values = c("blue", "red")) +
+          theme(legend.position = c(0.8, 0.95), legend.title = element_blank())
+      @
+      
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      
+      <<echo = FALSE, cache = TRUE>>=
+      rbind(dat00, imputed) %>%
+          ggplot(aes(x = bmi, y = glu, color = g)) +
+          geom_density_2d(bins = 15) +
+          theme_classic() +
+          theme(text = element_text(family = "Courier", size = 16)) +
+          xlab("BMI") +
+          ylab("Blood Glucose") +
+          scale_color_manual(values = c("blue", "red")) +
+          theme(legend.position = c(0.85, 0.075),
+                legend.title = element_blank()
+                )
+      @
+      
+    \end{column}
+  \end{columns}
   
-  diabetes1 %>% select(bmi, glu, bp) %>% cor()
-  imputed %>% select(bmi, glu, bp) %>% cor()
-  @ 
-
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}[fragile]{Example}
-
-  <<>>=
-  mean(diabetes1$glu)
-  mean(imputed$glu, na.rm = TRUE)
-  var(diabetes1$glu)
-  var(imputed$glu, na.rm = TRUE)
-  @ 
+\begin{frame}[fragile]{Implementation}
   
-\end{frame}
+  <<eval = FALSE>>=
+  dat1[m, "glu"] <- mean(dat1$glu, na.rm = TRUE)
 
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example}
-
-  <<>>=
-  s1 <- lm(glu ~ bmi + bp, data = diabetes1) %>% summary()
-  s2 <- lm(glu ~ bmi + bp, data = imputed) %>% summary()
-  
-  s1$r.squared
-  s2$r.squared
+  miceOut <- mice(data = dat1, m = 1, maxit = 1, method = "mean")
+  impData <- complete(miceOut, 1)
   @ 
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example}
-
-  <<>>=
-  s1$coef
-  s2$coef
-  @
   
 \end{frame}
 
@@ -1011,16 +393,15 @@ source("code/sim_missing/code/simMissingness.R")
       \only<2>{
 
         <<echo = FALSE, cache = TRUE>>=
-        miceD <- mice(data      = diabetes2[ , c("bmi", "glu")],
-                      m         = 1,
-                      maxit     = 1,
-                      method    = "norm.predict",
-                      printFlag = FALSE)
+        imputed <- dat1 %>%
+            dplyr::select(bmi, glu) %>%
+            mice(m         = 1,
+                 maxit     = 1,
+                 method    = "norm.predict",
+                 printFlag = FALSE) %>%
+            complete(1)
 
-        datD0 <- datD <- complete(miceD, 1)
-        datD[!m, ] <- NA
-        
-        p2 <- p1 + geom_point(data = datD,
+        p2 <- p1 + geom_point(data = imputed[m, ],
                               mapping = aes(y = glu, x = bmi),
                               colour = "red")
         p2
@@ -1030,12 +411,12 @@ source("code/sim_missing/code/simMissingness.R")
       \only<3>{
         
         <<echo = FALSE, cache = TRUE>>=
-        p2 + geom_smooth(data    = diabetes1,
+        p2 + geom_smooth(data    = dat0,
                          mapping = aes(y = glu, x = bmi),
                          method  = "lm",
                          color   = "blue",
                          se      = FALSE) +
-            geom_smooth(data    = datD0,
+            geom_smooth(data    = imputed,
                         mapping = aes(y = glu, x = bmi),
                         method  = "lm",
                         color   = "red",
@@ -1049,71 +430,63 @@ source("code/sim_missing/code/simMissingness.R")
   
 \end{frame}
 
-\watermarkon %-----------------------------------------------------------------%
+%------------------------------------------------------------------------------%
 
 \begin{frame}[fragile]{Example}
+  
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      <<echo = FALSE, cache = TRUE>>=
+      imputed <- dat1 %>%
+          dplyr::select(-bmi, -glu, -g) %>%
+          data.frame(imputed, g = "Det. Reg. Imp.")
+      
+      rbind(dat00, imputed) %>%
+          ggplot(aes(x = glu, color = g)) +
+          geom_density(size = 1) +
+          theme_classic() +
+          theme(text = element_text(family = "Courier", size = 16)) +
+          ylab("Density") +
+          xlab("Blood Glucose") +
+          scale_color_manual(values = c("blue", "red")) +
+          theme(legend.position = c(0.8, 0.95), legend.title = element_blank())
+      @
+      
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      
+      <<echo = FALSE, cache = TRUE>>=
+      rbind(dat00, imputed) %>%
+          ggplot(aes(x = bmi, y = glu, color = g)) +
+          geom_density_2d(bins = 15) +
+          theme_classic() +
+          theme(text = element_text(family = "Courier", size = 16)) +
+          xlab("BMI") +
+          ylab("Blood Glucose") +
+          scale_color_manual(values = c("blue", "red")) +
+          theme(legend.position = c(0.85, 0.075),
+                legend.title = element_blank()
+                )
+      @
+      
+    \end{column}
+  \end{columns}
+  
+\end{frame}
+
+\watermarkon %-----------------------------------------------------------------%
+
+\begin{frame}[fragile]{Implementation}
  
-  <<>>=
-  imputed <- mice(data      = diabetes2, 
-                  m         = 1, 
-                  maxit     = 20,
-                  printFlag = FALSE,
-                  method    = "norm.predict") %>% 
-      complete(1)
+  <<eval = FALSE>>=
+  miceOut <- mice(data = dat1, m = 1, method = "norm.predict") 
+  impData <- complete(miceOut, 1)
   @ 
   
 \end{frame}
 
-\watermarkoff %----------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example}
-
-  <<>>=
-  diabetes1 %>% select(bmi, glu, bp) %>% cor()
-  imputed %>% select(bmi, glu, bp) %>% cor()
-  @ 
-
-\end{frame}
-
 %------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example}
-
-  <<>>=
-  mean(diabetes1$glu)
-  mean(imputed$glu, na.rm = TRUE)
-  var(diabetes1$glu)
-  var(imputed$glu, na.rm = TRUE)
-  @ 
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example}
-
-  <<>>=
-  s1 <- lm(glu ~ bmi + bp, data = diabetes1) %>% summary()
-  s2 <- lm(glu ~ bmi + bp, data = imputed) %>% summary()
-  
-  s1$r.squared
-  s2$r.squared
-  @ 
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example}
-
-  <<>>=
-  s1$coef
-  s2$coef
-  @
-  
-\end{frame}
-
-\watermarkon %-----------------------------------------------------------------%
 
 \begin{frame}{Bad Methods (These almost never work)}
 
@@ -1170,6 +543,9 @@ source("code/sim_missing/code/simMissingness.R")
 \begin{frame}{LOCF}
   
   <<echo = FALSE, cache = TRUE>>=
+  ## Stash the diabetes datasets:
+  diabetes <- list(dat0 = dat0, dat00 = dat00, dat1 = dat1)
+  
   ## Simulate some longitudinal data with random slopes:
   n1 <- 5
   n2 <- 50
@@ -1286,11 +662,16 @@ source("code/sim_missing/code/simMissingness.R")
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile]{Example}
- 
+
+  <<echo = FALSE>>=
+  fullData <- dat1
+  locfData <- dat3
+  @
+  
   <<>>=
   ## Fit some multilevel regression models
-  fit1 <- lmer(y ~ t + (t | id), data = dat1) # Full data
-  fit2 <- lmer(y ~ t + (t | id), data = dat3) # LOCF data
+  fit1 <- lmer(y ~ t + (t | id), data = fullData)
+  fit2 <- lmer(y ~ t + (t | id), data = locfData)
   @ 
   
   <<echo = FALSE, fig.asp = 0.5>>=
@@ -1345,6 +726,10 @@ source("code/sim_missing/code/simMissingness.R")
 
 %------------------------------------------------------------------------------%
 
+\section{OK Methods}
+
+%------------------------------------------------------------------------------%
+
 \begin{frame}{OK Methods (These sometimes work)}
 
   \begin{columns}
@@ -1372,23 +757,27 @@ source("code/sim_missing/code/simMissingness.R")
       \only<1>{
         
         <<echo = FALSE>>=
-        p1
+        dat1  <- diabetes$dat1
+        dat0  <- diabetes$dat0
+        dat00 <- diabetes$dat00
+        
+        imputed <- dat1 %>%
+            dplyr::select(bmi, glu) %>%
+            mice(m         = 1,
+                 maxit     = 1,
+                 method    = "norm.nob",
+                 seed      = 235711,
+                 printFlag = FALSE) %>%
+            complete(1)
+        
+        p1 + imputed %$% ylim(min(glu), max(glu))
         @ 
         
       }
       \only<2>{
         
         <<echo = FALSE, cache = TRUE>>=
-        miceS <- mice(data      = diabetes2[ , c("bmi", "glu")],
-                      m         = 1,
-                      maxit     = 1,
-                      method    = "norm.nob",
-                      printFlag = FALSE)
-        
-        datS0 <- datS <- complete(miceS, 1)
-        datS[!m, ] <- NA
-        
-        p2 <- p1 + geom_point(data = datS,
+        p2 <- p1 + geom_point(data = imputed[m, ],
                               mapping = aes(y = glu, x = bmi),
                               colour = "red")
         p2
@@ -1398,12 +787,12 @@ source("code/sim_missing/code/simMissingness.R")
       \only<3>{
         
         <<echo = FALSE, cache = TRUE>>=
-        p2 + geom_smooth(data    = diabetes1,
+        p2 + geom_smooth(data    = dat0,
                          mapping = aes(y = glu, x = bmi),
                          method  = "lm",
                          color   = "blue",
                          se      = FALSE) +
-            geom_smooth(data    = datD0,
+            geom_smooth(data    = imputed,
                         mapping = aes(y = glu, x = bmi),
                         method  = "lm",
                         color   = "red",
@@ -1417,71 +806,63 @@ source("code/sim_missing/code/simMissingness.R")
 
 \end{frame}
 
-\watermarkon %-----------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example}
- 
-  <<>>=
-  imputed <- mice(data      = diabetes2, 
-                  m         = 1, 
-                  maxit     = 20,
-                  printFlag = FALSE,
-                  method    = "norm.nob") %>% 
-      complete(1)
-  @ 
-
-\end{frame}
-
-\watermarkoff %----------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example}
-
-  <<>>=
-  diabetes1 %>% select(bmi, glu, bp) %>% cor()
-  imputed %>% select(bmi, glu, bp) %>% cor()
-  @ 
-
-\end{frame}
-
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile]{Example}
-
-  <<>>=
-  mean(diabetes1$glu)
-  mean(imputed$glu)
-  var(diabetes1$glu)
-  var(imputed$glu)
-  @ 
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example}
-
-  <<>>=
-  s1 <- lm(glu ~ bmi + bp, data = diabetes1) %>% summary()
-  s2 <- lm(glu ~ bmi + bp, data = imputed) %>% summary()
-
-  s1$r.squared
-  s2$r.squared
-  @ 
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example}
-
-  <<>>=
-  s1$coef
-  s2$coef
-  @
+  
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      <<echo = FALSE, cache = TRUE>>=
+      imputed <- dat1 %>%
+          dplyr::select(-bmi, -glu, -g) %>%
+          data.frame(imputed, g = "Sto. Reg. Imp.")
+      
+      rbind(dat00, imputed) %>%
+          ggplot(aes(x = glu, color = g)) +
+          geom_density(size = 1) +
+          theme_classic() +
+          theme(text = element_text(family = "Courier", size = 16)) +
+          ylab("Density") +
+          xlab("Blood Glucose") +
+          scale_color_manual(values = c("blue", "red")) +
+          theme(legend.position = c(0.8, 0.95), legend.title = element_blank())
+      @
+      
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      
+      <<echo = FALSE, cache = TRUE>>=
+      rbind(dat00, imputed) %>%
+          ggplot(aes(x = bmi, y = glu, color = g)) +
+          geom_density_2d(bins = 15) +
+          theme_classic() +
+          theme(text = element_text(family = "Courier", size = 16)) +
+          xlab("BMI") +
+          ylab("Blood Glucose") +
+          scale_color_manual(values = c("blue", "red")) +
+          theme(legend.position = c(0.85, 0.075),
+                legend.title = element_blank()
+                )
+      @
+      
+    \end{column}
+  \end{columns}
   
 \end{frame}
 
 \watermarkon %-----------------------------------------------------------------%
+
+\begin{frame}[fragile]{Implementation}
+ 
+  <<eval = FALSE>>=
+  miceOut <- mice(data = dat1, m = 1, seed = 42, method = "norm.nob") 
+  impData <- complete(1)
+  @ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
 
 \begin{frame}{OK Methods (These sometimes work)}
 
@@ -1502,6 +883,18 @@ source("code/sim_missing/code/simMissingness.R")
 \end{frame}
 
 %------------------------------------------------------------------------------%
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
 
 \begin{frame}{Good Methods (These almost always work)}
 
@@ -1655,7 +1048,7 @@ source("code/sim_missing/code/simMissingness.R")
 \begin{frame}[fragile]{Example}
  
   <<>>=
-  miceOut <- mice(data      = diabetes2, 
+  miceOut <- mice(data      = dat1, 
                   m         = 25, 
                   maxit     = 20,
                   printFlag = FALSE,
@@ -1669,7 +1062,7 @@ source("code/sim_missing/code/simMissingness.R")
 \begin{frame}[fragile]{Example}
 
   <<>>=
-  diabetes1 %>% select(bmi, glu, bp) %>% cor()
+  dat0 %>% select(bmi, glu, bp) %>% cor()
   pooledCorMat(miceOut, c("bmi", "glu", "bp"))
   @ 
 
@@ -1680,9 +1073,9 @@ source("code/sim_missing/code/simMissingness.R")
 \begin{frame}[fragile]{Example}
 
   <<>>=
-  mean(diabetes1$glu)
+  mean(dat0$glu)
   with(miceOut, mean(glu))$analyses %>% unlist() %>% mean()
-  var(diabetes1$glu)
+  var(dat0$glu)
   with(miceOut, var(glu))$analyses %>% unlist() %>% mean()
   @ 
 
@@ -1693,7 +1086,7 @@ source("code/sim_missing/code/simMissingness.R")
 \begin{frame}[fragile]{Example}
 
   <<>>=
-  fit1 <- lm(glu ~ bmi + bp, data = diabetes1)
+  fit1 <- lm(glu ~ bmi + bp, data = dat0)
   fit2 <- with(miceOut, lm(glu ~ bmi + bp))
   
   summary(fit1)$r.squared
@@ -1762,11 +1155,11 @@ source("code/sim_missing/code/simMissingness.R")
 \begin{frame}[fragile]{Example}
   
   <<>>=
-  fit <- diabetes2 %>% 
+  fit <- dat1 %>% 
       select(bmi, glu, bp) %>% 
       lavCor(missing = "fiml", output = "sampstat")
   
-  mean(diabetes1$glu)
+  mean(dat0$glu)
   fit$mean["glu"]
   @   
 
@@ -1777,7 +1170,7 @@ source("code/sim_missing/code/simMissingness.R")
 \begin{frame}[fragile]{Example}
 
   <<>>=
-  diabetes1 %>% select(bmi, glu, bp) %>% cov()
+  dat0 %>% select(bmi, glu, bp) %>% cov()
   fit$cov
   @
 
@@ -1789,7 +1182,7 @@ source("code/sim_missing/code/simMissingness.R")
 
   <<>>=
   mod <- "glu ~ 1 + bmi + bp"
-  fit <- sem(mod, data = diabetes2, missing = "fiml")
+  fit <- sem(mod, data = dat1, missing = "fiml")
   
   summary(fit1)$r.squared
   inspect(fit, "r2")
