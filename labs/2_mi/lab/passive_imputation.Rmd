@@ -1,0 +1,577 @@
+---
+title: "Lab 2b: Passive Imputation"
+subtitle: "Missing Data in R"
+author: "Kyle M. Lang"
+date: "Updated: `r format(Sys.time(), format = '%Y-%m-%d')`"
+params:
+  answers: false
+output: 
+   bookdown::html_document2:
+    toc: true
+    toc_depth: 1
+    toc_float: true
+    number_sections: true
+    css: "../../../resources/style.css"
+---
+
+```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
+library(knitr)
+library(dplyr)
+
+set.seed(235711)
+
+## Define an asis engine that will evaluate inline code within an asis block:
+knit_engines$set(asis = function(options) {
+  if(options$echo && options$eval) knit_child(text = options$code)
+}
+)
+
+opts_chunk$set(include = params$answers, 
+               echo = params$answer, 
+               message = FALSE,
+               warning = FALSE,
+               fig.align = "center")
+```
+
+---
+
+In these lab exercises, you will explore how certain pathological data 
+characteristics can affect imputation results. You will also learn a very useful 
+technique for imputing variables with known relations: *Passive Imputation*.
+
+---
+
+# Setup
+
+---
+
+##
+
+**Load the `mice` package.**
+
+```{r}
+library(mice)
+```
+
+---
+
+The *mammalsleep* dataset is part of **mice**. This dataset contains the 
+[Allison and Cicchetti (1976)][data_ref] data for mammalian species.
+
+- Unless otherwise specified, all questions in this section refer to the 
+*mammalsleep* data.
+
+---
+
+##
+
+**Check the documentation for the *mammalsleep* dataset.**
+
+```{r, eval = FALSE}
+?mammalsleep
+```
+
+---
+
+##
+
+**Summarize the data to get an overview of their structure.**
+
+```{r}
+head(mammalsleep)
+summary(mammalsleep)
+str(mammalsleep)
+```
+
+---
+
+##
+
+**Compute the missing data patterns in the data.**
+
+- How many different missing data patterns are present in the data?
+- Which pattern occurs most frequently in the data?
+
+```{r}
+(pats <- md.pattern(mammalsleep))
+```
+
+```{asis}
+The *mammalsleep* data contain `r nrow(pats) - 1 ` total response patterns. The 
+complete case pattern (i.e., the pattern wherein all variables were observed) 
+occurred the most frequently (`r rownames(pats) %>% as.numeric() %>% max(na.rm = TRUE)` 
+times).
+```
+
+---
+
+# Naive Imputation
+
+---
+
+## {#imp1}
+
+**Use `mice()` to multiply impute the *mammalsleep* data. **
+
+- Create 5 imputations.
+- Use 10 iterations.
+- Use predictive mean matching as the imputation method.
+- Set a random number seed.
+- Keep all other options at their default values.
+
+```{r, cache = TRUE}
+imp <- mice(mammalsleep, maxit = 10, seed = 235711, print = FALSE)
+```
+
+When you run this imputation, you will probably see a warning about "logged 
+events". When `mice()` encounters certain computational difficulties (e.g., 
+extreme collinearity), it will take automatic remedial action and log the action 
+in the `loggedEvents` slot of the *mids* object.
+
+If you ever see a warning about logged events, you should check the `loggedEvents` 
+slot to see what actions were taken. You want to assess if the actions were 
+appropriate and judge the likely impact that the actions will have on your 
+results. If the actions `mice()` has taken seem too extreme, you need to address 
+the underlying data issues and rerun the imputation with the cleaned data.
+
+---
+
+##
+
+**Check the contents of the `loggedEvents` slot in the *mids* object you created 
+in Question \@ref(imp1).** 
+
+- What problem is `mice()` logging here?
+
+```{r}
+imp$loggedEvents %>% head()
+```
+
+```{asis}
+The imputation models seem to have more predictors ($P = 71$) than observations 
+($N \approx 50$). It looks like something may have gone "wrong" with the `species` 
+variable. To get around the issue, `mice()` has applied a ridge penalty.
+```
+
+---
+
+We can get a sense of how impactful the issues noted in the `loggedEvents` log 
+have been through our usual diagnostic plots.
+
+---
+
+##
+
+**Create trace plots, density plots, and strip plots from the *mids* object you 
+created in Question \@ref(imp1).**
+
+What do you conclude vis-a-vis convergence and the validity of these imputations?
+
+```{r}
+plot(imp)
+densityplot(imp)
+stripplot(imp)
+```
+
+```{asis}
+The trace plots look OK. So, it appears that the imputation model have converged 
+onto some equilibrium. The density plots and the strip plots, however, suggest 
+very poor imputations. The density plots, in particular, clearly show far too 
+little variability in the imputed values. Nearly all of the imputations collapse 
+onto a small range of values (hence the "sharp" spikes in the density plots). 
+Although the imputation models may have converged, it appears they have converged 
+onto the wrong solution. These imputations are certainly not reasonable.
+```
+
+---
+
+For didactic purposes, let's "play the fool", ignore any information we may have 
+gleaned from the diagnostic plots, and analyze these imputed data via the usual 
+process. 
+
+---
+
+##
+
+**Use the imputed data you created in Question \@ref(imp1) to fit the following 
+regression model.**
+
+$Y_{sws} = \beta_0 + \beta_1 X_{ln(bw)} + \beta_2 X_{odi} + \varepsilon$
+
+Pool the MI estimates, and check the RIV, $\lambda$, and FMI.
+
+- What do you notice?
+
+```{r}
+est <- with(imp, lm(sws ~ log(bw) + odi)) %>% pool()
+summary(est)
+est
+```
+
+```{asis}
+Although the estimates seem sensible, the RIV, $\lambda$, and FMI values all 
+suggest that the missing data have had a very large influence on the results. 
+For example, the $\lambda$ for $\hat{\beta}_1$ tells us that 
+`r 100 * est$pooled$lambda[2] %>% round(1)`% of the sampling variance in 
+$\hat{\beta}_1$ is attributable to the missing data and our treatment thereof. 
+Although we already knew these imputations were suspect, these regression 
+results further confirm the poor quality of the imputations.
+```
+
+---
+
+The poor performance you should have noted above is largely driven by the 
+`species` variable. This variable is a factor with `r nlevels(mammalsleep$species)` 
+levels. So, when we include this variable as a predictor in the imputation models, 
+it enters the model as a set of `r nlevels(mammalsleep$species) - 1` dummy codes. 
+These dummy codes produce the $P > N$ problem noted in the `loggedEvents` log 
+which leads to poor imputations.
+
+---
+
+## {#imp2}
+
+**Use `mice()` to re-impute the *mammalsleep* data.**
+
+Use the same settings from Question \@ref(imp1), but do not use `species` as a 
+predictor in any of the imputation models.
+
+- Name the resulting *mids* object `imp1`.
+
+```{r, cache = TRUE}
+pred <- imp$predictorMatrix
+pred[ , "species"] <- 0
+
+imp1 <- mice(mammalsleep, 
+             predictorMatrix = pred, 
+             maxit = 10, 
+             seed = 235711, 
+             print = FALSE)
+```
+
+##
+
+**If you get a warning about logged events. Check the `loggedEvents` slot of the 
+*mids* object you created in Question \@ref(imp2).**
+
+```{r}
+imp1$loggedEvents
+```
+
+```{asis}
+This time, the logged events are telling us about collinearity problems and the 
+actions taken to remedy the collinearity. Specifically, when imputing `mls` and 
+`gt`, `ts` was collinear with other predictors, so it was removed from the model.
+```
+
+---
+
+##
+
+**Create trace plots, density plots, and strip plots from the *mids* object you 
+created in Question \@ref(imp2).**
+
+What do you conclude vis-a-vis convergence and the validity of these imputations?
+
+```{r}
+plot(imp1)
+densityplot(imp1)
+stripplot(imp1)
+```
+
+```{asis}
+This time, the trace plots suggest some serious identification issues. Notice 
+how the individual lines in the plots of the means for `ps` and `ts` are stable 
+but do not mix. This pattern is indicative of an under-identified model. 
+Basically, the data do not contain enough information to define a unique
+solution for some parameters.
+
+The imputations look pretty much fine, but we don't care. The imputation model 
+must converge before we can move on to considering the plausibility of the 
+imputed values.
+```
+
+---
+
+The convergence issues you should have noticed above are caused by structural 
+features of the data. Total sleep (`ts`) is the sum of paradoxical sleep (`ps`) 
+and short wave sleep (`sws`). The imputation model treats `ts` as distinct and 
+stochastically related to `ps` and `sws`, but `ts` is actually a deterministic 
+function of `ps` and `sws`. This deterministic relation is ignored in the 
+imputations, and the resulting circularity in the imputations keeps the model 
+from finding a unique solution. 
+
+Thankfully, `mice()` offers a convenient routine for addressing exactly these 
+types of known relations among variables in the imputation model: *passive 
+imputation*. With passive imputation, we can account for transformations, 
+combinations, and recoded variables when imputing their missing data. 
+
+---
+
+# Passive Imputation
+
+---
+
+Frequently, we need to transform, combine, or recode variables. When such a need 
+arises with incomplete variables that we'd like to impute, we have a few options.
+
+1. We could impute the original, un-transformed, variable and transform the 
+completed version afterwards (the so-called *impute-then-transform* approach).
+1. We could transform the incomplete variable and impute the transformed version 
+as if it were any other variable (the so-called *just-another-variable* approach). 
+
+Both of these approaches have an important limitation, though. In neither case 
+does the imputation model have access to both the original and the transformed 
+versions of the variable in question. The imputations are either generated using 
+the information in the raw version of the variable (in the impute-then-transform 
+approach) or using the information in the transformation (in the 
+just-another-variable approach), but not both. Note that keeping both the raw 
+and transformed versions of a variable in the model is not an option since doing 
+so induces perfectly collinear variables. 
+
+To solve this problem, `mice()` implements a third approach called *passive 
+imputation*. The goal of passive imputation is to maintain known, deterministic 
+relations among incomplete variables throughout the imputation process and to 
+allow the imputation model to use the transformed variables as predictors when 
+imputing other variables (other than the raw version of the transformed variables, 
+themselves).
+
+For example, we can use passive imputation to maintain the following 
+deterministic function in the `boys` data
+$$\text{BMI} = \frac{\text{Weight}}{\text{Height}^2}$$
+or this compositional relation in the `mammalsleep` data
+$$\text{ts} = \text{ps}+\text{sws}.$$
+
+---
+
+To implement passive imputation, we need to adjust two features of the `mice()` setup:
+
+1. The method vector
+   - We use the method vector to define the deterministic relations.
+1. The predictor matrix
+   - We adjust the predictor matrix to keep a transformed variable from being 
+   used as a predictor of its raw version.
+
+---
+
+The following code will adjust the method vector from Question \@ref(imp2) to 
+implement passive imputation for `ts`.
+
+```{r, include = TRUE, echo = TRUE}
+(meth <- imp1$method)
+meth["ts"]<- "~ I(sws + ps)"
+meth
+```
+
+Now, `ts` will not be independently imputed along with the other variables. 
+Rather, in each iteration, the most recently completed version of `sws` and `ps` 
+will be added together to define the updated version of `ts`. 
+
+---
+
+The updated version of `ts` defined according to the deterministic relation 
+described above can then be used as a predictor when imputing other variables, 
+but we do not want to use `ts` to impute either `sws` or `ps` (to avoid 
+circularity). So, we need to adjust the predictor matrix to satisfy this 
+restriction. 
+
+```{r, include = TRUE, echo = TRUE}
+(pred <- imp1$predictorMatrix)
+pred[c("sws", "ps"), "ts"] <- 0
+pred
+```
+
+Now, we can re-impute the *mammalsleep* data using passive imputation to account 
+for the deterministic relation between `ts`, `sws`, and `ps`. We do so simply by 
+using the updated method vector and predictor matrix in a regular run of `mice()`. 
+
+```{r, include = TRUE, echo = TRUE, cache = TRUE}
+imp <- mice(mammalsleep, 
+            method = meth, 
+            predictorMatrix = pred, 
+            maxit = 10, 
+            seed = 235711, 
+            print = FALSE)
+```
+
+---
+
+If we inspect the diagnostic plots for these imputations, we see much better 
+performance than we achieved in Questions \@ref(imp1) or \@ref(imp2).
+
+```{r, include = TRUE, echo = TRUE}
+plot(imp)
+densityplot(imp)
+stripplot(imp)
+```
+
+We can see that the pathological non-convergence of Question \@ref(imp2) has 
+been corrected by the passive imputation. 
+
+---
+
+You will now implement passive imputation yourself using the *boys* dataset from 
+the **mice** package. You already explored the missing data in the *boys* data 
+in the last practical, so we will not repeat those steps. 
+
+Unless otherwise specified, all remaining questions refer to the *boys* dataset.
+
+---
+
+## {#passImp1}
+
+**Multiply impute the *boys* data using passive imputation for `bmi`.**
+
+Use passive imputation to maintain the known relation between `bmi`, `wgt`, and 
+`hgt`.
+
+- Specify the method vector entry for `bmi` as `"~ I(wgt / (hgt / 100)^2)"`.
+- Keep the default predictor matrix, for now.
+- Use 20 iterations.
+- Set a random number seed.
+- Leave all other settings at there default values.
+- Name the resulting *mids* object `imp1`.
+
+```{r, cache = TRUE}
+## Use the mice::make.method() function to generate a default method vector:
+(meth <- make.method(boys))
+
+meth["bmi"] <- "~ I(wgt / (hgt / 100)^2)"
+meth
+
+imp1 <- mice(boys, method = meth, maxit = 20, seed = 235711, print = FALSE)
+```
+
+---
+
+Run the following code to inspect the relation between the imputed BMI and the 
+BMI calculated from the imputed height and weight. If the passive imputation was 
+successful, these points should fall along a perfect line.
+
+```{r, include = TRUE, echo = TRUE}
+xyplot(imp1, 
+       bmi ~ I(wgt / (hgt / 100)^2), 
+       ylab = "Imputed BMI", 
+       xlab = "Calculated BMI")
+```
+
+---
+
+##
+
+**Create trace plots, density plots, and strip plots from the *mids* object you 
+created in Question \@ref(passImp1).**
+
+What do you conclude vis-a-vis convergence and the validity of these imputations?
+
+```{r}
+plot(imp1)
+densityplot(imp1)
+stripplot(imp1)
+```
+
+```{asis}
+Although the deterministic definition of `bmi` is now preserved in the completed
+data, the trace plots indicate some pathological behavior for `bmi`, `hgt`, and 
+`wgt`. We also get some absurd imputations for `bmi`. 
+```
+
+---
+
+Of course, the issues you should have spotted in the above imputations are to 
+be expected since we have purposefully omitted the second part of passive 
+imputation. We have not adjusted the predictor matrix, so we have circularity in 
+the imputations. We used passive imputation to create the imputations for `bmi`, 
+but `bmi` is still used as predictor for `wgt` and `hgt`. 
+
+---
+
+## {#passImp2}
+
+**Adjust the predictor matrix to remove the circularity described above.**
+
+Re-impute the *boys* data using the updated predictor matrix.
+
+- Keep all other settings the same as in Question \@ref(passImp1).
+- Name the resulting *mids* object `imp1`.
+
+```{r, cache = TRUE}
+(pred <- imp1$predictorMatrix)
+pred[c("hgt", "wgt"), "bmi"] <- 0
+pred
+
+imp1 <- mice(boys, 
+             method = meth, 
+             predictorMatrix = pred, 
+             maxit = 20,
+             seed = 235711, 
+             print = FALSE)
+```
+
+---
+
+##
+
+**Recreate the `xyplot()` from above using the imputations from Question 
+\@ref(passImp2).**
+
+Is the deterministic definition of `bmi` maintained in the imputed data?
+
+```{r}
+xyplot(imp1, 
+       bmi ~ I(wgt / (hgt / 100)^2), 
+       ylab="Imputed BMI", 
+       xlab="Calculated BMI")
+```
+
+```{asis}
+Yes, the relation is maintained. All points fall along the $Y = X$ line.
+```
+
+---
+
+##
+
+**Create trace plots, density plots, and strip plots from the *mids* object you 
+created in Question \@ref(passImp2).**
+
+What do you conclude vis-a-vis convergence and the validity of these imputations?
+
+```{r}
+plot(imp1)
+densityplot(imp1)
+stripplot(imp1)
+```
+
+```{asis}
+Everything looks good now. The trace plots indicate good convergence (though we 
+clearly need more than the default 5 iterations for the model to stabilize). 
+Judging from the density plots and strip plots, the imputations also seem sensible.
+```
+
+---
+
+**Just for fun: What you shouldn’t do with passive imputation**
+
+Never fix all relations. The algorithm will never escape the starting values.
+
+```{r, include = TRUE, echo = TRUE, cache = TRUE}
+meth <- make.method(boys)
+
+meth["bmi"] <- "~ I(wgt / (hgt / 100)^2)"
+meth["wgt"] <- "~ I(bmi * (hgt / 100)^2)"
+meth["hgt"] <- "~ I(sqrt(wgt / bmi) * 100)"
+
+imp <- mice(boys, method = meth, seed = 235711, print = FALSE)
+
+plot(imp, c("hgt", "wgt", "bmi"))
+```
+
+---
+
+End of Lab 2b
+
+---
+[data_ref]: http://doi.org/10.1126/science.982039
+[rubin_1996]: http://doi.org/10.1080/01621459.1996.10476908
+[wu_et_al_2015]: https://doi.org/10.1080/00273171.2015.1022644

@@ -1,0 +1,592 @@
+---
+title: "Lab 2c: MI Workflows"
+subtitle: "Missing Data in R"
+author: "Kyle M. Lang"
+date: "Updated: `r format(Sys.time(), format = '%Y-%m-%d')`"
+params:
+  answers: true
+output: 
+   bookdown::html_document2:
+    toc: true
+    toc_depth: 1
+    toc_float: true
+    number_sections: true
+    css: "../../../resources/style.css"
+---
+
+```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
+library(knitr)
+library(dplyr)
+
+set.seed(235711)
+
+## Define an asis engine that will evaluate inline code within an asis block:
+knit_engines$set(asis = function(options) {
+  if(options$echo && options$eval) knit_child(text = options$code)
+}
+)
+
+opts_chunk$set(include = params$answers, 
+               echo = params$answer, 
+               message = FALSE,
+               warning = FALSE,
+               fig.align = "center")
+```
+
+---
+
+In these lab exercises you will explore some different workflows that you can 
+use to implement an MI-based analysis.
+
+---
+
+# Setup
+
+---
+
+##
+
+**Load the `mice`, `miceadds`, and `mitools` packages.**
+
+```{r}
+library(mice)
+library(miceadds)
+library(mitools)
+```
+
+---
+
+In this lab, we will be working with the *boys* dataset provided by the **mice** 
+package. The *boys* dataset is distributed with **mice**, so you will be able to 
+access these data once you've loaded the **mice** package. The *boys* data are a 
+subset of a large Dutch dataset containing growth measures from the Fourth Dutch 
+Growth Study. 
+
+Unless otherwise specified, all questions in this section refer to the *boys* 
+dataset. 
+
+---
+
+##
+
+**Check the documentation for the *boys* data.**
+
+```{r, eval = FALSE}
+?boys
+```
+
+---
+
+##
+
+**Summarize the *boys* data to get a sense of their characteristics.**
+
+```{r}
+head(boys)
+summary(boys)
+str(boys)
+```
+
+---
+
+##
+
+**Use the mice::md.pattern() function to summarize the response patterns.**
+
+- How many different missing data patterns are present in the *boys* data?
+- Which pattern occurs most frequently in these data?
+
+```{r}
+(pats <- md.pattern(boys))
+```
+
+```{asis}
+There are 13 total patterns. The pattern where `gen`, `phb`, and `tv` are 
+missing occurs the most frequently.
+```
+
+---
+
+##
+
+**In how many patterns is the variable `gen` missing?**
+
+```{r}
+sum(pats[ , "gen"] == 0)
+```
+
+---
+
+Imputation Phase
+
+---
+
+## {#imp}
+
+**Multiply impute the *boys* data using passive imputation for `bmi`.**
+
+Use passive imputation to maintain the known relation between `bmi`, `wgt`, and 
+`hgt`.
+
+- Specify the method vector entry for `bmi` as `"~ I(wgt / (hgt / 100)^2)"`.
+- Use 20 iterations.
+- Create 10 imputations.
+- Set a random number seed.
+- Leave all other settings at there default values.
+- Name the resulting *mids* object `imp1`.
+
+```{r, cache = TRUE}
+## Use the mice::make.method() function to generate a default method vector:
+(meth <- make.method(boys))
+meth["bmi"] <- "~ I(wgt / (hgt / 100)^2)"
+meth
+
+## Adjust the default predictor matrix to break circularity in the imputations:
+(pred <- make.predictorMatrix(boys))
+pred[c("hgt", "wgt"), "bmi"] <- 0
+pred
+
+imp1 <- mice(boys, 
+             m = 10,
+             maxit = 20, 
+             method = meth, 
+             predictorMatrix = pred,
+             seed = 235711, 
+             print = FALSE)
+```
+
+---
+
+##
+
+**Create trace plots, density plots, and strip plots from the *mids* object you 
+created in Question \@ref(imp).**
+
+What do you conclude vis-a-vis convergence and the validity of these imputations?
+
+```{r}
+plot(imp1)
+densityplot(imp1)
+stripplot(imp1)
+```
+
+```{asis}
+Everything looks good. The imputation model seems to have converged, and the 
+imputed values look reasonable. 
+```
+
+---
+
+# Basic Workflow
+
+---
+
+First, we will continue to explore the workflow we've already been using wherein 
+we fit the analysis models using `with.mids()`. This workflow applies under two 
+conditions:
+
+1. We don't need to post-process the imputed datasets.
+1. The modeling function we want to apply provides `coef()` and `vcov()` methods.
+
+---
+
+## {#analysis1}
+
+**Use the imputed data you created in Question \@ref(imp) to fit the following 
+regression model.**
+
+$Y_{bmi} = \beta_0 + \beta_1 X_{age} + \beta_2 X_{region=east} + 
+\beta_3 X_{region=west} + \beta_4 X_{region=south} + \beta_5 X_{region = city} + 
+\varepsilon$
+
+Pool the MI estimates.
+
+- What are the substantive conclusions?
+- What can you conclude from the FMIs?
+
+```{r}
+fit <- with(imp1, lm(bmi ~ age + reg))
+est <- pool(fit)
+
+summary(est)
+est
+```
+
+```{asis}
+The effects of age and all regions except `city` are statistically significant. 
+BMI increases significantly as the boys age, after controlling for the region in
+which they live. Boys from the eastern, western, and southern regions have 
+significantly lower BMIs than boys from the northern region, after controlling 
+for age.
+
+All FMI estimates are very low, so we can conclude that we have not lost a very
+large proportion of information to the missing data.
+```
+
+---
+
+You may have noticed that the output above only includes information about the 
+coefficients and their significance tests but no model fit information. The $R^2$ 
+statistic is not normally distributed, so we should use a slightly more complex 
+pooling method for the $R^2$. More information on the specifics of pooling the 
+$R^2$ is available in [this section](https://stefvanbuuren.name/fimd/sec-pooling.html) 
+of FIMD and in [Harel (2009)](https://doi.org/10.1080/02664760802553000). The 
+correct pooling rule is implemented by the `mice::pool.r.squared()` function.
+
+---
+
+## 
+
+**Check the documentation for the `mice::pool.r.squared()` function.**
+
+```{r, eval = FALSE}
+?pool.r.squared
+```
+
+---
+
+##
+
+**Use `pool.r.squared()` to pool the $R^2$ and the adjusted $R^2$ for the model 
+you estimated in Question \@ref(analysis1).**
+
+```{r}
+pool.r.squared(fit)
+pool.r.squared(fit, adjusted = TRUE)
+```
+
+---
+
+We also need special techniques to pool the $m$ estimated $F$ statistics in an 
+MI-based analysis. The technical details of these pooling rules are too complex 
+to detail here. The general method was outlined by [Rubin (1987)][rubin_1987] 
+and extended by [Li, Raghunathan, and Rubin (1991)][d1_ref], 
+[Li, Meng, Raghunathan, and Rubin (1991)][d2_ref], and 
+[Meng and Rubin (1992)][d3_ref].
+
+- The [Li, Raghunathan, and Rubin (1991)][d1_ref] method is implemented as 
+`mice::D1()`. 
+- The [Li, Meng, Raghunathan, and Rubin (1991)][d2_ref] method is implemented as 
+`mice::D2()`.
+- The [Meng and Rubin (1992)][d3_ref] method is implemented as `mice::D3()`.
+
+---
+
+##
+
+**Use the `D1()`, `D2()`, and `D3()` functions to pool the $F$ for the model you 
+estimated in Question \@ref(analysis1).**
+
+```{r}
+D1(fit)
+D2(fit)
+D3(fit)
+```
+
+You should notice some differences between the three pooled statistics. Each 
+statistic uses a different pooling formula based on different assumptions. 
+
+- The $D1$ statistic is a direct generalization of the standard 
+[Rubin (1987)][rubin_1987] pooling rules. 
+- The $D2$ statistic requires only the estimated parameters (while $D1$ requires 
+the parameter estimates and their asymptotic covariance matrices).
+- $D3$ is actually a likelihood ratio test transformed to the scale of an 
+F-statistic, so the theoretical underpinnings of the $D3$ statistic are somewhat 
+different from $D1$ and $D2$.
+
+When the appropriate estimates are available, the $D1$ statistic is usually a 
+good choice. A more detailed discussion and comparison of these three statistics 
+is available in [this section](https://stefvanbuuren.name/fimd/sec-multiparameter.html)
+of FIMD.
+
+---
+
+We can also use these functions (as well as the `anova()` function) to do 
+significance testing for model comparisons using MI data.
+
+---
+
+##
+
+**Use the imputed data from Question \@ref(imp) to estimate a restricted model 
+wherein `bmi` is predicted by only `age`.**
+
+Use the `D1()`, `D2()`, `D3()`, and `anova()` functions to compare this 
+restricted model with the full model you estimated in Question \@ref(analysis1). 
+
+- What conclusion do you draw from these tests?
+- Which version of the pooled F statistic is used by `anova()`?
+
+```{r}
+fit0 <- with(imp1, lm(bmi ~ age))
+
+D1(fit, fit0)
+D2(fit, fit0)
+D3(fit, fit0)
+
+anova(fit, fit0)
+```
+
+```{asis}
+- All tests agree that the `reg` factor, as a whole, is not a significant 
+predictor of `bmi`.
+- The `anova()` function appears to be using the $D1$ statistic.
+```
+
+---
+
+# Workflows with Data Processing
+
+---
+
+Sometimes (rather often, actually), we need to process the imputed data before 
+we can fit an analysis model. In such cases, we usually implement something like 
+the following workflow.
+
+1. Impute the data with `mice()`
+1. Use `mice::complete()` to create a list of multiply imputed datasets
+1. Process each dataset
+1. Apply our analysis model to each processed dataset
+1. Pool the results
+
+---
+
+## {#complete}
+
+**Use `mice::complete()` to create a list of imputed datasets from the *mids* 
+object you created in Question \@ref(imp).**
+
+Name the resulting list `impData`. 
+
+```{r}
+impData <- complete(imp1, "all")
+```
+
+---
+
+## {#center}
+
+**Center `age` on 18 in each of the imputed datasets you created in Question 
+\@ref(complete).**
+
+*TIP:* You can use `lapply()` to broadcast the data transformation across all 
+elements in `impData`.
+
+```{r}
+impData <- lapply(impData, mutate, age18 = age - 18)
+```
+
+---
+
+## {#analysis2}
+
+**Use `lapply()` to fit the model from Question \@ref(analysis1) to each of the 
+transformed datasets produced in Question \@ref(center).**
+
+```{r}
+fits <- lapply(impData, function(x) lm(bmi ~ age18 + reg, data = x))
+```
+
+---
+
+At this point, you should have a standard R list containing the 10 fitted *lm* 
+objects. You have a few options for pooling these results.
+
+1. If you simply want to pool the parameter estimates, you can use the 
+`mitools::MIcombine()` function, and directly submit the list of model fits from 
+Question \@ref(analysis2) as input to the function.
+1. If you want to continue to make use of the pooling utilities provided by the 
+**mice** package, you can use the `mice::as.mira()` function to first cast the 
+list from Question \@ref(analysis2) as a *mira* object. You can then pool the 
+results using all the methods you've already learned.
+
+---
+
+##
+
+**Check the documentation for `mitools::MIcombine()` and `mice::as.mira()`.**
+
+```{r, eval = FALSE}
+?MIcombine
+?as.mira
+```
+
+---
+
+##
+
+**Pool the fitted models from Question \@ref(analysis2) using `mitools::MIcombine()`.**
+
+- Summarize the pooled estimates.
+- Extract the fractions of missing information for the parameter estimates.
+
+```{r}
+est <- MIcombine(fits)
+summary(est)
+est$missinfo
+```
+
+---
+
+##
+
+**Pool the fitted models from Question \@ref(analysis2) using `mice::as.mira()` 
+and `mice::pool()`.**
+
+- Summarize the pooled estimates.
+- Extract the fractions of missing information for the parameter estimates.
+- Extract the $\lambda$s for the parameter estimates.
+
+What do you notice vis-a-vis the FMI/$\lambda$ produced by these two pooling 
+approaches?
+
+```{r}
+est <- fits %>% as.mira() %>% pool()
+summary(est)
+ls(est$pooled)
+
+est$pooled$fmi
+est$pooled$lambda
+```
+
+```{asis}
+It looks like the quantity called "missing information" by `mitools::MIcombine()` 
+is equivalent to the quantity called $\lambda$ by `mice::pool()`.
+```
+
+---
+
+# Workflows for Special Pooling
+
+---
+
+If we want to pool parameters from a modeling function that does not provide 
+`coef()` and `vcov()` functions, we cannot use `mice::pool()` or 
+`mitools::MIcombine()` to do so.
+
+Fortunately, as long as we can estimate the parameters of interest and their 
+standard errors from each imputed dataset, we can still pool the results. We can
+use the `mice::pool.scalar()` function to do so.
+
+---
+
+##
+
+**Check the documentation for `mice::pool.scalar()`.**
+
+```{r, eval = FALSE}
+?pool.scalar
+```
+
+---
+
+The `t.test()` function is one popular function for which we cannot use the 
+standard pooling workflow. The following code shows one possible workflow for 
+conducting a t-test using multiply imputed data.
+
+We'll conduct an independent samples t-test for the average testicular volume of 
+boys who are younger than 13 and boys who are 13 or older.
+
+---
+
+```{r, include = TRUE, echo = TRUE}
+library(magrittr)
+
+## Run the t-test on each imputed dataset:
+tests <- lapply(impData, function(x) t.test(tv ~ I(age < 13), data = x))
+
+## Extract the estimated parameters (i.e., mean differences):
+d <- sapply(tests, function(x) diff(x$estimate) %>% abs())
+
+## Extract the standard errors:
+se <- sapply(tests, "[[", x = "stderr")
+
+## Pool the estimates:
+pooled <- pool.scalar(Q = d, U = se^2, n = nrow(impData[[1]]))
+
+## View the pooled parameter estimate:
+pooled$qbar
+
+## Compute the t-statistic using the pooled estimates:
+(t <- pooled %$% (qbar / sqrt(t)))
+
+## Compute the two-tailed p-value:
+2 * pt(t, df = pooled$df, lower.tail = FALSE)
+```
+
+---
+
+##
+
+**Conduct the same t-test as above using listwise deletion.**
+
+Compare the MI-based results to the deletion-based results. 
+
+- What differences do you observe?
+- What do you think causes these differences (if any)?
+
+```{r}
+(out <- t.test(tv ~ I(age < 13), data = boys))
+
+out$statistic
+out$estimate %>% diff() %>% abs()
+```
+
+```{asis}
+The estimate t-statistic and parameter estimate are larger in the MI-based 
+analysis than in the deletion-based analysis. This difference is probably caused
+by imputing many low testicular volumes (as we saw in the last practical). Hence 
+the mean of `tv` in the `age < 13` group is lower for the MI-based analysis.
+```
+
+---
+
+If we want to do an ANOVA with MI data, the pooling techniques we've discussed 
+so far can be a bit of a pain. We can easily estimate and pool the underlying 
+linear model (since that's just a linear regression model), but getting a pooled 
+version of the standard ANOVA table would require quite a lot of work.
+
+Thankfully, the `miceadds::mi.anova()` function does all of the heavy lifting 
+for us.
+
+---
+
+##
+
+**Check the documentation for the `miceadds::mi.anova()` function.**
+
+```{r, eval = FALSE}
+?mi.anova
+```
+
+--- 
+
+## 
+
+**Use `mi.anova()` to estimate a factorial ANOVA wherein `bmi` is the DV and 
+`reg` and `gen` are the IVs.**
+
+Use the *mids* object you created in Question \@ref(imp).
+
+- What substantive conclusions do you draw from this model?
+
+```{r}
+mi.anova(imp1, "bmi ~ reg * gen")
+```
+
+```{asis}
+The interaction between `reg` and `gen` is non-significant, but there are 
+significant main effects for both `reg` and `gen`. Furthermore, the effect of 
+`gen` appears to be much stronger than the effect of `reg`. 
+```
+
+---
+
+End of Lab 2c
+
+---
+
+[rubin_1987]: https://doi.org/10.1002/9780470316696
+[d1_ref]: https://doi.org/10.1080/01621459.1991.10475152
+[d2_ref]: https://www.jstor.org/stable/24303994
+[d3_ref]: https://doi.org/10.1093/biomet/79.1.103

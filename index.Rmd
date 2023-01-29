@@ -1,0 +1,77 @@
+---
+title: "Missing Data in R"
+subtitle: "Utrecht University Winter School"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: scroll
+---
+
+# Missing Data Basics
+
+## Column 1
+
+### Lecture Slides
+
+- [Missing Data Descriptives](lectures/1_basics/descriptives.pdf)
+- [Missing Data Mechanisms](lectures/1_basics/mechanisms.pdf)
+- [Simple Missing Data Treatments](lectures/1_basics/treatments.pdf)
+
+### R Demonstration
+
+- [Demo Script 1: Missing Data Basics](labs/1_basics/basics_demo.R)
+
+### R Lab
+
+- [Lab 1: Missing Data Basics](labs/1_basics/lab/basics.html)
+- [Lab 1 Solutions](labs/1_basics/lab/basics_solutions.html)
+
+<!----------------------------------------------------------------------------->
+
+# Multiple Imputation
+
+## Column 1
+
+### Lecture Slides
+
+- [Univariate MI](lectures/2_mi/univariate_mi.pdf)
+- [Multivariate MI](lectures/2_mi/multivariate_mi.pdf)
+- [MI Diagnostics](lectures/2_mi/diagnostics.pdf)
+
+### R Demonstration
+
+- [Demo Script 2: MI](labs/2_mi/code/mi_demo.R)
+
+### R Labs
+
+#### Exercises
+
+- [Lab2a: MI Fundamentals](labs/2_mi/lab/mi_fundamentals.html)
+- [Lab2b: Passive Imputation](labs/2_mi/lab/passive_imputation.html)
+- [Lab2c: MI Workflows](labs/2_mi/lab/mi_workflows.html)
+
+#### Solutions
+
+- [Lab2a Solutions](labs/2_mi/lab/mi_fundamentals_solutions.html)
+- [Lab2b Solutions](labs/2_mi/lab/passive_imputation_solutions.html)
+- [Lab2c Solutions](labs/2_mi/lab/mi_workflows_solutions.html)
+
+<!----------------------------------------------------------------------------->
+
+# Full Information Maximum Likelihood
+
+## Column 1
+
+### Lecture Slides
+
+- [FIML](lectures/3_fiml/fiml.pdf)
+
+### R Demonstration
+
+- [Demo Script 3: FIML](labs/3_fiml/fiml_demo.R)
+
+### R Lab
+
+- [Lab 3: FIML](labs/3_fiml/lab/fiml.html)
+- [Lab 3 Solutions](labs/3_fiml/lab/fiml_solutions.html)
+
