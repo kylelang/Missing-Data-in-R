@@ -1,7 +1,7 @@
 %%% Title:    Missing Data in R: FIML
 %%% Author:   Kyle M. Lang
 %%% Created:  2015-09-29
-%%% Modified: 2022-01-30
+%%% Modified: 2023-01-29
 
 \documentclass[10pt]{beamer}
 \usetheme{Utrecht}
@@ -27,13 +27,25 @@
 \subtitle{Utrecht University Winter School: Missing Data in R}
 \author{Kyle M. Lang}
 \institute{Department of Methodology \& Statistics\\Utrecht University}
-\date{2022-02-03}
+\date{}
 
 %------------------------------------------------------------------------------%
 
 \begin{document}
 
-<<setup, include = FALSE, cache = FALSE>>=
+<<knitr_setup, include = FALSE, cache = FALSE>>=
+options(width = 60)
+opts_chunk$set(size = "footnotesize",
+               fig.align = "center",
+               fig.path = "figure/fiml-",
+               message = FALSE,
+               warning = FALSE,
+               comment = "")
+opts_knit$set(root.dir = "../../../")
+knit_theme$set('edit-kwrite')
+@
+
+<<r_setup, include = FALSE, cache = FALSE>>=
 set.seed(235711)
 
 library(knitr)
@@ -47,19 +59,10 @@ library(mgcv)
 library(optimx)
 library(lavaan)
 
-source("../../../code/supportFunctions.R")
-source("../../../code/sim_missing/code/simMissingness.R")
+source("code/supportFunctions.R")
+source("code/sim_missing/code/simMissingness.R")
 
-dataDir <- "../../../data/"
-
-options(width = 60)
-opts_chunk$set(size = "footnotesize",
-               fig.align = "center",
-               fig.path = "figure/multivariate_mi-",
-               message = FALSE,
-               warning = FALSE,
-               comment = "")
-knit_theme$set('edit-kwrite')
+dataDir <- "data/"
 @
 
 %------------------------------------------------------------------------------%
@@ -136,6 +139,82 @@ knit_theme$set('edit-kwrite')
 
 \watermarkoff %----------------------------------------------------------------%
 
+\begin{frame}[fragile, allowframebreaks]{ML Intuition}
+  
+  Let's say we have the following $N = 10$ observations.
+  \vc
+  \begin{itemize}
+  \item We assume these data come from a normal distribution with a known 
+    variance of $\sigma^2 = 1$.  
+    \vc
+  \item We want to estimate the mean of this distribution, $\mu$.
+  \end{itemize}
+  
+  <<echo = 2>>=
+  options(width = 50)
+  (y <- rnorm(n = 10, mean = 5, sd = 1))
+  options(width = 80)
+  @
+  
+\end{frame}
+
+\watermarkon %-----------------------------------------------------------------%
+
+\begin{frame}{ML Intuition}
+  
+  In ML estimation, we would define different normal distributions.
+  \vc
+  \begin{itemize}
+  \item Every distribution would have $\sigma^2 = 1$.
+    \vc
+  \item Each distribution would have a different value of $\mu$.
+  \end{itemize}
+  \vb
+  We then compare the observed data to those distributions and see which 
+  distribution best fits the data.
+
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}{ML Intuition}
+  
+  <<echo = FALSE, out.width = "65%">>=
+  x1 <- seq(0, 10, length.out = 1000)
+  y1 <- dnorm(x1, 3, 1)
+  y2 <- dnorm(x1, 4, 1)
+  y3 <- dnorm(x1, 5, 1)
+  y4 <- dnorm(x1, 6, 1)
+  
+  dat1 <- data.frame(m = rep(c(3, 4, 5, 6), each = length(x1)),
+                     x = rep(x1, 4), 
+                     y = c(y1, y2, y3, y4)
+                     )
+  
+  dat2 <- data.frame(m = rep(c(3, 4, 5, 6), each = length(y)),
+                     x = rep(y, 4),
+                     y = c(dnorm(y, 3, 1),
+                           dnorm(y, 4, 1),
+                           dnorm(y, 5, 1),
+                           dnorm(y, 6, 1)
+                           )
+                     )
+  
+  ggplot(data = dat1, mapping = aes(y = y, x = x)) + 
+      geom_line() + 
+      geom_segment(data = dat2,
+                   mapping = aes(x = x, xend = x, y = 0, yend = y),
+                   color = "red") +
+      theme_classic() +
+      ylab("Density") +
+      xlab("Data Values") +
+      facet_wrap(vars(m))
+  @
+  
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
 \begin{frame}{Likelihoods}
   
   \begin{columns}
@@ -149,22 +228,22 @@ knit_theme$set('edit-kwrite')
     \end{column}
     \begin{column}{0.5\textwidth}
       
-<<echo = FALSE, cache = TRUE>>=
-x    <- seq(0, 15, length.out = 1000)
-dat1 <- data.frame(x = x, y = dnorm(x, 7.5, 1.75))
+      <<echo = FALSE, cache = TRUE>>=
+      x    <- seq(0, 15, length.out = 1000)
+      dat1 <- data.frame(x = x, y = dnorm(x, 7.5, 1.75))
+      
+      ggplot(data = dat1, aes(x = x, y = y)) + 
+          theme_classic() +
+          geom_line() +
+          theme(text       = element_text(size = 16, family = "Courier"),
+                plot.title = element_text(size = 20, face = "bold", hjust = 0.5)
+                ) +
+          ylab("Density") +
+          xlab("Y")
+      @
 
-ggplot(data = dat1, aes(x = x, y = y)) + 
-    theme_classic() +
-    geom_line() +
-    theme(text       = element_text(size = 16, family = "Courier"),
-          plot.title = element_text(size = 20, face = "bold", hjust = 0.5)
-          ) +
-    ylab("Density") +
-    xlab("Y")
-@
-
-\end{column}
-\end{columns}
+    \end{column}
+  \end{columns}
 
 \end{frame}
 
@@ -291,25 +370,24 @@ ggplot(data = dat1, aes(x = x, y = y)) +
 
 \begin{frame}[fragile, allowframebreaks]{Example}
     
-<<echo = FALSE>>=
-diabetes <- readRDS(paste0(dataDir, "diabetes.rds"))
-@ 
+  <<echo = FALSE>>=
+  diabetes <- readRDS(paste0(dataDir, "diabetes.rds"))
+  @ 
 
-<<>>=
-## Fit a model:
-out1 <- lm(ldl ~ bp + glu + bmi, data = diabetes)
-
-## Extract the predicted values and estimated residual 
-## standard error:
-yHat <- predict(out1)
-s    <- summary(out1)$sigma
-
-## Compute the row-wise probabilities:
-pY <- dnorm(diabetes$ldl, mean = yHat, sd = s)
-
-## Compute the loglikelihood, and compare to R's version:
-sum(log(pY)); logLik(out1)[1]
-@
+  <<>>=
+  ## Fit a model:
+  out1 <- lm(ldl ~ bp + glu + bmi, data = diabetes)
+  
+  ## Extract the predicted values and estimated residual standard error:
+  yHat <- predict(out1)
+  s    <- summary(out1)$sigma
+  
+  ## Compute the row-wise probabilities:
+  pY <- dnorm(diabetes$ldl, mean = yHat, sd = s)
+  
+  ## Compute the loglikelihood, and compare to R's version:
+  sum(log(pY)); logLik(out1)[1]
+  @
 
 \end{frame}
 
@@ -365,157 +443,6 @@ sum(log(pY)); logLik(out1)[1]
 
 \end{frame}
 
-\watermarkoff %----------------------------------------------------------------%
-
-\begin{frame}[fragile]{ML Example}
-  
-  Recall the $n$th observation's contribution to the multivariate normal 
-  loglikelihood function:
-  \begin{align*}
-   \mathcal{L} \left( \mub, \Sigma \right)_n = 
-   -\frac{P}{2} \ln(2\pi) - \frac{1}{2} \ln |\Sigma| - \frac{1}{2} (\mathbf{Y}_n - \mub)^T \Sigma^{-1}(\mathbf{Y}_n - \mub).
-  \end{align*}
-
-  \va
-
-  It turns out that this function is readily available in R via the 
-  \textbf{mvtnorm} package:
-
-<<eval = FALSE>>=
-## Vector of row-wise contributions to the overall LL:
-ll0 <- dmvnorm(y, mean = mu, sigma = sigma, log = TRUE)
-@
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{ML Example}
-
-  We can wrap the preceding code in a nice R function:
-
-<<>>=
-## Complete data loglikelihood function:
-ll <- function(par, data) {
-    ## Extract the parameter matrices:
-    p  <- ncol(data)
-    mu <- par[1:p]
-    
-    ## Populate sigma from its Cholesky factor:
-    sigma <- vecChol(tail(par, -p), p = p, revert = TRUE)
-    
-    ## Compute the row-wise contributions to the LL:
-    ll0 <- dmvnorm(data, mean = mu, sigma = sigma, log = TRUE)
-    
-    sum(ll0)# return the overall LL value
-}
-@
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{ML Example}
-
-  We'll also need the following helper function:
-  
-<<>>=
-## Convert from covariance matrix to vectorized Cholesky factor and back:
-vecChol <- function(x, p, revert = FALSE) {
-    if(revert) {
-        tmp                  <- matrix(0, p, p)
-        tmp[!lower.tri(tmp)] <- x
-        crossprod(tmp)
-    }
-    else
-        chol(x)[!lower.tri(x)]
-}
-@ 
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{ML Example}
-  
-  The \textbf{optimx} package can numerically optimize arbitrary functions.
-  \begin{itemize}
-  \item We can use it to (semi)manually implement ML.
-  \end{itemize}
-  
-<<>>=
-## Subset the 'diabetes' data:
-dat1 <- diabetes[ , c("bmi", "ldl", "glu")] %>% as.matrix()
-
-## Choose some starting values:
-m0   <- rep(0, 3)
-s0   <- diag(3) %>% vecChol()
-par0 <- c(m0, s0)
-
-## Use optimx() to numerically optimize the LL function:
-mle <- optimx(par     = par0,
-              fn      = ll,
-              data    = dat1,
-              method  = "BFGS",
-              control = list(maximize = TRUE, maxit = 1000)
-              )
-@ 
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{ML Example}
-  
-  Finally, let's check convergence and extract the optimized parameters:
-  
-<<>>=
-## Check convergence:
-mle[c("convcode", "kkt1", "kkt2")]
-
-## Get the optimize mean vector and covariance matrix:
-muHat    <- mle[1:3]
-sigmaHat <- mle[4:9] %>% as.numeric() %>% vecChol(p = 3, revert = TRUE)
-@ 
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}{ML Example}
-  
-<<echo = FALSE, results = "asis">>=
-names(muHat) <- colnames(dat1)
-
-muMat           <- rbind(muHat, colMeans(dat1))
-rownames(muMat) <- c("ML", "Closed Form")
-
-print(xtable(muMat, digits = 3, caption = "Estimated Means"), booktabs = TRUE)
-@ 
-
-\vx{-12}
-
-\begin{columns}
-  \begin{column}{0.5\textwidth}
-    
-<<echo = FALSE, results = "asis">>= 
-colnames(sigmaHat) <- rownames(sigmaHat) <- colnames(dat1)
-print(xtable(sigmaHat, digits = 3, caption = "ML Covariance Matrix"), 
-      booktabs = TRUE)
-@ 
-
-\end{column}
-\begin{column}{0.5\textwidth}
-  
-<<echo = FALSE, results = "asis">>= 
-print(xtable(cov(dat1), digits = 3, caption = "Closed Form Covariance Matrix"), 
-      booktabs = TRUE)
-@
-
-\end{column}
-\end{columns}
-
-\end{frame}
 
 \watermarkon %-----------------------------------------------------------------%
 
@@ -524,12 +451,12 @@ print(xtable(cov(dat1), digits = 3, caption = "Closed Form Covariance Matrix"),
 %------------------------------------------------------------------------------%
 
 \begin{frame}{From ML to FIML}
-
+  
   The $n$th observation's contribution to the multivariate normal loglikelihood 
   function would be the following:
   \begin{align}
-   \mathcal{L} \left( \mub, \Sigma \right)_n = 
-   -\frac{P}{2} \ln(2\pi) - \frac{1}{2} \ln |\Sigma| - \frac{1}{2} (\mathbf{Y}_n - \mub)^T \Sigma^{-1}(\mathbf{Y}_n - \mub). \label{llContrib}
+    \mathcal{L} \left( \mub, \Sigma \right)_n = 
+    -\frac{P}{2} \ln(2\pi) - \frac{1}{2} \ln |\Sigma| - \frac{1}{2} (\mathbf{Y}_n - \mub)^T \Sigma^{-1}(\mathbf{Y}_n - \mub). \label{llContrib}
   \end{align}\\
   \va
   \pause
@@ -544,49 +471,40 @@ print(xtable(cov(dat1), digits = 3, caption = "Closed Form Covariance Matrix"),
 
 \watermarkoff %----------------------------------------------------------------%
 
-\begin{frame}[fragile]{FIML Example}
-
-  First things first, we need to punch some holes in our example data.
-  
-<<>>=
-## Impose MAR missing:
-dat2 <- imposeMissData(data    = dat1,
-                       targets = c("ldl", "glu"),
-                       preds   = "bmi",
-                       pm      = 0.3,
-                       types   = c("low", "high"),
-                       stdDat  = TRUE)
-@
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
 \begin{frame}{Visualize the Response Patterns}
-
-<<echo = FALSE>>=
-nPats <- md.pattern(dat2, plot = FALSE) %>% nrow() - 1
-@
-
+  
+  <<echo = FALSE>>=
+  ## Impose MAR missing:
+  dat2 <- diabetes %>%
+      select(bmi, ldl, glu) %>%
+      imposeMissData(targets = c("ldl", "glu"),
+                     preds   = "bmi",
+                     pm      = 0.3,
+                     types   = c("low", "high"),
+                     stdDat  = TRUE)
+  
+  nPats <- md.pattern(dat2, plot = FALSE) %>% nrow() - 1
+  @
+  
   \begin{columns}
     \begin{column}{0.5\textwidth}
       
-      The data contain \Sexpr{nPats} unique response patterns.
+      These data contain \Sexpr{nPats} unique response patterns.
       \vc
       \begin{itemize}
-      \item We'll define \Sexpr{nPats} different version of $\mu$ and $\Sigma$.
+      \item We'd define \Sexpr{nPats} different version of $\mu$ and $\Sigma$.
         \vc
-      \item We'll calculate each individual loglikelihood contributions using 
+      \item We'd calculate each individual loglikelihood contributions using 
         the appropriate flavor of $\mu$ and $\Sigma$. 
       \end{itemize}
       
     \end{column}
     \begin{column}{0.5\textwidth}
       
-<<echo = FALSE>>=
-  tmp <- md.pattern(dat2)
-@
-
+      <<echo = FALSE>>=
+      ggmice::plot_pattern(dat2)
+      @
+      
     \end{column}
   \end{columns}
   
@@ -596,162 +514,108 @@ nPats <- md.pattern(dat2, plot = FALSE) %>% nrow() - 1
 
 \begin{frame}[fragile]{FIML Example}
 
-<<>>=
-## Compute the within-pattern contributions to the LL:
-ll0 <- function(i, mu, sigma, pats, ind, data) {
-    ## Define the current response pattern:
-    p1 <- pats[i, ]
-    
-    if(sum(p1) > 1) # More than one observed variable?
-        dmvnorm(x     = data[ind == i, p1],
-                mean  = mu[p1],
-                sigma = sigma[p1, p1],
-                log   = TRUE)
-    else
-        dnorm(x    = data[ind == i, p1],
-              mean = mu[p1],
-              sd   = sqrt(sigma[p1, p1]),
-              log  = TRUE)
-}
-@
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{FIML Example}
-
-<<>>=
-## FIML loglikelihood function:
-llm <- function(par, data, pats, ind) {
-    ## Extract the parameter matrices:
-    p  <- ncol(data)
-    mu <- par[1:p]
-    
-    ## Populate sigma from its Cholesky factor:
-    sigma <- vecChol(tail(par, -p), p = p, revert = TRUE)
-    
-    ## Compute the pattern-wise contributions to the LL:
-    ll1 <- sapply(X     = 1:nrow(pats),
-                  FUN   = ll0,
-                  mu    = mu,
-                  sigma = sigma,
-                  pats  = pats,
-                  ind   = ind,
-                  data  = data)
-
-    sum(unlist(ll1))
-}
-@
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{FIML Example}
-
-<<>>=
-## Summarize response patterns:
-pats <- uniquecombs(!is.na(dat2))
-ind  <- attr(pats, "index")
-
-## Choose some starting values:
-m0   <- colMeans(dat2, na.rm = TRUE)
-s0   <- cov(dat2, use = "pairwise") %>% vecChol()
-par0 <- c(m0, s0)
-
-## Use optimx() to numerically optimize the LL function:
-mle <- optimx(par     = par0,
-              fn      = llm,
-              data    = dat2,
-              pats    = pats,
-              ind     = ind,
-              method  = "BFGS",
-              control = list(maximize = TRUE, maxit = 1000)
-              )
-@
-
+  We most often apply FIML when estimating latent variable models.
+  \vc
+  \begin{itemize}
+  \item We can eastily apply FIML to latent variable models in \pkg{lavaan}.
+  \end{itemize}
+  
+  <<>>=
+  library(lavaan)
+  
+  ## Read in some data:
+  bfi <- readRDS(paste0(dataDir, "bfi_datasets.rds"))$incomplete
+ 
+  ## Specify the measurement model:
+  cfaMod <- '
+  agree =~ A1 + A2 + A3 + A4 + A5
+  open  =~ O1 + O2 + O3 + O4 + O5
+  '
+  
+  ## Estimate the CFA using FIML:
+  fimlOut <- cfa(cfaMod, data = bfi, std.lv = TRUE, missing = "fiml")
+  @ 
+  
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile]{FIML Example}
   
-  Check convergence and extract the optimized parameters:
+  <<echo = FALSE>>=
+  options(width = 80)
+  @ 
   
-<<>>=
-## Check convergence:
-mle[c("convcode", "kkt1", "kkt2")]
-
-## Get the optimize mean vector and covariance matrix:
-muHat1    <- mle[1:3]
-sigmaHat1 <- mle[4:9] %>% as.numeric() %>% vecChol(p = 3, revert = TRUE)
-@ 
-
+  <<>>=
+  partSummary(fimlOut, 1:4)
+  @ 
+  
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
 \begin{frame}[fragile]{FIML Example}
-
-  Just to make sure our results are plausible, we can do the same analysis using 
-  the \code{cfa()} function from the \textbf{lavaan} package:
-
-<<>>=
-## Define the model in lavaan syntax:
-mod <- "
-bmi ~~ ldl + glu
-ldl ~~ glu
-"
-
-## Fit the model with lavaan::cfa():
-fit <- cfa(mod, data = dat2, missing = "fiml")
-
-## Extract the estimated parameters:
-muHat2    <- inspect(fit, "est")$nu
-sigmaHat2 <- inspect(fit, "theta")
-@
-
+  
+  <<>>=
+  partSummary(fimlOut, 7, fmi = TRUE)
+  @ 
+  
 \end{frame}
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}{FIML Example}
+\begin{frame}[fragile]{FIML Example}
   
-<<echo = FALSE, results = "asis">>=
-muMat           <- rbind(muHat1, t(muHat2))
-colnames(muMat) <- colnames(dat1)
-rownames(muMat) <- c("Manual", "Lavaan")
+  <<>>=
+  partSummary(fimlOut, 8, fmi = TRUE)
+  @ 
+  
+\end{frame}
 
-print(xtable(muMat, digits = 3, caption = "Estimated Means"), booktabs = TRUE)
-@ 
+%------------------------------------------------------------------------------%
 
-\vx{-12}
+\begin{frame}[fragile]{FIML Example}
+  
+  <<>>=
+  partSummary(fimlOut, 9, fmi = TRUE)
+  @ 
+  
+\end{frame}
 
-\begin{columns}
-  \begin{column}{0.5\textwidth}
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{FIML Example}
+  
+  <<>>=
+  partSummary(fimlOut, 10, fmi = TRUE)
+  @ 
+
+\end{frame}
+
+\watermarkon %-----------------------------------------------------------------%
+
+\begin{frame}{FMI with FIML}
+
+  As you saw above, we can also estimate the FMI when using FIML.
+  \vc
+  \begin{itemize}
+  \item The FMI is calculated using the method described by 
+    \citet{savaleiRhemtulla:2012}.
+  \end{itemize}
+  \vb
+  \citet{savaleiRhemtulla:2012} take an information-theoretic approach to 
+  defining the FMI.
+  \begin{itemize}
+  \item Based on the \emph{Missing Information Principle} of 
+    \citet{orchardWoodbury:1972}
+    \vc  
+  \item Their FMI estimates the ratio of missing to complete information for 
+    each parameter.
+  \end{itemize}
+  \vb
+  You can use this method to compute the FMI for sufficient statistics via the 
+  \pkg{semTools}::\code{fmi()} function.
     
-<<echo = FALSE, results = "asis">>= 
-colnames(sigmaHat1) <- rownames(sigmaHat1) <- colnames(dat1)
-print(xtable(sigmaHat1, 
-             digits  = 3, 
-             caption = "Manual FIML Covariance Matrix"), 
-      booktabs = TRUE)
-@ 
-
-\end{column}
-\begin{column}{0.5\textwidth}
-  
-<<echo = FALSE, results = "asis">>= 
-print(xtable(sigmaHat2, 
-             digits  = 3, 
-             caption = "Lavaan FIML Covariance Matrix"), 
-      booktabs = TRUE)
-@
-
-\end{column}
-\end{columns}
-
 \end{frame}
 
 \watermarkon %-----------------------------------------------------------------%
@@ -763,39 +627,23 @@ print(xtable(sigmaHat2,
 \begin{frame}[allowframebreaks]{Satisfying the MAR Assumption}
  
   Like MI, FIML also requires MAR data.
+  \vc
   \begin{itemize}
-  \item Parameters will be biased with MAR is violated.
+  \item Parameters will be biased when data are MNAR.
   \end{itemize}
   \vb
   Unlike MI, FIML directly treats the missing data while estimating the analysis 
   model.
+  \vc
   \begin{itemize}
   \item The MAR predictors must be included in the analysis model.
+    \vc
   \item Otherwise, FIML reduces to pairwise deletion.
   \end{itemize}
   \vb  
-  If the MAR predictors are not substantively interesting variables, naively 
+  When the MAR predictors are not substantively interesting variables, naively 
   included them in the analysis model can change the model's meaning.
-  
-  %\vc
-  %\begin{itemize}
-  %\item Suppose we are interested in the effect of age on blood pressure.
-  %  \begin{itemize}
-  %  \item $Y_{BP} = \beta_0 + \beta_1 X_{age} + \varepsilon$
-  %    \vc
-  %  \item In this model, $\beta_1$ represents the effect of age on blood pressure.
-  %  \end{itemize}
-  %  \vc
-  %\item If missingness in blood pressure depends on blood glucose and total 
-  %  cholesterol, we need to add those variables into our model.
-  %  \begin{itemize}
-  %  \item $Y_{BP} = \beta_0 + \beta_1 X_{age} + \beta_2 X_{glu} + \beta_3 X_{TC} + \varepsilon$
-  %    \vc
-  %  \item Now, $\beta_1$ represents the partial effect of age, after controlling 
-  %    for blood glucose and total cholesterol.
-  %  \end{itemize}
-  %\end{itemize}
-  
+ 
 \end{frame}
 
 %------------------------------------------------------------------------------%
@@ -809,27 +657,167 @@ print(xtable(sigmaHat2,
   \item Satisfy the MAR assumption by incorporating MAR predictors into the 
     analysis model.
     \vc
-  \item Do not affect the fit or substantive meaning of the analysis model.
+  \item Maintain the fit and substantive meaning of the analysis model.
   \end{enumerate}
   \vb
   The approach entails incorporating the MAR predictors via a fully-saturated 
   covariance structure:
   \vc
   \begin{enumerate}
-  \item Allow all MAR predictors to co-vary with all other MAR predictors.
+  \item Allow every MAR predictor to covary with all other MAR predictors.
     \vc
-  \item Allow all MAR predictors to co-vary with all observed variables in the
+  \item Allow every MAR predictor to covary with all observed variables in the
     analysis model (or their residuals).
   \end{enumerate}
   
 \end{frame}
 
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}{Saturated Correlates Diagram}
+  
+  \begin{figure}
+    \includegraphics[width = 0.65\textwidth]{figures/saturated_correlates_diagram.pdf}
+  \end{figure}
+  
+\end{frame}
+
 %------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Saturated Correlates Example}
+
+  We can use the \code{lavaan.auxiliary()} function from \pkg{semTools} (or one 
+  of its wrappers) to streamline the analysis.
+
+  <<cache = TRUE>>=
+  library(semTools)
+
+  ## Estimate the CFA from above with auxiliary variables:
+  fimlOut2 <- bfi %>%
+      mutate(male = as.numeric(sex == "male")) %>%
+      cfa.auxiliary(cfaMod, 
+                    data = ., 
+                    aux = c("age", "male"), 
+                    std.lv = TRUE)
+  @ 
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Saturated Correlates Example}
+
+  The \code{cfa.auxiliary()} function has automatically added the following
+  paths to our CFA model.
+  
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      <<echo = FALSE>>=
+      modString <- lavExport(fimlOut2, export = FALSE) %>%
+          cat() %>%
+          capture.output()
+      
+      grep("age ~~", modString, value = TRUE) %>% cat(sep = "\n")
+      @ 
+      
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      
+      <<echo = FALSE>>=
+      grep("male ~~", modString, value = TRUE) %>% cat(sep = "\n")
+      @ 
+
+    \end{column}
+  \end{columns}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Saturated Correlates Example}
+
+  The auxiliaries have been correlated with all other variables.
+
+  <<>>=
+  inspect(fimlOut2, "est")$theta[11:12, 1:6] %>% round(3)
+  inspect(fimlOut2, "est")$theta[11:12, 7:12] %>% round(3)
+  @
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Saturated Correlates Example}
+
+  The degrees of freedom have not changed, though.
+  
+  <<>>=
+  ## Naive FIML:
+  fitMeasures(fimlOut, "df")
+  
+  ## FIML w/ saturated correlates:
+  fitMeasures(fimlOut2, "df")
+  @
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Saturated Correlates Example}
+
+  Let's compare the effects of the various missing data treatments on the latent
+  covariance estimates.
+  
+  \va
+  
+  <<echo = FALSE, results = "asis">>=
+  obj <- readRDS(paste0(dataDir, "lavaan_objects.rds"))
+  
+  what <- "agree~~open"
+  
+  est <- with(obj,
+              c(coef(compOut)[what],
+                coef(naiveOut)[what],
+                coef(miOut)[what],
+                coef(fimlOut)[what],
+                coef(fimlOut2)[what])
+              )
+  
+  fmi <- with(obj,
+              c(getFmi(miOut, what), 
+                getFmi(fimlOut, what), 
+                getFmi(fimlOut2, what)
+                )
+              )
+  
+  name1 <- c("Complete", "Listwise", "Multiple", "Naive", "FIML w/")
+  name2 <- c("Data", "Deletion", "Imputation", "FIML", "Auxiliaries")
+  name3 <- c("", "", "Est", "FMI")
+  
+  tabData <- cbind(name3, 
+                   rbind(name1, 
+                         name2, 
+                         sprintf("%.3f", est), 
+                         c("---", "---", sprintf("%.3f", fmi))
+                         )
+                   )
+  
+  xtable(tabData, caption = "Latent Covariances", align = "lrrrrrr") %>%
+      print(hline.after = c(-1, 2, nrow(tabData)), 
+            include.colnames = FALSE,
+            include.rownames = FALSE,
+            booktab = TRUE)
+  @
+  
+\end{frame}
+
+\watermarkon %-----------------------------------------------------------------%
 
 \begin{frame}[allowframebreaks]{References}
   
   \bibliographystyle{apacite}
-  \bibliography{../../../bibtex/winter_school_refs.bib}
+  \bibliography{../../../bibtex/missing_data_papers.bib}
   
 \end{frame}
 

@@ -1,15 +1,34 @@
-### Title:    Support Functions for Teaching
+### Title:    Support Functions for Examples
 ### Author:   Kyle M. Lang
 ### Created:  2017-08-24
-### Modified: 2021-01-26
+### Modified: 2022-07-01
+
+###--------------------------------------------------------------------------###
+
+## Suppress any printed output:
+quiet <- function(x) { 
+  sink(tempfile()) 
+  on.exit(sink()) 
+  x 
+}
 
 ###--------------------------------------------------------------------------###
 
 ## Create an basic ggplot object using my preferred styling:
-gg0 <- function(x, y, points = TRUE) {
-    p0 <- ggplot(mapping = aes(x = x, y = y)) +
+gg0 <- function(x, y = NULL, points = TRUE) {
+    if(is.null(y))
+        p0 <- ggplot(mapping = aes(x = x))
+    else
+        p0 <- ggplot(mapping = aes(x = x, y = y))
+
+    p0 <- p0 +
         theme_classic() +
-        theme(text = element_text(family = "Courier", size = 16))
+        theme(text = element_text(family = "Courier", size = 16),
+              plot.title = element_text(family = "Courier",
+                                        size = 16,
+                                        face = "bold",
+                                        hjust = 0.5)
+              )
 
     if(points) p0 + geom_point()
     else       p0
@@ -18,7 +37,6 @@ gg0 <- function(x, y, points = TRUE) {
 ###--------------------------------------------------------------------------###
 
 rangeNorm <- function(x, newMin = 0.0, newMax = 1.0) {
-
     r0 <- diff(range(x))
     r1 <- newMax - newMin
 
@@ -59,26 +77,32 @@ wrap <- function(x, w = 60) {
 ### http://r.789695.n4.nabble.com/Sweave-and-Slides-Beamer-td3451049.html
 
 ## Break up long output into "paragraphs":
-paragraphs <- function(x) {
+paragraphs <- as.paragraphs <- function(x, lines = NULL) {
     text <- capture.output(x)
 
-    if(text[length(text)] == "") text <- text[-length(text)]
+    if(!is.null(lines)) text <- text[lines]
+    
+    if(tail(text, 1) == "") text <- text[-length(text)]
 
     blanks <- which(text == "")
-    if(blanks[1] != 1) blanks <- c(-1, blanks)
+    if(length(blanks) > 0) {
+        if(blanks[1] != 1) blanks <- c(-1, blanks)
 
-    starts <- blanks + 1
-    ends   <- c(blanks[-1] - 1, length(text))
-
-    res <- list()
-    for(i in 1 : length(starts))
-        res <- c(res, list(text[starts[i] : ends[i]]))
-
-    class(res) <- c("paragraphs", res$class)
+        starts <- blanks + 1
+        ends   <- c(blanks[-1] - 1, length(text))
+        
+        res <- list()
+        for(i in 1 : length(starts))
+            res <- c(res, list(text[starts[i] : ends[i]]))
+    }
+    else
+        res <- list(text)
+    
+    class(res) <- c("paragraphs", class(res))
     res
 }
 
-as.paragraphs <- paragraphs
+###--------------------------------------------------------------------------###
 
 ## Make sure subsets of 'paragraphs' objects are also 'paragraphs' objects:
 assign("[.paragraphs",
@@ -104,150 +128,32 @@ print.paragraphs <- function(x, ...) {
 ###--------------------------------------------------------------------------###
 
 ## Print only a subset of a summary object:
-partSummary <- function(x, which = Inf, stars = FALSE) {
-    tmp <- paragraphs(print(summary(x), signif.stars = stars))
+partSummary <- function(x,
+                        which = Inf,
+                        lines = NULL,
+                        stars = FALSE,
+                        drops = NULL,
+                        ...)
+{
+    s0 <- summary(x, ...) %>% quiet()
+    if(!is.null(drops)) s0 <- dplyr::select(s0, -all_of(drops))
 
+    out <- paragraphs(print(s0, signif.stars = stars))
+    
     check <- length(which) == 1 && is.infinite(which)
-    if(check) tmp
-    else      tmp[which]
-}
+    if(!check) out <- out[which]
 
-###--------------------------------------------------------------------------###
+    if(!is.null(lines)) out <- paragraphs(out, lines)
 
-## A summary method for cell-means coded lm models.
-## This function will correct the R^2 and F-stats from the usual summary.lm().
-summary.cellMeans <- function(obj) {
-    ## Get broken summaries:
-    s0  <- summary.lm(obj)
-    av0 <- anova(obj)
-
-    ## Extract model info:
-    y  <- obj$model[ , 1]
-    df <- obj$rank - 1
-
-    ## Compute correct measures of variability:
-    ss <- crossprod(obj$fitted.values - mean(y))
-    ms <- ss / df
-
-    ## Compute correct stats:
-    r2  <- as.numeric(ss / crossprod(y - mean(y)))
-    r2a <- as.numeric(1 - (1 - r2) * ((length(y) - 1) / obj$df.residual))
-    f   <- as.numeric(ms / av0["Residuals", "Mean Sq"])
-
-    ## Replace broken stats:
-    s0$r.squared           <- r2
-    s0$adj.r.squared       <- r2a
-    s0$fstatistic[c(1, 2)] <- c(f, df)
-
-    s0 # Return corrected summary
-}
-
-###--------------------------------------------------------------------------###
-
-## Do K-Fold Cross-Validation with lm():
-cv.lm <- function(data, models, names = NULL, K = 10, seed = NULL) {
-
-    if(!is.null(seed)) set.seed(seed)
-
-    ## Create a partition vector:
-    part <- sample(rep(1 : K, ceiling(nrow(data) / K)))[1 : nrow(data)]
-
-    ## Find the DV:
-    dv <- ifelse(is.character(models[[1]]),
-                 trimws(strsplit(models[[1]], "~")[[1]][1]),
-                 all.vars(models[[1]], max.names = 1)
-                 )
-
-    ## Apply over candidate models:
-    cve <- sapply(X = models, FUN = function(model, data, dv, K, part) {
-        ## Loop over K repititions:
-        mse <- c()
-        for(k in 1 : K) {
-            ## Partition data:
-            train <- data[part != k, ]
-            valid <- data[part == k, ]
-
-            ## Fit model, generate predictions, and save the MSE:
-            fit    <- lm(model, data = train)
-            pred   <- predict(fit, newdata = valid)
-            mse[k] <- MSE(y_pred = pred, y_true = valid[ , dv])
-        }
-        ## Return the CVE:
-        sum((table(part) / length(part)) * mse)
-    },
-    data = data,
-    K    = K,
-    dv   = dv,
-    part = part)
-
-    ## Name output:
-    if(!is.null(names))          names(cve) <- names
-    else if(is.null(names(cve))) names(cve) <- paste("Model", 1 : length(cve))
-
-    cve
-}
-
-###--------------------------------------------------------------------------###
-
-## Create polynomial formula objects:
-polyList <- function(y, x, n) {
-    out <- list(paste(y, x, sep = " ~ "))
-    for(i in 2 : n) {
-        xn       <- paste0("I(", x, "^", i, ")")
-        out[[i]] <- paste(out[[i - 1]], xn, sep = " + ")
-    }
     out
 }
 
 ###--------------------------------------------------------------------------###
 
-simulateSimpleData <- function(parms) {
-    nObs    <- parms$nObs
-    xyCor   <- parms$corVec[1]
-    xzCor   <- parms$corVec[2]
-    yzCor   <- parms$corVec[3]
-    meanVec <- parms$meanVec
-
-    sigma <- matrix(c(1.0, xyCor, xzCor,
-                      xyCor, 1.0, yzCor,
-                      xzCor, yzCor, 1.0),
-                    nrow = 3)
-
-    simData <- as.data.frame(rmvnorm(nObs, meanVec, sigma))
-    colnames(simData) <- c("x", "y", "z")
-    simData
-}
-
-###--------------------------------------------------------------------------###
-
-                                        #imposeMissing <- function(compData, parms)
-                                        #{
-                                        #    incompVars <- parms$incompVars
-                                        #    auxVar <- parms$auxVar
-                                        #    pm <- parms$pm
-                                        #    marType <- parms$marType
-                                        #
-                                        #    pVec <- pnorm(compData[ , auxVar],
-                                        #                  mean(compData[ , auxVar]),
-                                        #                  sd(compData[ , auxVar])
-                                        #                  )
-                                        #
-                                        #    if(marType == "tails") {
-                                        #        rVec <- pVec < (pm / 2) | pVec > (1 - (pm/2))
-                                        #    } else if(marType == "center") {
-                                        #        rVec <- pVec > (0.5 - (pm / 2)) & pVec < (0.5 + (pm / 2))
-                                        #    } else if(marType == "lower") {
-                                        #        rVec <- pVec < pm
-                                        #    } else if(marType == "upper") {
-                                        #        rVec <- pVec > (1 - pm)
-                                        #    } else {
-                                        #        stop("Please provide a valid 'marType'")
-                                        #    }
-                                        #
-                                        #    missData <- simData
-                                        #    missData[rVec, incompVars] <- NA
-                                        #    missData
-                                        #}
+## Extract the DV name from an lm.fit object
+## NOTE:
+##  This function only works when lm is run using the fomula interface.
+dvName <- function(x) all.vars(x$terms)[1]
 
 ###--------------------------------------------------------------------------###
 
@@ -286,6 +192,86 @@ pooledCorMat <- function(x, vars) {
         matrix(ncol = length(vars)^2, byrow = TRUE) %>% 
         colMeans() %>% 
         matrix(ncol = length(vars), dimnames = list(vars, vars))
+}
+
+###--------------------------------------------------------------------------###
+
+### NOTE: The following, RHat-related funcitons were (slightly) adapted from the
+###       miceadds package (v.3.13-12)
+
+###--------------------------------------------------------------------------###
+
+################################################################################
+## auxiliary functions for Rhat statistic
+################################################################################
+
+## Code from rube package
+## Source: http://www.stat.cmu.edu/~hseltman/rube/rube0.2-16/R/Rhat.R
+## Inference from Iterative Simulation Using Multiple Sequences
+## Author(s): Andrew Gelman and Donald B. Rubin
+## Source: Statistical Science, Vol. 7, No. 4 (Nov., 1992), pp. 457-472
+## Stable URL: http://www.jstor.org/stable/2246093
+## Matches gelman.diag() from package "coda", but not WinBUGS() "summary" component.
+## Better than gelman.diag() because multivariate stat is not bothered to be calculated
+
+.rhat0 <- function(mat)
+{
+    m <- ncol(mat)
+    n <- nrow(mat)
+    b <- apply(mat,2,mean)
+    B <- sum((b-mean(mat))^2)*n/(m-1)
+    w <- apply(mat,2, stats::var)
+    W <- mean(w)
+    s2hat <- (n-1)/n*W + B/n
+    Vhat <- s2hat + B/m/n
+    covWB <- n /m * (stats::cov(w,b^2)-2*mean(b)*stats::cov(w,b))
+    varV <- (n-1)^2 / n^2 * stats::var(w)/m +
+                (m+1)^2 / m^2 / n^2 * 2*B^2/(m-1) +
+                2 * (m-1)*(n-1)/m/n^2 * covWB
+    df <- 2 * Vhat^2 / varV
+    R <- sqrt((df+3) * Vhat / (df+1) / W)
+    return(R)
+}
+
+###--------------------------------------------------------------------------###
+
+.rhat <- function(arr)
+{
+    dm <- dim(arr)
+    if (length(dm)==2) return(.rhat0(arr))
+    if (dm[2]==1) return(NULL)
+    if (dm[3]==1) return(.rhat0(arr[,,1]))
+    return(apply(arr,3,.rhat0))
+}
+
+###--------------------------------------------------------------------------###
+
+## Define an S3 generic to dispatch rhat.mids():
+rhat <- function(x, ...) UseMethod("rhat")
+
+###--------------------------------------------------------------------------###
+
+## Define the rhat method for mids objects:
+rhat.mids <- function(object, all = FALSE, ...)
+{
+    chainMean <- object$chainMean
+    chainVar  <- object$chainVar
+
+    dcM <- dim(chainMean)
+    dfr <- data.frame(matrix( 0, nrow=dcM[1], ncol=4 ))
+
+    for (vv in 1:dcM[1]) {
+        dfr[vv, 3] <- .rhat(chainMean[vv, , ])
+        dfr[vv, 4] <- .rhat(chainVar[vv, , ])
+        dfr[vv, 1] <- rownames(chainMean[, , 1])[vv]
+        dfr[vv, 2] <- 100 * mean(is.na(object$data[ , dfr[vv, 1]]))
+    }
+    
+    colnames(dfr) <- c("Variable", "MissProp", "RHat_Mean", "RHat_Variance")
+
+    if(all) return(dfr)
+
+    dfr[!is.na(dfr$RHat_Mean), ]
 }
 
 ###--------------------------------------------------------------------------###
@@ -340,3 +326,21 @@ imposeMissData <- function(data, targets, preds, pm, types = "random", ...) {
 
     data
 }
+
+###--------------------------------------------------------------------------###
+
+## Extract the FMI for a parameter (what) from a lavaan object (x):
+getFmi <- function(x, what) {
+    ## Create the summary:
+    tmp <- summary(x, fmi = TRUE) %>% quiet()
+    
+    if(class(x) == "lavaan") tmp <- tmp$pe
+    
+    ## Create labels á la coef():
+    labs <- with(tmp, c(lhs, op, rhs)) %>% matrix(ncol = 3) %>% apply(1, paste0, collapse = "")
+    
+    ## Extract the appropriate FMI:
+    tmp$fmi[labs %in% what]
+}
+
+###--------------------------------------------------------------------------###
