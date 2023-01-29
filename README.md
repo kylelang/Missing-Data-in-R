@@ -4,7 +4,7 @@ This repository will hold all of the materials for the Utrecht University Winter
 School course: *Missing Data in R*.
 
 You can access a structured (albeit very ugly) layout of the course materials
-via [www.kylemlang.com/missing-data-in-r](www.kylemlang.com/missing-data-in-r).
+via <https://www.kylemlang.com/Missing-Data-in-R/>.
 
 ## Preparation
 
