@@ -123,7 +123,7 @@ source("code/sim_missing/code/simMissingness.R")
                             preds = "bmi",
                             auc   = 0.85)$r
   
-  ## Impose missing on 'glu' according to the missingess above:
+  ## Impose missing on 'glu' according to the missingness above:
   dat1[m, "glu"] <- NA
   @ 
   
@@ -879,6 +879,172 @@ source("code/sim_missing/code/simMissingness.R")
     \item Doesn't make any sense with \emph{Item Nonresponse}
     \end{itemize}
   \end{itemize}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\section{Comparisons}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Comparison}
+  
+  Run a Monte Carlo simulation to compare the treatments.
+  \vc
+  \begin{itemize}
+  \item Use the synthetic diabetes data as the population.
+    \vc
+  \item Simulate MAR missingness.
+    \vc
+    \begin{itemize}
+    \item Blood Glucose
+      \begin{itemize}
+      \item $PM = 20\%$, $P(M) \sim \{bmi, age\}$
+      \end{itemize}
+      \vc
+    \item Blood Pressure
+      \begin{itemize}
+      \item $PM = 30\%$, $P(M) \sim \{bmi, tc\}$
+      \end{itemize}
+    \end{itemize}
+    \vc
+  \item Treat the missing data as above.
+    \vc
+  \item Use the treated data to estimate several statistics.
+    \vc
+  \item Repeat the process 250 times and pool the results.
+  \end{itemize}
+  
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}{Comparison}
+  
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      <<echo = FALSE>>=
+      dat1 <- readRDS(paste0(dataDir, "diabetes_incomplete.rds"))
+      ggmice::plot_pattern(dat1)
+      @
+      
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      
+      <<echo = FALSE>>=
+      naniar::gg_miss_upset(dat1, nsets = 2)
+      @
+      
+    \end{column}
+  \end{columns}
+  
+\end{frame}
+
+\watermarkon %-----------------------------------------------------------------%
+
+\begin{frame}{Comparison}
+
+  <<echo = FALSE>>=
+  res  <- readRDS(paste0(dataDir, "treatment_simulation_results.rds"))
+  meth <- c("MS", "DRI", "SRI", "CC", "FO")
+
+  mTab  <- res$mean %>% select(-mi)
+  lmTab <- with(res, rbind(coef, r2)) %>% select(-mi)
+
+  bpCov <- res$cov[setdiff(names(res$cov), "mi")] %>%
+      lapply(function(x) data.frame(x) %>% select(bp)) %>%
+      do.call(cbind, .) %>%
+      t() %>%
+      data.frame()
+
+  gluCov <- res$cov[setdiff(names(res$cov), "mi")] %>%
+      lapply(function(x) data.frame(x) %>% select(glu)) %>%
+      do.call(cbind, .) %>%
+      t() %>%
+      data.frame()
+
+  vTab <- rbind(gluCov$glu, bpCov$bp)
+
+  bpCov %<>% select(-bp)
+  gluCov %<>% select(-glu)
+  
+  colnames(mTab) <- colnames(lmTab) <- colnames(vTab) <-
+      rownames(bpCov) <- rownames(gluCov) <- meth
+
+  rownames(vTab) <- rownames(mTab)
+  rownames(lmTab) <- c("$\\beta_0$",
+                       "$\\beta_{bmi}$",
+                       "$\\beta_{glu}$",
+                       "$\\beta_{age}$",
+                       "$R^2$")
+  
+  mTab <- xtable(mTab,
+                 align = c("l", rep("r", length(meth))),
+                 caption = "Variable Means")
+
+  vTab <- xtable(vTab,
+                 align = c("l", rep("r", length(meth))),
+                 caption = "Variable Variances")
+
+  lmTab <- xtable(lmTab,
+                  align = c("l", rep("r", length(meth))),
+                  caption = "Linear Regression Estimates")
+
+  @ 
+
+  <<echo = FALSE, results = 'asis'>>=
+  print(mTab, booktabs = TRUE, digits = 2)
+  @
+
+  <<echo = FALSE, results = 'asis'>>=
+  print(vTab, booktabs = TRUE, digits = 2)
+  @
+    
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Comparison}
+
+  \begin{align*}
+    Y_{BP} = \beta_0 + \beta_1 X_{BMI} + \beta_2 X_{Glucose} + \beta_3 X_{Age} +
+    \varepsilon
+  \end{align*}
+  
+  <<echo = FALSE, results = 'asis'>>=
+  print(lmTab,
+        booktabs = TRUE,
+        sanitize.rownames.function = function(x) x,
+        digits = 2)
+  @
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Comparison}
+
+  <<echo = FALSE, results = 'asis'>>=
+  xtable(gluCov,
+         auto = TRUE,
+         digits = 2,
+         caption = "Covariances with Blood Glucose")
+  @
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Comparison}
+
+  <<echo = FALSE, results = 'asis'>>=
+  xtable(bpCov,
+         auto = TRUE,
+         digits = 2,
+         caption = "Covariances with Blood Pressure")
+  @
 
 \end{frame}
 

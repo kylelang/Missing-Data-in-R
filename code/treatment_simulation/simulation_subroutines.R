@@ -5,8 +5,7 @@
 
 
 ## Simluate nonresponse:
-imposeMissing <- function(data, parms)
-{
+imposeMissing <- function(data, parms) {
     for(v in parms$targets) {
         m <- with(parms,
                   simLinearMissingness(data  = data,
@@ -23,14 +22,12 @@ imposeMissing <- function(data, parms)
 ###--------------------------------------------------------------------------###
 
 ## Impute the missing data:
-impute <- function(method, data, parms)
-{
+impute <- function(method, data, parms) {
     miceOut <- with(parms,
                     mice(data,
                          m = ifelse(method == "norm", nImp, 1),
                          maxit = ifelse(method == "mean", 1, nIter),
                          method = method,
-                         seed = seed,
                          printFlag = FALSE)
                     )
 
@@ -41,8 +38,7 @@ impute <- function(method, data, parms)
 ###--------------------------------------------------------------------------###
 
 ## Estimate statistics from simulated/imputed data:
-getStats <- function(x, parms)
-{
+getStats <- function(x, parms) {
     meanVars <- parms$meanVars
     covVars  <- parms$covVars
 
@@ -104,8 +100,7 @@ runMethod <- function(method, data, parms)
 ###--------------------------------------------------------------------------###
 
 ## Conduct one replication of the simulation:
-doRep <- function(rp, data, parms)
-{
+doRep <- function(rp, data, parms) {
     ## Setup the PRNG:
     .lec.SetPackageSeed(rep(parms$seed, 6))
 
@@ -132,3 +127,13 @@ doRep <- function(rp, data, parms)
     ## Return the estimated statistics:
     stats
 }
+
+###--------------------------------------------------------------------------###
+
+## Average R^2 stats via sqrt > r2z > mean > z2r > square:
+poolR2 <- function(x)
+    sqrt(x) %>%
+        DescTools::FisherZ() %>%
+        mean() %>%
+        DescTools::FisherZInv() %>%
+        .^2
