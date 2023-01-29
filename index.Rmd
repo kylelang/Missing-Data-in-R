@@ -40,7 +40,7 @@ output:
 
 ### R Demonstration
 
-- [Demo Script 2: MI](labs/2_mi/code/mi_demo.R)
+- [Demo Script 2: MI](labs/2_mi/mi_demo.R)
 
 ### R Labs
 
