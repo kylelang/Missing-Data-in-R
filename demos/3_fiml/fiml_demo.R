@@ -1,11 +1,11 @@
 ### Title:    Missing Data in R: FIML Demonstration
 ### Author:   Kyle M. Lang
 ### Created:  2015-10-26
-### Modified: 2022-01-30
+### Modified: 2023-01-31
 
 rm(list = ls(all = TRUE))
 
-dataDir <- "../../data/"
+dataDir <- "data/"
 
 library(lavaan)
 library(semTools)
@@ -161,7 +161,7 @@ summary(semFit2, fit.measures = TRUE, fmi = TRUE)
 
 ###-Path Analysis------------------------------------------------------------###
 
-## Simple medation model
+## Simple mediation model
 paMod1 <- "
 policy1 ~ b*riae1 + c*polv
 riae1 ~ a*polv
@@ -176,7 +176,7 @@ summary(paFit1)
 
 ##----------------------------------------------------------------------------##
 
-## Medation model w/ auxiliaries:
+## Mediation model w/ auxiliaries:
 paMod2 <- "
 policy1 ~ b*riae1 + c*polv
 riae1 ~ a*polv

@@ -19,12 +19,12 @@ output:
 
 ### R Demonstration
 
-- [Demo Script 1: Missing Data Basics](labs/1_basics/basics_demo.R)
+- [Demo Script 1: Missing Data Basics](demos/1_basics/basics_demo.R)
 
 ### R Lab
 
-- [Lab 1: Missing Data Basics](labs/1_basics/lab/basics.html)
-- [Lab 1 Solutions](labs/1_basics/lab/basics_solutions.html)
+- [Lab 1: Missing Data Basics](labs/1_basics/basics.html)
+- [Lab 1 Solutions](labs/1_basics/basics_solutions.html)
 
 <!----------------------------------------------------------------------------->
 
@@ -40,21 +40,21 @@ output:
 
 ### R Demonstration
 
-- [Demo Script 2: MI](labs/2_mi/mi_demo.R)
+- [Demo Script 2: MI](demos/2_mi/mi_demo.R)
 
 ### R Labs
 
 #### Exercises
 
-- [Lab2a: MI Fundamentals](labs/2_mi/lab/mi_fundamentals.html)
-- [Lab2b: Passive Imputation](labs/2_mi/lab/passive_imputation.html)
-- [Lab2c: MI Workflows](labs/2_mi/lab/mi_workflows.html)
+- [Lab2a: MI Fundamentals](labs/2_mi/mi_fundamentals.html)
+- [Lab2b: Passive Imputation](labs/2_mi/passive_imputation.html)
+- [Lab2c: MI Workflows](labs/2_mi/mi_workflows.html)
 
 #### Solutions
 
-- [Lab2a Solutions](labs/2_mi/lab/mi_fundamentals_solutions.html)
-- [Lab2b Solutions](labs/2_mi/lab/passive_imputation_solutions.html)
-- [Lab2c Solutions](labs/2_mi/lab/mi_workflows_solutions.html)
+- [Lab2a Solutions](labs/2_mi/mi_fundamentals_solutions.html)
+- [Lab2b Solutions](labs/2_mi/passive_imputation_solutions.html)
+- [Lab2c Solutions](labs/2_mi/mi_workflows_solutions.html)
 
 <!----------------------------------------------------------------------------->
 
@@ -68,10 +68,10 @@ output:
 
 ### R Demonstration
 
-- [Demo Script 3: FIML](labs/3_fiml/fiml_demo.R)
+- [Demo Script 3: FIML](demos/3_fiml/fiml_demo.R)
 
 ### R Lab
 
-- [Lab 3: FIML](labs/3_fiml/lab/fiml.html)
-- [Lab 3 Solutions](labs/3_fiml/lab/fiml_solutions.html)
+- [Lab 3: FIML](labs/3_fiml/fiml.html)
+- [Lab 3 Solutions](labs/3_fiml/fiml_solutions.html)
 

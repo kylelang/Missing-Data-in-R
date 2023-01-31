@@ -1,0 +1,583 @@
+---
+title: "Lab 1: Missing Data Basics"
+subtitle: "Missing Data in R"
+author: "Kyle M. Lang"
+date: "Updated: `r format(Sys.time(), format = '%Y-%m-%d')`"
+params:
+  answers: true
+output: 
+   bookdown::html_document2:
+    toc: true
+    toc_depth: 1
+    toc_float: true
+    number_sections: true
+    css: "../../resources/style.css"
+---
+
+
+```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
+library(knitr)
+library(dplyr)
+library(magrittr)
+
+## Define an asis engine that will evaluate inline code within an asis block:
+knit_engines$set(asis = function(options) {
+  if(options$echo && options$eval) knit_child(text = options$code)
+}
+)
+
+opts_chunk$set(include = params$answers, 
+               echo = params$answer, 
+               message = FALSE,
+               warning = FALSE)
+
+dataDir <- "../../data/"
+```
+
+---
+
+In these lab exercises, you will explore diagnostic tools that you can use to 
+evaluate the extent of a missing data problem.
+
+---
+
+# Preliminaries
+
+---
+
+##
+
+**Load packages.**
+
+Use the `library()` function to load the **mice**, **ggmice**, **naniar**, and 
+**ggplot2** packages into your workspace.
+
+```{r}
+library(mice)
+library(ggmice)
+library(naniar)
+library(ggplot2)
+```
+
+---
+
+The `mice` package contains several datasets. Once an R package is loaded, the 
+datasets contained therein will be accessible within the current R session. 
+
+The `nhanes` dataset (Schafer, 1997, Table 6.14) is one of the datasets provided 
+by the **mice** package. The `nhanes` dataset is a small dataset with 
+non-monotone missing values. It contains 25 observations on four variables: 
+
+1. *Age Group* (`age`)
+1. *Body Mass Index* (`bmi`)
+1. *Hypertension* (`hyp`)
+1. *Cholesterol* (`chl`)
+
+Unless otherwise specified, all questions below apply to the `nhanes` dataset.
+
+---
+
+##
+
+**Print the `nhanes` dataset to the console.**
+
+```{r}
+nhanes
+```
+
+---
+
+##
+
+**Access the documentation for the `nhanes` dataset.**
+
+```{r, eval = FALSE}
+?nhanes
+```
+
+---
+
+##
+
+**Use the `naniar::vis_miss()` function to visualize the missing data.**
+
+```{r}
+vis_miss(nhanes)
+```
+
+---
+
+# Response Rates
+
+---
+
+##
+
+**Use the `summary()` function to summarize the `nhanes` dataset.**
+
+```{r}
+summary(nhanes)
+```
+
+---
+
+Use the output of the `summary()` function to answer the next two questions.
+
+---
+
+##
+
+**Which variable has the most missing values?**
+
+```{asis}
+The cholesterol variable, `chl`, has the most missing values (i.e., 
+`r nhanes %$% is.na(chl) %>% sum()`).
+```
+
+---
+
+##
+
+**Which variables, if any, have no missing values?**
+
+```{asis}
+Only `age` is fully observed.
+```
+
+---
+
+##
+
+**Compute the proportion of missing values for each variable.**
+
+```{r}
+pm <- colMeans(is.na(nhanes))
+
+## OR ##
+
+pm <- is.na(nhanes) %>% colMeans()
+```
+
+```{asis}
+Notice how the second solutions uses the **dplyr** pipe to clarify the sequence 
+of steps in the process.
+```
+
+---
+
+##
+
+**What is the proportion of missing data in `bmi`?**
+
+```{r}
+pm["bmi"]
+```
+
+---
+
+##
+
+**Use the `naniar::gg_miss_var()` function to visualize the *percents* missing 
+for each variable.**
+
+```{r}
+gg_miss_var(nhanes, show_pct = TRUE)
+```
+
+```{asis}
+Notice that I have specified the `show_pct = TRUE` option to plot the *percents* 
+missing. The default is to plot the counts of missing values.
+```
+
+---
+
+# Response Patterns
+
+---
+
+Inspecting the missing data/response patterns is always useful (but may be 
+difficult for datasets with many variables). The response patterns give an 
+indication of how much information is missing and how the missingness is 
+distributed.
+
+---
+
+##
+
+**Visualize the missing data patterns.**
+
+- You can use the `plot_pattern()` function from the [**ggmice**][ggmice] package.
+- What information can you glean from the figure?
+
+```{r}
+plot_pattern(nhanes)
+```
+
+```{asis}
+There are 27 missing values in total: 10 for `chl`, 9 for `bmi`, and 8 for `hyp`. 
+Moreover, there are thirteen completely observed rows, four rows with 1 missing
+value, one row with 2 missing values, and seven rows with 3 missing values. 
+```
+
+##
+
+**How many observations would be available if we only analyzed complete cases?**
+
+```{asis}
+The data would contain `r (nhanes %>% is.na() %>% rowMeans() == 0) %>% sum()` 
+observations if we excluded incomplete cases.
+```
+
+---
+
+##
+
+**Which missing data pattern is most frequently observed?**
+
+```{asis}
+The pattern wherein all variables are observed.
+```
+
+---
+
+# Coverage Rates
+
+---
+
+##
+
+**Calculate the covariance coverage rates.**
+
+- You can use the `md.pairs()` function from the [**mice**][mice] package to 
+count the number of jointly observed cases for every pair or variables.
+  
+```{r}
+## Calculate covariance coverage:
+cc <- md.pairs(nhanes)$rr /  nrow(nhanes)
+round(cc, 2)
+```
+
+---
+
+##
+
+**Calculate the flux statistics for each variable.**
+
+- You can use the `flux()` function from the [**mice**][mice] package to 
+compute a panel of flux statistics.
+  
+```{r}
+flux(nhanes)
+```
+
+---
+
+# Testing the Missingness
+
+---
+
+##
+
+**Create a missingness vector for `bmi`.** 
+
+This vector should be a logical vector of the same length as the `bmi` vector. 
+The missingness vector should take the value `TRUE` for all missing entries in 
+`bmi` and `FALSE` for all observed entries in `bmi`.
+
+```{r}
+mBmi <- is.na(nhanes$bmi)
+```
+
+---
+
+##
+
+**Test if missingness on `bmi` depends on `age`.** 
+
+Use the `t.test()` function and the missingness vector you created above.
+
+- What is the estimated t-statistic?
+- What is the p-value for this test?
+- What is the conclusion of this test?
+
+```{r}
+out <- t.test(age ~ mBmi, data = nhanes)
+out$statistic
+out$p.value
+```
+
+```{asis}
+Missingness in `bmi` does not significantly depend on `age`.
+```
+
+---
+
+##
+
+**Test if all missingness in `nhanes` is MCAR.** 
+
+Use the `naniar::mcar_test()` function to implement the 
+[Little (1988)](little_1988) MCAR Test.
+
+- What is the estimated $\chi^2$-statistic?
+- What is the p-value for this test?
+- What is the conclusion of this test?
+
+```{r}
+out <- mcar_test(nhanes)
+
+out$statistic
+out$p.value
+```
+
+```{asis}
+The missing values in `nhanes` appear to be MCAR.
+```
+
+---
+
+##
+
+**Use the `naniar::geom_miss_point()` function to visualize the distribution of 
+missing values between `bmi` and `chl`.**
+
+You will first need to set up the figure using `ggplot()`. You can then apply  
+`geom_miss_point()` to plot the points.
+
+- What conclusions can you draw from this figure, if any?
+
+```{r}
+ggplot(data = nhanes, mapping = aes(x = bmi, y = chl)) + geom_miss_point()
+```
+
+```{asis}
+Missing values in `chl` tend to occur more frequently in the lower tail of `bmi` 
+and visa-versa.
+```
+
+---
+
+# More Complex Data
+
+---
+
+```{r, eval = TRUE, include = FALSE}
+ea <- readRDS(paste0(dataDir, "eating_attitudes.rds"))
+```
+
+Real-world missing data problems are rarely as simple as the situation explored
+above. Now, we will consider a slightly more complex datasets. For the remaining
+exercises, you will analyze the *Eating Attitudes* data from [Enders (2010)][amda]. 
+These data are available as [*eating_attitudes.rds*][ea_data1].
+
+This dataset includes `r nrow(ea)` observations of the following `r ncol(ea)` 
+variables. Note that the variables are listed in the order that they appear on 
+the dataset.
+
+- `id`: A numeric ID
+- `eat1:eat24`: Seven indicators of a *Drive for Thinness* construct
+- `eat3:eat21`: Three indicators of a *Preoccupation with Food* construct
+- `bmi`: Body mass index
+- `wsb`: A single item assessing *Western Standards of Beauty*
+- `anx`: A single item assessing *Anxiety Level*
+
+You can download the original data [here][ea_data0], and you can access the code 
+used to process the data [here][ea_code].
+
+---
+
+##
+
+**Read in the *eating_attitudes.rds* dataset.**
+
+```{r, eval = FALSE}
+dataDir <- "../../../data/"
+ea <- readRDS(paste(dataDir, "eating_attitudes.rds"))
+```
+
+NOTE: 
+
+1. In the following, I will refer to these data as the *EA data*.
+1. Unless otherwise specified, the data analyzed in all following questions are 
+the EA data.
+
+---
+
+##
+
+**Summarize the EA data to get a sense of their characteristics.**
+
+- Pay attention to the missing values.
+
+```{r}
+head(ea)
+summary(ea)
+str(ea)
+```
+
+---
+
+## {#calcCover}
+
+**Calculate the covariance coverage rates.**
+
+- You can use the `md.pairs()` function from the [**mice**][mice] package to 
+count the number of jointly observed cases for every pair or variables.
+  
+```{r}
+library(magrittr) # Provides the extract2() alias function
+
+## Calculate covariance coverage:
+cc <- (ea %>% select(-id) %>% md.pairs() %>% extract2("rr")) /  nrow(ea)
+round(cc, 2)
+```
+
+---
+
+##
+
+**Summarize the coverages from \@ref(calcCover).**
+
+Covariance coverage matrices are often very large and, hence, difficult to parse. 
+It can be useful to distill this information into a few succinct summaries to 
+help extract the useful knowledge.
+
+```{asis}
+One of the most useful numeric summaries is the range. We'll start there.
+
+NOTE:
+
+- When computing the range, it is often helpful to exclude coverages of 1.0 
+since variables that are fully jointly observed won't have much direct influence 
+on our missing data treatment.
+- We usually want to exclude the diagonal elements from the coverage matrix, too. 
+These values represent *variance* coverages instead of *covariance* coverages. 
+In other words, the diagonal of the coverage matrix gives the proportion of 
+observed cases for each variable.
+```
+
+```{r}
+## Range of coverages < 1.0:
+## NOTE: Use lower.tri() to select only the elements below the diagonal.
+uniqueCc <- cc[lower.tri(cc)] 
+uniqueCc[uniqueCc < 1] %>% range()
+```
+
+```{asis}
+Sometimes, we may want to count the number of coverages that satisfy some 
+condition (e.g., fall below some threshold). When doing such a summary, we need 
+to remember two idiosyncrasies of the covariance coverage matrix:
+
+1. The diagonal elements are not covariance coverages.
+1. The matrix is symmetric.
+
+So, to get a count of covariance coverages without double counting, we consider 
+only the elements from the lower (or upper) triangle.
+```
+
+```{r}
+## Count the number of coverages lower than 0.9:
+sum(uniqueCc < 0.9)
+```
+
+---
+
+##
+
+**Visualize the covariance coverage rates from \@ref(calcCover).**
+  
+As with numeric summaries, visualizations are also a good way to distill 
+meaningful knowledge from the raw information in a covariance coverage matrix.
+  
+```{asis}
+We'll try two different visualizations. 
+
+First, we'll create a simple histogram of the coverages to get a sense of their 
+distribution. To see why such a visualization is useful, consider two 
+hypothetical situations wherein the range of coverages is [0.2; 0.8].
+
+1. Half of these coverages are lower than 0.3
+1. Only one of the coverages is lower than 0.3
+
+Clearly, the second situation is less problematic, but we cannot differentiate 
+between these two simply by examining the range of coverages.
+```
+
+```{r}
+library(ggplot2)
+
+## Simple histogram of coverages:
+data.frame(Coverage = uniqueCc) %>% 
+  ggplot(aes(Coverage)) + 
+  geom_histogram(bins = 15, color = "black")
+```
+
+```{asis}
+Next, we'll create a heatmap of the coverage matrix itself. Such a visualization
+could help us locate clusters of variables with especially low coverages, for 
+example.
+```
+
+```{r}
+## Convert the coverage matrix into a plotable, tidy-formatted data.frame:
+pDat <- data.frame(Coverage = as.numeric(cc), 
+                   x        = rep(colnames(cc), ncol(cc)), 
+                   y        = rep(colnames(cc), each = ncol(cc))
+                   )
+
+## Create the heatmap via the "tile" geom:
+ggplot(pDat, aes(x = x, y = y, fill = Coverage)) + 
+  geom_tile() + 
+  scale_x_discrete(limits = rev(colnames(cc))) +
+  scale_y_discrete(limits = colnames(cc)) + 
+  scale_fill_distiller(palette = "Oranges") + 
+  xlab(NULL) + 
+  ylab(NULL)
+```
+
+---
+
+## {#mdPattern}
+
+**Visualize the missing data patterns.**
+
+- How many unique response patterns are represented in the EA data?
+
+*HINT*: 
+
+- The `plot_pattern()` function from [**ggmice**][ggmice] will create a nice 
+visualization of the patterns.
+- The `md.pattern()` function from **mice** will create a (somewhat less beautiful) 
+visualization but will return a numeric pattern matrix that you can further analyze.
+
+```{r, fig.asp = 1.25}
+library(ggmice)
+
+## Visualize the response patterns:
+plot_pattern(ea)
+
+## Create an analyzable pattern matrix (without visualization):
+(pats <- md.pattern(ea, plot = FALSE))
+
+## Count the number of unique response patterns:
+nrow(pats) - 1
+```
+
+```{asis}
+As shown by the above code, there are `r nrow(pats) - 1` unique response 
+patterns in the EA data.
+```
+
+---
+
+End of Lab 1
+
+---
+
+[amda]: https://www.cms.guilford.com/books/Applied-Missing-Data-Analysis/Craig-Enders/9781606236390
+[ea_data0]: https://www.appliedmissingdata.com/analyses
+[ea_data1]: ../../data/eating_attitudes.rds
+[ea_code]: ../../code/process_eating_data.R
+[little_1998]: https://doi.org/10.1080/01621459.1988.10478722
+[ggmice]: https://amices.org/ggmice/index.html
+[mice]: https://cran.r-project.org/web/packages/mice/index.html
