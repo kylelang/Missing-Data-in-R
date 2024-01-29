@@ -1,7 +1,7 @@
 %%% Title:    Missing Data in R: FIML
 %%% Author:   Kyle M. Lang
 %%% Created:  2015-09-29
-%%% Modified: 2023-01-29
+%%% Modified: 2024-01-29
 
 \documentclass[10pt]{beamer}
 \usetheme{Utrecht}
@@ -33,19 +33,7 @@
 
 \begin{document}
 
-<<knitr_setup, include = FALSE, cache = FALSE>>=
-options(width = 60)
-opts_chunk$set(size = "footnotesize",
-               fig.align = "center",
-               fig.path = "figure/fiml-",
-               message = FALSE,
-               warning = FALSE,
-               comment = "")
-opts_knit$set(root.dir = "../../../")
-knit_theme$set('edit-kwrite')
-@
-
-<<r_setup, include = FALSE, cache = FALSE>>=
+<<setup, include = FALSE, cache = FALSE>>=
 set.seed(235711)
 
 library(knitr)
@@ -59,10 +47,20 @@ library(mgcv)
 library(optimx)
 library(lavaan)
 
-source("code/supportFunctions.R")
-source("code/sim_missing/code/simMissingness.R")
+source("../../../code/supportFunctions.R")
+source("../../../code/sim_missing/code/simMissingness.R")
 
-dataDir <- "data/"
+dataDir <- "../../../data/"
+
+options(width = 60)
+
+opts_chunk$set(size = "footnotesize",
+               fig.align = "center",
+               fig.path = "figure/fiml-",
+               message = FALSE,
+               warning = FALSE,
+               comment = "")
+knit_theme$set('edit-kwrite')
 @
 
 %------------------------------------------------------------------------------%

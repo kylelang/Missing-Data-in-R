@@ -64,6 +64,7 @@ output:
 ### Lecture Slides
 
 - [FIML](lectures/3_fiml/fiml.pdf)
+- [ML Example](lectures/3_fiml/ml_example.pdf)
 
 ### R Demonstration
 
