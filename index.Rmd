@@ -13,7 +13,6 @@ output:
 
 ### Lecture Slides
 
-- [Missing Data Descriptives](lectures/1_basics/descriptives.pdf)
 - [Missing Data Mechanisms](lectures/1_basics/mechanisms.pdf)
 - [Simple Missing Data Treatments](lectures/1_basics/treatments.pdf)
 

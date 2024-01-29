@@ -1,7 +1,7 @@
 %%% Title:    Missing Data in R: Multivariate MI
 %%% Author:   Kyle M. Lang
 %%% Created:  2017-09-12
-%%% Modified: 2023-01-27
+%%% Modified: 2024-01-29
 
 \documentclass[10pt]{beamer}
 \usetheme{Utrecht}
@@ -107,7 +107,7 @@ knit_theme$set('edit-kwrite')
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}[allowframebreaks]{Joint Modeling: Strengths}
+\begin{frame}[allowframebreaks]{JM: Strengths}
   
   When correctly implemented, JM approaches are guaranteed to produce 
   \emph{Bayesianly proper} imputations.
@@ -133,7 +133,7 @@ knit_theme$set('edit-kwrite')
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}{Joint Modeling: Weaknesses}
+\begin{frame}{JM: Weaknesses}
   
   JM approaches don't scale well.
   \vc
@@ -154,7 +154,50 @@ knit_theme$set('edit-kwrite')
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}{Software Implementations}
+\begin{frame}{FCS: Strengths}
+  
+  FCS scales much better than JM.
+  \vc
+  \begin{itemize}
+  \item FCS only samples from a series of univariate distributions, not large 
+    joint distributions.
+  \end{itemize}
+  \va 
+  FCS approaches can create imputations for variables that don't have a sensible 
+  joint distribution.
+  \vc
+  \begin{itemize}
+  \item FCS can easily treat mixes of continuous and categorical variables.
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{FCS: Weaknesses}
+
+  FCS will usually be slower than JM.
+  \vc
+  \begin{itemize}
+  \item Each variable gets its own fully parameterized distribution, even if 
+    that granularity is unnecessary.
+  \end{itemize}
+  \va
+  When the incomplete variables don't have a known joint distribution, FCS 
+  doesn't have theoretical support.
+  \vc
+  \begin{itemize}
+  \item There is, however, a large degree of empirical support for the 
+    tenability of the FCS approach.
+  \item In practice, we usually choose FCS since real data rarely arise from a 
+    known joint distribution.
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{JM: Software Implementations}
   
   In R, MI via JM is available from several packages.
   \begin{itemize}
@@ -178,52 +221,10 @@ knit_theme$set('edit-kwrite')
   
 \end{frame}
 
+ 
 %------------------------------------------------------------------------------%
 
-\begin{frame}{Fully Conditional Specification: Strengths}
-  
-  FCS scales much better than JM.
-  \vc
-  \begin{itemize}
-  \item FCS only samples from a series of univariate distributions, not large 
-    joint distributions.
-  \end{itemize}
-  \va 
-  FCS approaches can create imputations for variables that don't have a sensible 
-  joint distribution.
-  \vc
-  \begin{itemize}
-  \item FCS can easily treat mixes of continuous and categorical variables.
-  \end{itemize}
-  
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}{Fully Conditional Specification: Weaknesses}
-
-  FCS will usually be slower than JM.
-  \vc
-  \begin{itemize}
-  \item Each variable gets its own fully parameterized distribution, even if 
-    that granularity is unnecessary.
-  \end{itemize}
-  \va
-  When the incomplete variables don't have a known joint distribution, FCS 
-  doesn't have theoretical support.
-  \vc
-  \begin{itemize}
-  \item There is, however, a large degree of empirical support for the 
-    tenability of the FCS approach.
-  \item In practice, we usually choose FCS since real data rarely arise from a 
-    known joint distribution.
-  \end{itemize}
-  
-\end{frame}
-  
-%------------------------------------------------------------------------------%
-
-\begin{frame}{Software Implementations}
+\begin{frame}{FCS: Software Implementations}
   
   The \pkg{mice} package is the most popular R implementation of FCS.  
   \citep{mice}.
@@ -246,11 +247,11 @@ knit_theme$set('edit-kwrite')
 
 %------------------------------------------------------------------------------%
 
-\sectionslide{Fully Conditional Specification}
+\section{Procedures}
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}{Procedure: Fully Conditional Specification}
+\begin{frame}{FCS: Procedure}
   
   \begin{enumerate}
   \item Fill the missing data with reasonable guesses.
@@ -270,82 +271,6 @@ knit_theme$set('edit-kwrite')
   \end{enumerate}
   
 \end{frame}
-
-\watermarkoff %----------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example: Data Generation}
-  
-  First we'll simulate some synthetic data.
-  
-  <<>>=
-  ## Simulate some data:
-  simData <- 
-      simCovData(nObs = 1000, sigma = 0.25, nVars = 4)
-  
-  head(simData, 10)
-  @ 
-  
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example: Data Generation}
-
-  Next, we impose some missing values on the simulated data.
-  
-  <<>>=
-  targets  <- paste0("x", 1:3)
-  missData <- imposeMissData(data    = simData,
-                             targets = targets,
-                             preds   = "x4",
-                             pm      = 0.3,
-                             types = c("low", "center", "high")
-                             )
-  @ 
-  
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example: Data Visualization}
-
-  Check the results.
-  
-<<>>=
-head(missData, 10)
-@ 
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example: Data Visualization}
-
-  \begin{columns}
-    \begin{column}{0.5\textwidth}
-      
-      Use the \code{naniar::vis\_missing()} function to visualize the pattern of 
-      missing values.
-      
-      <<eval = FALSE>>=
-      vis_miss(missData)
-      @ 
-      
-    \end{column}
-    \begin{column}{0.5\textwidth}
-      
-      <<echo = FALSE>>=
-      vis_miss(missData)
-      @ 
-      
-    \end{column}
-  \end{columns}
-  
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\sectionslide{Joint Modeling}
 
 %------------------------------------------------------------------------------%
 
@@ -375,26 +300,7 @@ head(missData, 10)
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}{Multivariate Bayesian Regression}
-  
-  Previously, we saw examples of univariate Bayesian regression which used the 
-  following model:
-  \begin{align*}
-    \sigma^2 &\sim \text{Inv-}\chi^2 \left(N - P, MSE \right)\\[8pt]
-    \beta &\sim \text{MVN} \left( \hat{\beta}_{ls}, ~ \sigma^2 (\mathbf{X}^T \mathbf{X})^{-1} \right)
-  \end{align*}
-  We can directly extend the above to the multivariate case:
-  \begin{align*}
-    \Sigma^{(i)} &\sim \text{Inv-W} \left(N - 1, (N - 1) \Sigma^{(i - 1)} \right)\\[8pt]
-    \mu^{(i)} &\sim \text{MVN} \left(\mu^{(i - 1)}, N^{-1}\Sigma^{(i)} \right)
-  \end{align*}
-  We get $\alpha$, $\beta$, and $\Sigma_{\varepsilon}$ via the calculations on the 
-  preceding slide
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}{Procedure: Joint Modeling}
+\begin{frame}{JM: Procedure}
   
   In JM imputation, we estimate the imputation model via the 
   \citet{tannerWong:1987} \emph{data augmentation} algorithm.
@@ -423,22 +329,30 @@ head(missData, 10)
 
 \watermarkoff %----------------------------------------------------------------%
 
-\begin{frame}[fragile, allowframebreaks]{Example: Data Visualization}
+\begin{frame}[fragile, allowframebreaks]{JM: Visualing Patternwise Estimation}
 
   \begin{columns}
     \begin{column}{0.5\textwidth}
-      
-      Use \code{ggmice::plot\_pattern()} to visualize the response patterns.
-      
-      <<eval = FALSE>>=
-      library(ggmice)
-      plot_pattern(missData)
-      @         
+
+      \begin{align*}
+        \beta &= (\mathbf{X}^T \mathbf{X})^{-1} \mathbf{X}^T \mathbf{Y}\\
+        &= \text{Cov}(\mathbf{X})^{-1} \text{Cov}(\mathbf{X}, \mathbf{Y})\\
+        \alpha &= \mu_Y - \beta^T \mu_X\\
+        \Sigma_{\varepsilon} &= \Sigma_Y - \beta^T \Sigma_X \beta
+      \end{align*}
       
     \end{column}
     \begin{column}{0.5\textwidth}
       
       <<echo = FALSE>>=
+      simData <- simCovData(nObs = 1000, sigma = 0.25, nVars = 4)
+  
+      missData <- imposeMissData(data    = simData,
+                                 targets = paste0("x", 1:3),
+                                 preds   = "x4",
+                                 pm      = 0.3,
+                                 types = c("low", "center", "high")
+                                 )
       ggmice::plot_pattern(missData)
       @         
       
@@ -449,7 +363,7 @@ head(missData, 10)
 
 %------------------------------------------------------------------------------%
 
-\sectionslide{Mixed Data Types}
+\section{Mixed Data Types}
 
 %------------------------------------------------------------------------------%
 
@@ -527,3 +441,85 @@ head(missData, 10)
 %------------------------------------------------------------------------------%
 
 \end{document}
+
+
+
+%------------------------------------------------------------------------------%
+%------------------------------------------------------------------------------%
+%------------------------------------------------------------------------------%
+
+
+
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example: Data Generation}
+  
+  First we'll simulate some synthetic data.
+  
+  <<>>=
+  ## Simulate some data:
+  simData <- 
+      simCovData(nObs = 1000, sigma = 0.25, nVars = 4)
+  
+  head(simData, 10)
+  @ 
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example: Data Generation}
+
+  Next, we impose some missing values on the simulated data.
+  
+  <<>>=
+  targets  <- paste0("x", 1:3)
+  missData <- imposeMissData(data    = simData,
+                             targets = targets,
+                             preds   = "x4",
+                             pm      = 0.3,
+                             types = c("low", "center", "high")
+                             )
+  @ 
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example: Data Visualization}
+
+  Check the results.
+  
+<<>>=
+head(missData, 10)
+@ 
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example: Data Visualization}
+
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      
+      Use the \code{naniar::vis\_missing()} function to visualize the pattern of 
+      missing values.
+      
+      <<eval = FALSE>>=
+      vis_miss(missData)
+      @ 
+      
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      
+      <<echo = FALSE>>=
+      vis_miss(missData)
+      @ 
+      
+    \end{column}
+  \end{columns}
+  
+\end{frame}
+
+

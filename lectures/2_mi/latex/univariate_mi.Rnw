@@ -1,7 +1,7 @@
 %%% Title:    Missing Data in R: Univariate MI
 %%% Author:   Kyle M. Lang
 %%% Created:  2017-09-12
-%%% Modified: 2023-01-27
+%%% Modified: 2024-01-29
 
 \documentclass[10pt]{beamer}
 \usetheme{Utrecht}
@@ -18,7 +18,6 @@
 
 \newcommand{\rmsc}[1]{\textrm{\textsc{#1}}}
 
-
 \title{Univariate Multiple Imputation}
 \subtitle{Utrecht University Winter School: Missing Data in R}
 \author{Kyle M. Lang}
@@ -30,7 +29,7 @@
 \begin{document}
 
 <<setup, include = FALSE, cache = FALSE>>=
-set.seed(235711)
+set.seed(314159)
 
 library(knitr)
 library(ggplot2)
@@ -397,26 +396,20 @@ knit_theme$set('edit-kwrite')
   
   The problems on the previous slide arise from using the same regression 
   coefficients to create each of the $M$ imputations.
+  \vc
   \begin{itemize}
   \item Implies that you're using the ``correct'' coefficients.
-    \vb
-  \item This assumption is plainly ridiculous.
-    \begin{itemize}
+  \end{itemize}
+  \va
+  This assumption is plainly ridiculous.
+  \vc
+  \begin{itemize}
     \item If we don't know some values of our outcome variable, how can we know 
       the ``correct'' coefficients to link the incomplete outcome to the 
       observed predictors?
-    \end{itemize}
-    \vb
-    \pause
-  \item Proper MI also models uncertainty in the regression coefficients used to 
-    create the imputations.
-    \begin{itemize}
-    \item A different set of of coefficients is randomly sampled (using Bayesian 
-      simulation) to create each of the $M$ imputations.
       \vc
-    \item The tricky part about implemented MI is deriving the distributions 
-      from which to sample these coefficients.
-    \end{itemize}
+    \item In any fitted regression model, the coeffcients are only estimates of
+      the population parameters.
   \end{itemize}
   
 \end{frame}
@@ -424,7 +417,17 @@ knit_theme$set('edit-kwrite')
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Setting Up Proper MI}
-  
+
+  Proper MI also models uncertainty in the regression coefficients used to 
+  create the imputations.
+  \begin{itemize}
+    \item A different set of of coefficients is randomly sampled (using Bayesian 
+      simulation) to create each of the $M$ imputations.
+      \vc
+    \item The tricky part about implemented MI is deriving the distributions 
+      from which to sample these coefficients.
+  \end{itemize}
+  \va  
   Our imputation model is simply a linear regression model:
   \begin{align*}
     Y = \mathbf{X} \beta + \varepsilon
@@ -435,99 +438,14 @@ knit_theme$set('edit-kwrite')
   %\item \textsc{Question:} Why do we only sample $\sigma^2$ and not 
   %  $\varepsilon$?
   %\end{itemize}
-  \pause
-  \va
-  For a simple imputation model with a normally distributed outcome and 
-  uninformative priors, we need to specify two distributions:
-  \begin{enumerate}
-    \item The marginal posterior distribution of $\sigma^2$
-    \item The conditional posterior distribution of $\beta$ 
-  \end{enumerate}
-  
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}{Marginal Distribution of $\sigma^2$}
- 
-  We first specify the marginal posterior distribution for the noise variance,
-  $\sigma^2$.
-  \vc
-  \begin{itemize}
-  \item This distribution does not depend on any other parameters.
-  \end{itemize}
-  \begin{align}
-    \sigma^2 &\sim \text{Inv-}\chi^2 \left(N - P, MSE \right) \label{sigma2PosteriorEq}\\
-    &\text{with } MSE = \frac{1}{N - P} \left( Y - \mathbf{X}\hat{\beta}_{ls} \right)^T \left( Y - \mathbf{X}\hat{\beta}_{ls} \right) \notag
-  \end{align}
-  \vx{-12}
-  \begin{itemize}
-  \item $\sigma^2$ follows a scaled inverse $\chi^2$ distribution.
-  \end{itemize}
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}{Conditional Distribution of $\beta$}
-
-  We then specify the conditional posterior distribution for $\beta$. 
-  \vc
-  \begin{itemize}
-  \item This distribution is conditioned on a specific value of $\sigma^2$.
-  \end{itemize}
-  \begin{align}
-    \beta \sim \text{MVN} \left( \hat{\beta}_{ls}, ~ \sigma^2 (\mathbf{X}^T \mathbf{X})^{-1} \right) \label{betaPosteriorEq}
-  \end{align}
-  \vx{-12}
-  \begin{itemize}
-  \item $\beta$ (conditionally) follows a multivariate normal distribution.
-  \end{itemize}
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}{PPD of the Missing Data}
-  
-  Once we've sampled our imputation model parameters, we can construct the 
-  posterior predictive distribution of the missing data.
-  \vc
-  \begin{itemize}
-  \item This is the distribution from which we sample our imputed values.
-    \vc
-  \item In practice, we directly compute the imputations based on the simulated 
-    imputation model parameters.
-  \end{itemize}
-  \begin{align}
-    Y_{imp} &= \mathbf{X}_{mis}\tilde{\beta} + \tilde{\varepsilon} \label{impPosteriorEq}\\
-    &\text{with } \varepsilon \sim \text{N} \left( 0, \widetilde{\sigma^2} \right) \notag
-  \end{align}
-  
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}{General Steps for Basic MI}
-  
-  With all of the elements in place, we can execute a basic MI by following 
-  these steps:
-  \vb
-  \begin{enumerate}
-  \item Find the least squares estimates of $\beta$, $\hat{\beta}_{ls}$, by 
-    regressing the observed portion of $Y$ onto the the analogous rows of 
-    $\mathbf{X}$.
-    \vb
-  \item Use $\hat{\beta}_{ls}$ to parameterize the posterior distribution of 
-    $\sigma^2$, given by Equation \ref{sigma2PosteriorEq}, and draw $M$ samples 
-    of $\sigma^2$ from this distribution.
-    \vb
-  \item For each of the $\sigma^2_m$, sample a corresponding value of $\beta$ 
-    from Equation \ref{betaPosteriorEq}.
-    \vb
-  \item Plug the $M$ samples of $\beta$ and $\sigma^2$ into Equation 
-    \ref{impPosteriorEq} to create the $M$ imputations.
-  \end{enumerate}
+  %\pause
+  %\va
+  %For a simple imputation model with a normally distributed outcome and 
+  %uninformative priors, we need to specify two distributions:
+  %\begin{enumerate}
+  %  \item The marginal posterior distribution of $\sigma^2$
+  %  \item The conditional posterior distribution of $\beta$ 
+  %\end{enumerate}
   
 \end{frame}
 
@@ -978,30 +896,6 @@ knit_theme$set('edit-kwrite')
     \end{itemize}
   \end{enumerate}
   
-  \pagebreak
-  
-  To cross-validate predictive models with MI data, we have a few options:
-  \vc  
-  \begin{enumerate}
-  \item We can simply impute the entire sample before splitting and run the 
-    cross-validation procedure on each of the $M$ imputed datasets.
-    \vc
-  \item We can split the sample first, train the imputation model on 
-    the training set, and also use this imputation model to generate imputations 
-    for the validation data.
-    \vc
-  \item We can train separate imputation models on the training and validation 
-    data.
-    \vc
-    \begin{itemize}
-    \item When generating the validation-set predictions, we need to cross the 
-      training- and validation-set imputations.
-      \vc
-    \item I.e., for $M_1 = 10$ sets of training-set estimates and $M_2 = 10$ 
-      validation-set imputations, we'll have $M_1 \times M_2 = 100$ predictions.
-    \end{itemize}
-  \end{enumerate}
-  
 \end{frame}
 
 %------------------------------------------------------------------------------%
@@ -1054,6 +948,206 @@ knit_theme$set('edit-kwrite')
 
 %------------------------------------------------------------------------------%
 
+\begin{frame}{Pros and Cons of Predictive Mean Matching}
+  
+  PMM tends to work well with continuous, non-normal variables.
+  \begin{itemize}
+  \item Relatively robust to misspecification of the imputation model
+  \item Imputed values are always valid
+  \end{itemize}
+  \vb
+  PMM does have some important limitations.
+  \begin{itemize}
+  \item In small samples, the same donor cases can be re-used many times.
+  \item PMM cannot extrapolate beyond the observed range of the data.
+  \item PMM cannot be used with some variable types.
+    \begin{itemize}
+    \item Nominal variables
+    \end{itemize}
+  \item PMM may perform poorly when the number of predictor variables is small.
+  \end{itemize}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[allowframebreaks]{References}
+  
+  \bibliographystyle{apacite}
+  \bibliography{../../../bibtex/winter_school_refs.bib}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\end{document}
+
+
+
+%------------------------------------------------------------------------------%
+%------------------------------------------------------------------------------%
+%------------------------------------------------------------------------------%
+
+
+
+\begin{frame}{Marginal Distribution of $\sigma^2$}
+ 
+  We first specify the marginal posterior distribution for the noise variance,
+  $\sigma^2$.
+  \vc
+  \begin{itemize}
+  \item This distribution does not depend on any other parameters.
+  \end{itemize}
+  \begin{align}
+    \sigma^2 &\sim \text{Inv-}\chi^2 \left(N - P, MSE \right) \label{sigma2PosteriorEq}\\
+    &\text{with } MSE = \frac{1}{N - P} \left( Y - \mathbf{X}\hat{\beta}_{ls} \right)^T \left( Y - \mathbf{X}\hat{\beta}_{ls} \right) \notag
+  \end{align}
+  \vx{-12}
+  \begin{itemize}
+  \item $\sigma^2$ follows a scaled inverse $\chi^2$ distribution.
+  \end{itemize}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{Conditional Distribution of $\beta$}
+
+  We then specify the conditional posterior distribution for $\beta$. 
+  \vc
+  \begin{itemize}
+  \item This distribution is conditioned on a specific value of $\sigma^2$.
+  \end{itemize}
+  \begin{align}
+    \beta \sim \text{MVN} \left( \hat{\beta}_{ls}, ~ \sigma^2 (\mathbf{X}^T \mathbf{X})^{-1} \right) \label{betaPosteriorEq}
+  \end{align}
+  \vx{-12}
+  \begin{itemize}
+  \item $\beta$ (conditionally) follows a multivariate normal distribution.
+  \end{itemize}
+
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{PPD of the Missing Data}
+  
+  Once we've sampled our imputation model parameters, we can construct the 
+  posterior predictive distribution of the missing data.
+  \vc
+  \begin{itemize}
+  \item This is the distribution from which we sample our imputed values.
+    \vc
+  \item In practice, we directly compute the imputations based on the simulated 
+    imputation model parameters.
+  \end{itemize}
+  \begin{align}
+    Y_{imp} &= \mathbf{X}_{mis}\tilde{\beta} + \tilde{\varepsilon} \label{impPosteriorEq}\\
+    &\text{with } \varepsilon \sim \text{N} \left( 0, \widetilde{\sigma^2} \right) \notag
+  \end{align}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}{General Steps for Basic MI}
+  
+  With all of the elements in place, we can execute a basic MI by following 
+  these steps:
+  \vb
+  \begin{enumerate}
+  \item Find the least squares estimates of $\beta$, $\hat{\beta}_{ls}$, by 
+    regressing the observed portion of $Y$ onto the the analogous rows of 
+    $\mathbf{X}$.
+    \vb
+  \item Use $\hat{\beta}_{ls}$ to parameterize the posterior distribution of 
+    $\sigma^2$, given by Equation \ref{sigma2PosteriorEq}, and draw $M$ samples 
+    of $\sigma^2$ from this distribution.
+    \vb
+  \item For each of the $\sigma^2_m$, sample a corresponding value of $\beta$ 
+    from Equation \ref{betaPosteriorEq}.
+    \vb
+  \item Plug the $M$ samples of $\beta$ and $\sigma^2$ into Equation 
+    \ref{impPosteriorEq} to create the $M$ imputations.
+  \end{enumerate}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[allowframebreaks]{Pooling Predictions}
+
+  When doing an MI-based analysis, we generally want to pool results as late as 
+  possible in the analytic process.
+  \vc
+  \begin{itemize}
+  \item This pattern also holds when doing prediction with MI data 
+    \citep{woodEtAl:2015}.
+    \vc
+  \item When doing prediction, we pool the $M$ sets of predictions.
+    \begin{itemize}
+    \item We don't generate predictions using the pooled parameters.
+    \item \emph{Caveat:} For GLMs, we pool predictions before applying the 
+      inverse link function.
+    \end{itemize}
+    \vc
+  \item When pooling fit measures based on predictions (e.g., MSE), we pool the 
+    $M$ estimates of fit.
+    \begin{itemize}
+    \item We don't generate fit values using pooled predictions or parameters.
+    \end{itemize}
+    \vc
+  \item Variability between the $M$ predictions (or any estimates derived 
+    therefrom) quantifies uncertainty due to missing data.
+  \end{itemize}
+  
+  \pagebreak
+  
+  According to \citet{woodEtAl:2015}, the most natural approach also tends to 
+  perform best:
+  \vc
+  \begin{enumerate}
+  \item Train the prediction model on each of the $M$ imputed datasets separately.
+    \vc
+  \item Generate $M$ sets of predictions by submitting the fully observed future 
+    data to the $M$ models from above.
+    \vc
+  \item Average the $M$ sets of predictions into a single vector of predicted 
+    values.
+    \begin{itemize}
+    \item When estimating prediction error, calculate $M$ separate measures of 
+      error, and pool these estimates.
+    \end{itemize}
+  \end{enumerate}
+  
+  \pagebreak
+  
+  To cross-validate predictive models with MI data, we have a few options:
+  \vc  
+  \begin{enumerate}
+  \item We can simply impute the entire sample before splitting and run the 
+    cross-validation procedure on each of the $M$ imputed datasets.
+    \vc
+  \item We can split the sample first, train the imputation model on 
+    the training set, and also use this imputation model to generate imputations 
+    for the validation data.
+    \vc
+  \item We can train separate imputation models on the training and validation 
+    data.
+    \vc
+    \begin{itemize}
+    \item When generating the validation-set predictions, we need to cross the 
+      training- and validation-set imputations.
+      \vc
+    \item I.e., for $M_1 = 10$ sets of training-set estimates and $M_2 = 10$ 
+      validation-set imputations, we'll have $M_1 \times M_2 = 100$ predictions.
+    \end{itemize}
+  \end{enumerate}
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
 \begin{frame}[allowframebreaks]{Predictive Mean Matching: Procedure}
   
   Suppose we want to generate $M$ imputations for an incomplete variable, $Y$, 
@@ -1095,39 +1189,4 @@ knit_theme$set('edit-kwrite')
   
 \end{frame}
 
-%------------------------------------------------------------------------------%
-
-\begin{frame}{Pros and Cons of Predictive Mean Matching}
-  
-  PMM tends to work well with continuous, non-normal variables.
-  \begin{itemize}
-  \item Relatively robust to misspecification of the imputation model
-  \item Imputed values are always valid
-  \end{itemize}
-  \vb
-  PMM does have some important limitations.
-  \begin{itemize}
-  \item In small samples, the same donor cases can be re-used many times.
-  \item PMM cannot extrapolate beyond the observed range of the data.
-  \item PMM cannot be used with some variable types.
-    \begin{itemize}
-    \item Nominal variables
-    \end{itemize}
-  \item PMM may perform poorly when the number of predictor variables is small.
-  \end{itemize}
-  
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[allowframebreaks]{References}
-  
-  \bibliographystyle{apacite}
-  \bibliography{../../../bibtex/winter_school_refs.bib}
-  
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\end{document}
 

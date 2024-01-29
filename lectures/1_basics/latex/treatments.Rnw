@@ -1,7 +1,7 @@
 %%% Title:    Missing Data in R: Missing Data Treatments
 %%% Author:   Kyle M. Lang
 %%% Created:  2015-11-06
-%%% Modified: 2023-01-28
+%%% Modified: 2024-01-29
 
 \documentclass{beamer}
 \usetheme{Utrecht}
@@ -28,18 +28,7 @@
 
 \begin{document}
 
-<<knitr_setup, include = FALSE, cache = FALSE>>=
-opts_chunk$set(size = "footnotesize",
-               fig.align = "center",
-               fig.path = "figure/intro-",
-               message = FALSE,
-               warning = FALSE,
-               comment = "")
-opts_knit$set(root.dir = "../../../")
-knit_theme$set('edit-kwrite')
-@
-
-<<r_setup, inclcude = FALSE, echo = FALSE>>=
+<<setup, include = FALSE, echo = FALSE>>=
 options(width = 60)
 
 set.seed(235711)
@@ -57,10 +46,18 @@ library(ggpubr)
 library(lme4)
 library(lavaan)
 
-dataDir <- "data/"
+opts_chunk$set(size = "footnotesize",
+               fig.align = "center",
+               fig.path = "figure/treatments-",
+               message = FALSE,
+               warning = FALSE,
+               comment = "")
+knit_theme$set('edit-kwrite')
 
-source("code/supportFunctions.R")
-source("code/sim_missing/code/simMissingness.R")
+dataDir <- "../../../data/"
+
+source("../../../code/supportFunctions.R")
+source("../../../code/sim_missing/code/simMissingness.R")
 @
 
 %------------------------------------------------------------------------------%
@@ -514,218 +511,6 @@ source("code/sim_missing/code/simMissingness.R")
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}{Bad Methods (These almost never work)}
-
-  Averaging Available Items (Person-Mean Imputation)
-  \begin{itemize}
-  \item Compute aggregate scores using only available values
-    \begin{itemize}
-    \item Missing data must be MCAR
-    \item Each item must contributes equally to the aggregate score
-    \end{itemize}
-  \end{itemize}
-
-  \vb
-
-  Last Observation Carried Forward (LOCF)
-  \begin{itemize}
-  \item Replace post-dropout values with the most recent observed value
-    \begin{itemize}
-    \item Assume that dropouts would maintain their last known values
-    \item Attenuates estimates of growth/development
-    \end{itemize}
-  \end{itemize}
-
-\end{frame}
-
-\watermarkoff %----------------------------------------------------------------%
-
-\begin{frame}{LOCF}
-  
-  <<echo = FALSE, cache = TRUE>>=
-  ## Stash the diabetes datasets:
-  diabetes <- list(dat0 = dat0, dat00 = dat00, dat1 = dat1)
-  
-  ## Simulate some longitudinal data with random slopes:
-  n1 <- 5
-  n2 <- 50
-  
-  s     <- 1.0
-  gamma <- c(1.5, 1.25)
-  tau   <- matrix(c(1.0, -0.3, -0.3, 1.0), 2, 2)
-  
-  U    <- rmvnorm(n2, gamma, tau)
-  time <- matrix(1:n1 - 1)
-  tmp  <- U[ , 1] + U[ , 2] %*% t(time)
-  
-  dat1 <- dat2 <- dat3 <-
-      data.frame(y = as.numeric(tmp) + rnorm(n1 * n2, 0, s),
-                 t = rep(0:(n1 - 1), each = n2),
-                 id = rep(1:n2, n1)
-                 ) %>%
-      arrange(id)
-  
-  ## Apply random attrition:
-  dat2$y <- dat1 %$% tapply(y, id, attrit, pComp = 0.25) %>% unlist()
-  
-  ## Treat attrition with LOCF:
-  dat3$y <- dat2 %$% tapply(y, id, locf) %>% unlist()
-  
-  ## Create some missingness indicators for plotting purposes:
-  dat3$m  <- is.na(dat2$y)
-  dat3$m2 <- dat3 %$% tapply(m,
-                             id,
-                             function(x) {
-                                 tmp <- (which(x) - 1)[1]
-                                 x[tmp] <- TRUE
-                                 x
-                             }
-                             ) %>% unlist()
-  
-  p00 <- ggplot(data = dat1, mapping = aes(y = y, x = t)) +
-      ylab("Y") +
-      xlab("Time") +
-      theme_classic() +
-      theme(text = element_text(size = 8, family = "Courier"),
-            plot.title = element_text(face = "bold", hjust = 0.5),
-            axis.title = element_blank(),
-            legend.position = "none") +
-      ylim(range(dat1$y))
-  
-  p01 <- p00 + scale_color_manual(values = c("black", "red"))
-  @ 
-  
-  \only<1>{
-    
-    <<echo = FALSE, cache = TRUE, fig.asp = 0.5>>=
-    ggarrange(
-        p00 + 
-        geom_line(aes(group = id), alpha = 0.3) + 
-        geom_point(size = 0.75) +
-        ggtitle("Fully Observed Data"),
-        
-        p00 + 
-        geom_line(data = dat2, mapping = aes(group = id), alpha = 0.3) +
-        geom_point(data = dat2, size = 0.75) +
-        ggtitle("Data with Attrition") +
-        theme(axis.text.y = element_blank()),
-        
-        ncol = 2) %>%
-        annotate_figure(left = text_grob("Y", 
-                                         family = "Courier", 
-                                         size = 10,
-                                         rot = 90),
-                        bottom = text_grob("Time", family = "Courier", size = 10)
-                        )
-    @
-    
-  }
-  
-  \only<2>{
-    
-    <<echo = FALSE, cache = TRUE, fig.asp = 0.5>>=
-    ggarrange(
-        p01 + 
-        geom_line(data = dat3, aes(group = id, color = m2), alpha = 0.3) +
-        geom_point(data = dat3, aes(color = m), size = 0.75) +
-        ggtitle("Data Treated with LOCF"),
-        
-        p01 + 
-        geom_line(data = dat3, aes(group = id, color = m2), alpha = 0.1) +
-        geom_point(data = dat3, aes(color = m), alpha = 0.1, size = 0.75) +
-        geom_smooth(data = dat3,
-                    method = "lm",
-                    se = FALSE,
-                    color = "red",
-                    size = 1) +
-        geom_smooth(data = dat1,
-                    method = "lm",
-                    se = FALSE,
-                    color = "black",
-                    size = 1) +
-        ggtitle("Correct vs. Imputed Trends") +
-        theme(axis.text.y = element_blank()),
-        
-        ncol = 2) %>%
-        annotate_figure(left = text_grob("Y", 
-                                         family = "Courier", 
-                                         size = 10,
-                                         rot = 90),
-                        bottom = text_grob("Time", family = "Courier", size = 10)
-                        )
-    @
-    
-  }
-  
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}[fragile]{Example}
-
-  <<echo = FALSE>>=
-  fullData <- dat1
-  locfData <- dat3
-  @
-  
-  <<>>=
-  ## Fit some multilevel regression models
-  fit1 <- lmer(y ~ t + (t | id), data = fullData)
-  fit2 <- lmer(y ~ t + (t | id), data = locfData)
-  @ 
-  
-  <<echo = FALSE, fig.asp = 0.5>>=
-  rf1 <- ranef(fit1)[[1]]
-  rf2 <- ranef(fit2)[[1]]
-
-  rf <- data.frame(Data = rep(c("Full", "LOCF"), each = nrow(rf1)),
-                   x = c(rf1$t, rf2$t)
-                   )
-
-  ff1 <- coef(fit1)[[1]]
-  ff2 <- coef(fit2)[[1]]
-
-  ff <- data.frame(Data = rep(c("Full", "LOCF"), each = nrow(ff1)),
-                   x = c(ff1$t, ff2$t)
-                   )
-  
-  ggarrange(
-      ggplot(data = rf, mapping = aes(x = x, color = Data)) + 
-      geom_density() +
-      ggtitle("Random Effects") +
-      scale_color_manual(values = c("black", "red")) +
-      theme_classic() +
-      theme(text = element_text(size = 8, family = "Courier"),
-            plot.title = element_text(face = "bold", hjust = 0.5),
-            axis.title = element_blank()
-            ),
-    
-      ggplot(data = ff, mapping = aes(x = x, color = Data)) + 
-      geom_density() +
-      ggtitle("Fixed Effects") +
-      scale_color_manual(values = c("black", "red")) +
-      theme_classic() +
-      theme(text = element_text(size = 8, family = "Courier"),
-            plot.title = element_text(face = "bold", hjust = 0.5),
-            axis.title = element_blank(),
-            axis.text.y = element_blank()
-            ),
-      
-      ncol = 2,
-      common.legend = TRUE,
-      legend = "right") %>%
-      annotate_figure(left = text_grob("Density", 
-                                       family = "Courier", 
-                                       size = 10,
-                                       rot = 90),
-                      bottom = text_grob("Effect", family = "Courier", size = 10)
-                      )
-  @
-  
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
 \section{OK Methods}
 
 %------------------------------------------------------------------------------%
@@ -757,10 +542,6 @@ source("code/sim_missing/code/simMissingness.R")
       \only<1>{
         
         <<echo = FALSE>>=
-        dat1  <- diabetes$dat1
-        dat0  <- diabetes$dat0
-        dat00 <- diabetes$dat00
-        
         imputed <- dat1 %>%
             dplyr::select(bmi, glu) %>%
             mice(m         = 1,
@@ -1054,13 +835,223 @@ source("code/sim_missing/code/simMissingness.R")
 
 
 
+%------------------------------------------------------------------------------%
+%------------------------------------------------------------------------------%
+%------------------------------------------------------------------------------%
 
 
 
+\begin{frame}{Bad Methods (These almost never work)}
 
+  Averaging Available Items (Person-Mean Imputation)
+  \begin{itemize}
+  \item Compute aggregate scores using only available values
+    \begin{itemize}
+    \item Missing data must be MCAR
+    \item Each item must contributes equally to the aggregate score
+    \end{itemize}
+  \end{itemize}
 
+  \vb
 
+  Last Observation Carried Forward (LOCF)
+  \begin{itemize}
+  \item Replace post-dropout values with the most recent observed value
+    \begin{itemize}
+    \item Assume that dropouts would maintain their last known values
+    \item Attenuates estimates of growth/development
+    \end{itemize}
+  \end{itemize}
 
+\end{frame}
+
+\watermarkoff %----------------------------------------------------------------%
+
+\begin{frame}{LOCF}
+  
+  <<echo = FALSE, cache = TRUE>>=
+  ## Stash the diabetes datasets:
+  diabetes <- list(dat0 = dat0, dat00 = dat00, dat1 = dat1)
+  
+  ## Simulate some longitudinal data with random slopes:
+  n1 <- 5
+  n2 <- 50
+  
+  s     <- 1.0
+  gamma <- c(1.5, 1.25)
+  tau   <- matrix(c(1.0, -0.3, -0.3, 1.0), 2, 2)
+  
+  U    <- rmvnorm(n2, gamma, tau)
+  time <- matrix(1:n1 - 1)
+  tmp  <- U[ , 1] + U[ , 2] %*% t(time)
+  
+  dat1 <- dat2 <- dat3 <-
+      data.frame(y = as.numeric(tmp) + rnorm(n1 * n2, 0, s),
+                 t = rep(0:(n1 - 1), each = n2),
+                 id = rep(1:n2, n1)
+                 ) %>%
+      arrange(id)
+  
+  ## Apply random attrition:
+  dat2$y <- dat1 %$% tapply(y, id, attrit, pComp = 0.25) %>% unlist()
+  
+  ## Treat attrition with LOCF:
+  dat3$y <- dat2 %$% tapply(y, id, locf) %>% unlist()
+  
+  ## Create some missingness indicators for plotting purposes:
+  dat3$m  <- is.na(dat2$y)
+  dat3$m2 <- dat3 %$% tapply(m,
+                             id,
+                             function(x) {
+                                 tmp <- (which(x) - 1)[1]
+                                 x[tmp] <- TRUE
+                                 x
+                             }
+                             ) %>% unlist()
+  
+  p00 <- ggplot(data = dat1, mapping = aes(y = y, x = t)) +
+      ylab("Y") +
+      xlab("Time") +
+      theme_classic() +
+      theme(text = element_text(size = 8, family = "Courier"),
+            plot.title = element_text(face = "bold", hjust = 0.5),
+            axis.title = element_blank(),
+            legend.position = "none") +
+      ylim(range(dat1$y))
+  
+  p01 <- p00 + scale_color_manual(values = c("black", "red"))
+  @ 
+  
+  \only<1>{
+    
+    <<echo = FALSE, cache = TRUE, fig.asp = 0.5>>=
+    ggarrange(
+        p00 + 
+        geom_line(aes(group = id), alpha = 0.3) + 
+        geom_point(size = 0.75) +
+        ggtitle("Fully Observed Data"),
+        
+        p00 + 
+        geom_line(data = dat2, mapping = aes(group = id), alpha = 0.3) +
+        geom_point(data = dat2, size = 0.75) +
+        ggtitle("Data with Attrition") +
+        theme(axis.text.y = element_blank()),
+        
+        ncol = 2) %>%
+        annotate_figure(left = text_grob("Y", 
+                                         family = "Courier", 
+                                         size = 10,
+                                         rot = 90),
+                        bottom = text_grob("Time", family = "Courier", size = 10)
+                        )
+    @
+    
+  }
+  
+  \only<2>{
+    
+    <<echo = FALSE, cache = TRUE, fig.asp = 0.5>>=
+    ggarrange(
+        p01 + 
+        geom_line(data = dat3, aes(group = id, color = m2), alpha = 0.3) +
+        geom_point(data = dat3, aes(color = m), size = 0.75) +
+        ggtitle("Data Treated with LOCF"),
+        
+        p01 + 
+        geom_line(data = dat3, aes(group = id, color = m2), alpha = 0.1) +
+        geom_point(data = dat3, aes(color = m), alpha = 0.1, size = 0.75) +
+        geom_smooth(data = dat3,
+                    method = "lm",
+                    se = FALSE,
+                    color = "red",
+                    size = 1) +
+        geom_smooth(data = dat1,
+                    method = "lm",
+                    se = FALSE,
+                    color = "black",
+                    size = 1) +
+        ggtitle("Correct vs. Imputed Trends") +
+        theme(axis.text.y = element_blank()),
+        
+        ncol = 2) %>%
+        annotate_figure(left = text_grob("Y", 
+                                         family = "Courier", 
+                                         size = 10,
+                                         rot = 90),
+                        bottom = text_grob("Time", family = "Courier", size = 10)
+                        )
+    @
+    
+  }
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
+
+\begin{frame}[fragile]{Example}
+
+  <<echo = FALSE>>=
+  fullData <- dat1
+  locfData <- dat3
+  @
+  
+  <<>>=
+  ## Fit some multilevel regression models
+  fit1 <- lmer(y ~ t + (t | id), data = fullData)
+  fit2 <- lmer(y ~ t + (t | id), data = locfData)
+  @ 
+  
+  <<echo = FALSE, fig.asp = 0.5>>=
+  rf1 <- ranef(fit1)[[1]]
+  rf2 <- ranef(fit2)[[1]]
+
+  rf <- data.frame(Data = rep(c("Full", "LOCF"), each = nrow(rf1)),
+                   x = c(rf1$t, rf2$t)
+                   )
+
+  ff1 <- coef(fit1)[[1]]
+  ff2 <- coef(fit2)[[1]]
+
+  ff <- data.frame(Data = rep(c("Full", "LOCF"), each = nrow(ff1)),
+                   x = c(ff1$t, ff2$t)
+                   )
+  
+  ggarrange(
+      ggplot(data = rf, mapping = aes(x = x, color = Data)) + 
+      geom_density() +
+      ggtitle("Random Effects") +
+      scale_color_manual(values = c("black", "red")) +
+      theme_classic() +
+      theme(text = element_text(size = 8, family = "Courier"),
+            plot.title = element_text(face = "bold", hjust = 0.5),
+            axis.title = element_blank()
+            ),
+    
+      ggplot(data = ff, mapping = aes(x = x, color = Data)) + 
+      geom_density() +
+      ggtitle("Fixed Effects") +
+      scale_color_manual(values = c("black", "red")) +
+      theme_classic() +
+      theme(text = element_text(size = 8, family = "Courier"),
+            plot.title = element_text(face = "bold", hjust = 0.5),
+            axis.title = element_blank(),
+            axis.text.y = element_blank()
+            ),
+      
+      ncol = 2,
+      common.legend = TRUE,
+      legend = "right") %>%
+      annotate_figure(left = text_grob("Density", 
+                                       family = "Courier", 
+                                       size = 10,
+                                       rot = 90),
+                      bottom = text_grob("Effect", family = "Courier", size = 10)
+                      )
+  @
+  
+\end{frame}
+
+%------------------------------------------------------------------------------%
 
 \begin{frame}{Good Methods (These almost always work)}
 
