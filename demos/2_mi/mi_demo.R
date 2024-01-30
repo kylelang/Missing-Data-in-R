@@ -1,7 +1,7 @@
 ### Title:    Missing Data in R: MI Demonstration
 ### Author:   Kyle M. Lang
 ### Created:  2015-10-04
-### Modified: 2023-01-31
+### Modified: 2024-01-30
 
 rm(list = ls(all = TRUE)) # Clear workspace
 
@@ -39,7 +39,7 @@ hist(cover)
 cover[cover < 1] %>% range()
 
 ## How many unique response patterns?
-md.pattern(missData) %>% nrow() - 1
+md.pattern(missData, plot = FALSE) %>% nrow() - 1
 
 
 ###-Missing Data Imputation--------------------------------------------------###
@@ -74,7 +74,7 @@ miceOut <- mice(missData, m = 10, maxit = 20, method = meth, seed = 235711)
 
 ###--------------------------------------------------------------------------###
 
-## Use a dummy run of mice() to initialize the meta data:
+## Use a dummy run of mice() to initialize the metadata:
 init <- mice(missData, maxit = 0)
 
 ls(init)
@@ -130,6 +130,7 @@ Rhat.mice(miceOut)
 plot(miceOut)
 
 ## Construct density plots of imputed vs. observed:
+p <- list()
 targets <- names(pm)[pm > 0]
 for(v in targets) 
   p[[v]] <- ggmice(miceOut, aes(.data[[v]], group = .imp)) + geom_density()
