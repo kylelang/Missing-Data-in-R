@@ -1,7 +1,7 @@
-### Title:    Missing Data in R: MI Demonstration
+### Title:    Missing Data in R: Multiple Imputation
 ### Author:   Kyle M. Lang
 ### Created:  2015-10-04
-### Modified: 2024-01-30
+### Modified: 2025-01-27
 
 rm(list = ls(all = TRUE)) # Clear workspace
 
@@ -74,12 +74,8 @@ miceOut <- mice(missData, m = 10, maxit = 20, method = meth, seed = 235711)
 
 ###--------------------------------------------------------------------------###
 
-## Use a dummy run of mice() to initialize the metadata:
-init <- mice(missData, maxit = 0)
-
-ls(init)
-
-(meth <- init$method)
+## Generate a default method vector:
+(meth <- make.method(missData))
 
 ## Impute all continuous variables using CART:
 meth <- gsub("pmm", "cart", meth)
@@ -87,8 +83,8 @@ meth <- gsub("pmm", "cart", meth)
 ## Impute 'sex' with somethin' fancy:
 meth["sex"] <- "lasso.select.logreg"
 
-## Check the default predictor matrix:
-(pred <- init$predictorMatrix)
+## Create a default predictor matrix:
+(pred <- make.predictorMatrix(missData))
 
 ## Do not use 'policy' items to impute 'riae' items:
 pred[grep("riae", rownames(pred)), grep("policy", colnames(pred))] <- 0
@@ -129,20 +125,18 @@ Rhat.mice(miceOut)
 
 plot(miceOut)
 
-## Construct density plots of imputed vs. observed:
-p <- list()
+p1 <- p2 <- list()
 targets <- names(pm)[pm > 0]
-for(v in targets) 
-  p[[v]] <- ggmice(miceOut, aes(.data[[v]], group = .imp)) + geom_density()
+for(v in targets) { 
+  ## Construct density plots of imputed vs. observed:
+  p1[[v]] <- ggmice(miceOut, aes(.data[[v]], group = .imp)) + geom_density()
 
-p # Print the plots
+  ## Create strip plots of imputed vs. observed values:
+  p2[[v]] <- ggmice(miceOut, aes(.imp, .data[[v]])) + geom_jitter(width = 0.25)
+}
 
-## Create strip plots of imputed vs. observed values:
-targets <- names(pm)[pm > 0]
-for(v in targets) 
-  p[[v]] <- ggmice(miceOut, aes(.imp, .data[[v]])) + geom_jitter(width = 0.25)
-
-p # Print the plots
+p1 # Print the density plots
+p2 # Print the strip plots
 
 
 ###-Analyzing MI Data--------------------------------------------------------###
