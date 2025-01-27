@@ -1,7 +1,7 @@
-### Title:    Missing Data in R: Missing Data Basics Demonstration Script
+### Title:    Missing Data in R: Missing Data Descriptives
 ### Author:   Kyle M. Lang
 ### Created:  2018-09-10
-### Modified: 2023-01-31
+### Modified: 2025-01-27
 
 ## Clear the workspace:
 rm(list = ls(all = TRUE))
@@ -16,11 +16,24 @@ library(ggmice)  # more plotting
 ## Define the data directory:
 dataDir <- "data/"
 
+################################################################################
+## Practice Problem 1.1
+## 
+## Use the readRDS() function to load the "adams_klps_data-example.rds" and
+## "bfiOE.rds" datasets.
+##
+################################################################################
+
 
 ###-Descriptives-------------------------------------------------------------###
 
 bfi <- readRDS(paste0(dataDir, "bfiANC.rds"))
 
+## Compute summary stats for each variable:
+summary(bfi)
+
+
+## Use the summary() function to summarize the 'nhanes' dataset from the 
 ## Compute the missingness and response matrices:
 mMat <- is.na(bfi)
 rMat <- !is.na(bfi)
@@ -54,6 +67,18 @@ range(pm2)
 ## Find variables with PM greater than 10%:
 pm[pm > 0.1]
 
+### NOTE: Use the "bfiOE" data to answer Practice Problems 1.2 - 1.4
+
+################################################################################
+## Practice Problem 1.2
+##
+## a) Compute the proportion of missing values for each variable.
+## b) What is the percentage of missing data for "O1"?
+## c) Compute the number of observed values for each variable:
+## d) What is the number of observed values for "E1"?
+##
+################################################################################
+
 ## Find missing data patterns:
 missPat <- md.pattern(bfi)
 missPat
@@ -75,6 +100,17 @@ rownames(missPat) %>% head(-1)  %>% as.numeric()
 
 ## Close the graphics device:
 dev.off()
+
+################################################################################
+## Practice Problem 1.3
+##
+## a) Compute the missing data patterns for these data.
+## b) How many distinct missing data patterns exist in these data?
+## c) How many missing data patterns have only one missing value?
+## d) How many observations are affected by patterns that involve only one
+##    missing value?
+##
+################################################################################
 
 ## Compute covariance coverage:
 (cc <- md.pairs(bfi)$rr / nrow(bfi))
@@ -103,17 +139,45 @@ cc[lower.tri(cc, diag = TRUE)]
 ## What's on the diagonal of the coverage matrix?
 diag(cc) - po
 
+################################################################################
+## Practice Problem 1.4
+##
+## a) Compute the covariance coverage matrix.
+## b) What is the range of covariance coverage values?
+## c) What is the covariance coverage between "E2" and "O4"?
+## d) How many covariance coverages are less that 0.75?
+##
+################################################################################
+
 
 ###-Visualizations-----------------------------------------------------------###
 
 ## Visualize the spatial distribution of missing data using naniar::vis_mis():
 vis_miss(bfi)
 
+### NOTE: Use the "adams_klps_data-example" data to answer Practice Problems
+###       1.5 - 1.8
+
+################################################################################
+## Practice Problem 1.5
+##
+## Use naniar::vis_miss() to visualize the distribtuion of the missing data.
+##
+################################################################################
+
 ## Visualize the variablewise nonresponse rates using naniar::gg_miss_var():
 gg_miss_var(bfi)
 gg_miss_var(bfi, show_pct = TRUE) + ggtitle("Percent Missing for Each Variable")
 gg_miss_var(bfi, facet = education)
 gg_miss_var(bfi, facet = education, show_pct = TRUE)
+
+################################################################################
+## Practice Problem 1.6
+##
+## Use naniar::gg_miss_var() to visualize the percents missing for each variable
+## in the data.
+##
+################################################################################
 
 ## Visualize the casewise nonresponse rates using naniar::gg_miss_case():
 gg_miss_case(bfi)
@@ -125,12 +189,29 @@ gg_miss_case(bfi, order_cases = FALSE)
 p1 <- ggplot(bfi, aes(A1, N1)) + geom_miss_point()
 p1 + facet_wrap(vars(gender))
 
+################################################################################
+## Practice Problem 1.7
+##
+## a) Use naniar::geom_miss_point() to visualize the relative distribution of
+##    missing values between "raie1" and "policy1"
+## b) Facet the plot you made in (3a) by "sex".
+##
+################################################################################
+
 ## Visualize coverages using naniar::gg_miss_upset():
 gg_miss_upset(bfi)
 
 bfi %>%
     select(education, matches("^A\\d")) %>%
     gg_miss_upset(nsets = ncol(.), nintersects = NA)
+
+################################################################################
+## Practice Problem 1.8
+##
+## Use naniar::gg_miss_upset() to visualize the coverages for all "policy" items
+## in the data.
+##
+################################################################################
 
 ## Visualize response patterns using mice::md.pattern():
 bfi %>%
