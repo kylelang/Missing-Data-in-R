@@ -1,7 +1,7 @@
 %%% Title:    Missing Data in R: Missing Data Treatments
 %%% Author:   Kyle M. Lang
 %%% Created:  2015-11-06
-%%% Modified: 2024-01-29
+%%% Modified: 2025-01-27
 
 \documentclass{beamer}
 \usetheme{Utrecht}
@@ -347,19 +347,6 @@ source("../../../code/sim_missing/code/simMissingness.R")
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}[fragile]{Implementation}
-  
-  <<eval = FALSE>>=
-  dat1[m, "glu"] <- mean(dat1$glu, na.rm = TRUE)
-
-  miceOut <- mice(data = dat1, m = 1, maxit = 1, method = "mean")
-  impData <- complete(miceOut, 1)
-  @ 
-  
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
 \begin{frame}{Bad Methods (These almost never work)}
 
   \begin{columns}
@@ -473,17 +460,6 @@ source("../../../code/sim_missing/code/simMissingness.R")
 \end{frame}
 
 \watermarkon %-----------------------------------------------------------------%
-
-\begin{frame}[fragile]{Implementation}
- 
-  <<eval = FALSE>>=
-  miceOut <- mice(data = dat1, m = 1, method = "norm.predict") 
-  impData <- complete(miceOut, 1)
-  @ 
-  
-\end{frame}
-
-%------------------------------------------------------------------------------%
 
 \begin{frame}{Bad Methods (These almost never work)}
 
