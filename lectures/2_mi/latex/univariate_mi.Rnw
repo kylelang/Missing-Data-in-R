@@ -1,7 +1,7 @@
 %%% Title:    Missing Data in R: Univariate MI
 %%% Author:   Kyle M. Lang
 %%% Created:  2017-09-12
-%%% Modified: 2024-01-29
+%%% Modified: 2025-01-28
 
 \documentclass[10pt]{beamer}
 \usetheme{Utrecht}
@@ -73,7 +73,7 @@ knit_theme$set('edit-kwrite')
 
 %------------------------------------------------------------------------------%
 
-\sectionslide{Single Imputation}
+\section{Imputation}
 
 %------------------------------------------------------------------------------%
 
@@ -94,11 +94,6 @@ knit_theme$set('edit-kwrite')
     \item Impute the missing data.
     \end{itemize}
   \end{enumerate}
-  \vb
-  Imputation can be used to support either prediction or inference.
-  \begin{itemize}
-  \item Our goals will dictate what type of imputation we need to do.
-  \end{itemize}
   
 \end{frame}
 
@@ -136,7 +131,7 @@ knit_theme$set('edit-kwrite')
 \end{frame}
 
 %------------------------------------------------------------------------------%
-
+\comment{%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{frame}{Do we really need to worry?}
 
   The arguments against single imputation can seem archaic and petty. Do we 
@@ -173,7 +168,7 @@ knit_theme$set('edit-kwrite')
   \end{itemize}
   
 \end{frame}
-
+}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \watermarkoff %----------------------------------------------------------------%
 
 \begin{frame}[fragile, allowframebreaks]{Simulate Some Toy Data}
@@ -249,6 +244,10 @@ knit_theme$set('edit-kwrite')
   \end{columns}
   
 \end{frame}
+
+%------------------------------------------------------------------------------%
+
+\subsection{Single Imputation}
 
 %------------------------------------------------------------------------------%
 
@@ -351,10 +350,10 @@ knit_theme$set('edit-kwrite')
 
 \watermarkon %-----------------------------------------------------------------%
 
-\sectionslide{Multiple Imputation}
+\subsection{Multiple Imputation}
 
 %------------------------------------------------------------------------------%
-
+\comment{%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{frame}[fragile]{Flavors of MI}
   
   MI simply repeats a single regression imputation $M$ times.
@@ -413,7 +412,7 @@ knit_theme$set('edit-kwrite')
   \end{itemize}
   
 \end{frame}
-
+}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %------------------------------------------------------------------------------%
 
 \begin{frame}{Setting Up Proper MI}
@@ -850,7 +849,7 @@ knit_theme$set('edit-kwrite')
 \end{frame}
 
 \watermarkon %-----------------------------------------------------------------%
-
+\comment{%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{frame}[allowframebreaks]{Pooling Predictions}
 
   When doing an MI-based analysis, we generally want to pool results as late as 
@@ -968,7 +967,7 @@ knit_theme$set('edit-kwrite')
   \end{itemize}
   
 \end{frame}
-
+}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %------------------------------------------------------------------------------%
 
 \begin{frame}[allowframebreaks]{References}

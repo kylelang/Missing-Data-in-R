@@ -1,7 +1,7 @@
 %%% Title:    Missing Data in R: Missing Data Treatments
 %%% Author:   Kyle M. Lang
 %%% Created:  2015-11-06
-%%% Modified: 2025-01-27
+%%% Modified: 2025-01-28
 
 \documentclass{beamer}
 \usetheme{Utrecht}
@@ -487,11 +487,11 @@ source("../../../code/sim_missing/code/simMissingness.R")
 
 %------------------------------------------------------------------------------%
 
-\section{OK Methods}
+\section{OK Method}
 
 %------------------------------------------------------------------------------%
 
-\begin{frame}{OK Methods (These sometimes work)}
+\begin{frame}{OK Method (This sometimes works)}
 
   \begin{columns}
     \begin{column}{0.5\textwidth}
@@ -616,26 +616,6 @@ source("../../../code/sim_missing/code/simMissingness.R")
   miceOut <- mice(data = dat1, m = 1, seed = 42, method = "norm.nob") 
   impData <- complete(1)
   @ 
-
-\end{frame}
-
-%------------------------------------------------------------------------------%
-
-\begin{frame}{OK Methods (These sometimes work)}
-
-  Nonresponse Weighting
-  \vc
-  \begin{itemize}
-  \item Weight the observed cases to correct for nonresponse bias
-    \vc
-    \begin{itemize}
-    \item Popular in survey research and official statistics
-      \vc
-    \item Only worth considering with \emph{Unit Nonresponse}
-      \vc
-    \item Doesn't make any sense with \emph{Item Nonresponse}
-    \end{itemize}
-  \end{itemize}
 
 \end{frame}
 
