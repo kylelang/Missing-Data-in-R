@@ -1528,11 +1528,9 @@ regression imputation.</strong></p>
 default options.</strong></p>
 <hr />
 <p>The object returned by <code>mice()</code> has the class <em>mids</em> (<em>m</em>ultiply <em>i</em>mputed
-<em>d</em>ata<em>s</em>et). This object encapsulates all the relevant information <code>mice()</code>
+<em>d</em>ata <em>s</em>et). This object encapsulates all the relevant information <code>mice()</code>
 produced when imputing the <em>nhanes</em> dataset (e.g., the original data, the
 imputed values, the number of missing values, number of iterations, etc.).</p>
-<p>To see what’s inside most R objects, we can use the <code>ls()</code> function to list the
-contents of the object.</p>
 <hr />
 </div>
 <div id="section-5" class="section level2" number="2.3">
@@ -1549,12 +1547,12 @@ in Question <a href="#defaultMI">2.2</a>.</strong></p>
 <hr />
 <p>Before proceeding any further, we need to check convergence. If the imputation
 model did not converge, or if the imputed values are not reasonable, there is no
-reason to proceed on to the analysis phase.</p>
+reason to proceed to the analysis phase.</p>
 <hr />
 </div>
 <div id="section-6" class="section level2" number="2.4">
 <h2><span class="header-section-number">2.4</span> </h2>
-<p><strong>Use the <code>plot.mids()</code> function to create trace plots from the imputed data.</strong></p>
+<p><strong>Use the <code>plot.mids()</code> function to create trace plots of the imputed data.</strong></p>
 <hr />
 </div>
 <div id="section-7" class="section level2" number="2.5">
@@ -1996,8 +1994,6 @@ useful statistics (e.g., the fraction of missing information, <code>fmi</code>).
 ##  [7] &quot;m&quot;        &quot;riv&quot;      &quot;t&quot;        &quot;term&quot;     &quot;ubar&quot;</code></pre>
 <pre class="r"><code>poolFit$pooled$fmi</code></pre>
 <pre><code>## [1] 0.3595712 0.2518258</code></pre>
-<pre class="r"><code>poolFit$pooled$lambda</code></pre>
-<pre><code>## [1] 0.2496022 0.1564529</code></pre>
 <hr />
 </div>
 <div id="section-10" class="section level2" number="5.2">
@@ -2008,7 +2004,7 @@ Question <a href="#analysisPhase">5.1</a>.</strong></p>
 <hr />
 <p>The workflow demonstrated above applies to many different types of analysis. As
 long as the estimation function provides <code>coef()</code> and <code>vcov()</code> methods, this
-workflow should succeed. In Lab 2b, we will explore alternative workflows that
+workflow should succeed. In Lab 2c, we will explore alternative workflows that
 you can use in situations where the <code>mice()</code> <span class="math inline">\(\rightarrow\)</span> <code>with.mids()</code>
 <span class="math inline">\(\rightarrow\)</span> <code>pool()</code> process doesn’t work.</p>
 <hr />
@@ -2083,9 +2079,9 @@ argument in <code>mice()</code>.</p>
 </ul>
 <hr />
 <p>The <code>mice::quickpred()</code> function provides a simple way to construct predictor
-matrices via various selection rules. The following code will select as
-predictors all variables that correlated at least <span class="math inline">\(\rho = 0.30\)</span> with each
-incomplete variable.</p>
+matrices via various selection rules. The following code will select a variable
+as a predictor when it correlates at least <span class="math inline">\(\rho = 0.30\)</span> with the incomplete
+variable.</p>
 <pre class="r"><code>(pred &lt;- quickpred(nhanes, mincor = 0.3))</code></pre>
 <pre><code>##     age bmi hyp chl
 ## age   0   0   0   0

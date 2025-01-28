@@ -154,12 +154,9 @@ default values for the `maxit` and `m` arguments, respectively.
 ---
 
 The object returned by `mice()` has the class *mids* (*m*ultiply *i*mputed 
-*d*ata*s*et). This object encapsulates all the relevant information `mice()` 
+*d*ata *s*et). This object encapsulates all the relevant information `mice()` 
 produced when imputing the *nhanes* dataset (e.g., the original data, the 
 imputed values, the number of missing values, number of iterations, etc.).
-
-To see what's inside most R objects, we can use the `ls()` function to list the 
-contents of the object.
 
 ---
 
@@ -188,7 +185,7 @@ imp$data
 ```
 
 ```{asis}
-A list of the imputed values is stored in the `imp` slot.
+A list containing the imputed values is stored in the `imp` slot.
 ```
 
 ```{r}
@@ -196,8 +193,7 @@ imp$imp
 ```
 
 ```{asis}
-The vector defining the elementary imputation methods used is stored in the 
-`method` slot.
+A vector defining the elementary imputation methods is stored in the `method` slot.
 ```
 
 ```{r}
@@ -216,13 +212,13 @@ imp$m
 
 Before proceeding any further, we need to check convergence. If the imputation 
 model did not converge, or if the imputed values are not reasonable, there is no 
-reason to proceed on to the analysis phase.
+reason to proceed to the analysis phase.
 
 ---
 
 ##
 
-**Use the `plot.mids()` function to create trace plots from the imputed data.**
+**Use the `plot.mids()` function to create trace plots of the imputed data.**
 
 ```{r}
 plot(imp)
@@ -446,7 +442,6 @@ useful statistics (e.g., the fraction of missing information, `fmi`).
 ls(poolFit)
 ls(poolFit$pooled)
 poolFit$pooled$fmi
-poolFit$pooled$lambda
 ```
 
 ---
@@ -472,7 +467,7 @@ predict `bmi`.
 
 The workflow demonstrated above applies to many different types of analysis. As
 long as the estimation function provides `coef()` and `vcov()` methods, this 
-workflow should succeed. In Lab 2b, we will explore alternative workflows that
+workflow should succeed. In Lab 2c, we will explore alternative workflows that
 you can use in situations where the `mice()` $\rightarrow$ `with.mids()` 
 $\rightarrow$ `pool()` process doesn't work. 
 
@@ -569,9 +564,9 @@ pred1
 ---
 
 The `mice::quickpred()` function provides a simple way to construct predictor 
-matrices via various selection rules. The following code will select as 
-predictors all variables that correlated at least $\rho = 0.30$ with each 
-incomplete variable.
+matrices via various selection rules. The following code will select a variable
+as a predictor when it correlates at least $\rho = 0.30$ with the incomplete 
+variable.
 
 ```{r, include = TRUE, echo = TRUE, cache = TRUE}
 (pred <- quickpred(nhanes, mincor = 0.3))
@@ -746,7 +741,6 @@ Define the following methods.
 
 meth <- make.method(nhanes2)
 meth["bmi"] <- "cart"
-meth["hyp"] <- "logreg"
 
 meth
 ```
