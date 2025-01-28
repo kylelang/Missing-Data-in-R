@@ -1,7 +1,7 @@
 ### Title:    Missing Data in R: Multiple Imputation
 ### Author:   Kyle M. Lang
 ### Created:  2015-10-04
-### Modified: 2025-01-27
+### Modified: 2025-01-28
 
 rm(list = ls(all = TRUE)) # Clear workspace
 
@@ -37,9 +37,6 @@ vis_miss(missData)
 cover <- md.pairs(missData)$rr / nrow(missData)
 hist(cover)
 cover[cover < 1] %>% range()
-
-## How many unique response patterns?
-md.pattern(missData, plot = FALSE) %>% nrow() - 1
 
 
 ###-Missing Data Imputation--------------------------------------------------###
@@ -141,10 +138,6 @@ p2 # Print the strip plots
 
 ###-Analyzing MI Data--------------------------------------------------------###
 
-## Use miceadds::micombine.cor() to run correlation tests on the imputed data:
-varPositions <- grep("riae\\d", colnames(missData))
-micombine.cor(miceOut, varPositions)
-
 ## Use mice::with.mids() to fit a linear regression directly to the imputed data
 ## in the mids object:
 fit1 <- with(miceOut, lm(policy1 ~ nori1 + nori4 + nori10 + polv + sex))
@@ -174,6 +167,10 @@ pool(fit2) %>% summary()
 anova(fit1, fit2)
 D1(fit1, fit2)
 D3(fit1, fit2)
+
+## Use miceadds::micombine.cor() to run correlation tests on the imputed data:
+varPositions <- grep("riae\\d", colnames(missData))
+micombine.cor(miceOut, varPositions)
 
 ## Use miceadds::mi.anova() to run a factorial ANOVA on the imputed data:
 mi.anova(miceOut, "policy1 ~ polv * sex")
