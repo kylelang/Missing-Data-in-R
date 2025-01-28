@@ -18,7 +18,8 @@ output:
 
 ### R Demonstration
 
-- [Demo Script 1: Missing Data Basics](demos/1_basics/basics_demo.R)
+- [Demo Script 1: Missing Data Descriptives](demos/1_basics/descriptives.R)
+- [Suggested Solutions: Missing Data Descriptives](demos/1_basics/descriptives_solutions.R)
 
 ### R Lab
 
@@ -39,7 +40,7 @@ output:
 
 ### R Demonstration
 
-- [Demo Script 2: MI](demos/2_mi/mi_demo.R)
+- [Demo Script 2: MI](demos/2_mi/mi.R)
 
 ### R Labs
 
@@ -55,7 +56,7 @@ output:
 - [Lab2b Solutions](labs/2_mi/passive_imputation_solutions.html)
 - [Lab2c Solutions](labs/2_mi/mi_workflows_solutions.html)
 
-<!----------------------------------------------------------------------------->
+<!-----------------------------------------------------------------------------
 
 # Full Information Maximum Likelihood
 
@@ -75,3 +76,4 @@ output:
 - [Lab 3: FIML](labs/3_fiml/fiml.html)
 - [Lab 3 Solutions](labs/3_fiml/fiml_solutions.html)
 
+------------------------------------------------------------------------------->

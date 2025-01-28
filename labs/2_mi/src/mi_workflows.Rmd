@@ -11,7 +11,7 @@ output:
     toc_depth: 1
     toc_float: true
     number_sections: true
-    css: "../../resources/style.css"
+    css: "../../../resources/style.css"
 ---
 
 ```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
@@ -38,6 +38,9 @@ opts_chunk$set(include = params$answers,
 In these lab exercises you will explore some different workflows that you can 
 use to implement an MI-based analysis.
 
+Unless otherwise specified, you will be analyzing the *boys* dataset from the
+**mice** package in all following exercises.
+
 ---
 
 # Setup
@@ -56,68 +59,7 @@ library(mitools)
 
 ---
 
-In this lab, we will be working with the *boys* dataset provided by the **mice** 
-package. The *boys* dataset is distributed with **mice**, so you will be able to 
-access these data once you've loaded the **mice** package. The *boys* data are a 
-subset of a large Dutch dataset containing growth measures from the Fourth Dutch 
-Growth Study. 
-
-Unless otherwise specified, all questions in this section refer to the *boys* 
-dataset. 
-
----
-
-##
-
-**Check the documentation for the *boys* data.**
-
-```{r, eval = FALSE}
-?boys
-```
-
----
-
-##
-
-**Summarize the *boys* data to get a sense of their characteristics.**
-
-```{r}
-head(boys)
-summary(boys)
-str(boys)
-```
-
----
-
-##
-
-**Use the mice::md.pattern() function to summarize the response patterns.**
-
-- How many different missing data patterns are present in the *boys* data?
-- Which pattern occurs most frequently in these data?
-
-```{r}
-(pats <- md.pattern(boys))
-```
-
-```{asis}
-There are 13 total patterns. The pattern where `gen`, `phb`, and `tv` are 
-missing occurs the most frequently.
-```
-
----
-
-##
-
-**In how many patterns is the variable `gen` missing?**
-
-```{r}
-sum(pats[ , "gen"] == 0)
-```
-
----
-
-Imputation Phase
+# Imputation Phase
 
 ---
 

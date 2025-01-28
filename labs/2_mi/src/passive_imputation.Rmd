@@ -11,7 +11,7 @@ output:
     toc_depth: 1
     toc_float: true
     number_sections: true
-    css: "../../resources/style.css"
+    css: "../../../resources/style.css"
 ---
 
 ```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
@@ -81,26 +81,6 @@ The *mammalsleep* dataset is part of **mice**. This dataset contains the
 head(mammalsleep)
 summary(mammalsleep)
 str(mammalsleep)
-```
-
----
-
-##
-
-**Compute the missing data patterns in the data.**
-
-- How many different missing data patterns are present in the data?
-- Which pattern occurs most frequently in the data?
-
-```{r}
-(pats <- md.pattern(mammalsleep))
-```
-
-```{asis}
-The *mammalsleep* data contain `r nrow(pats) - 1 ` total response patterns. The 
-complete case pattern (i.e., the pattern wherein all variables were observed) 
-occurred the most frequently (`r rownames(pats) %>% as.numeric() %>% max(na.rm = TRUE)` 
-times).
 ```
 
 ---
@@ -389,7 +369,7 @@ using the updated method vector and predictor matrix in a regular run of `mice()
 imp <- mice(mammalsleep, 
             method = meth, 
             predictorMatrix = pred, 
-            maxit = 10, 
+            maxit = 20, 
             seed = 235711, 
             print = FALSE)
 ```
@@ -410,11 +390,53 @@ been corrected by the passive imputation.
 
 ---
 
-You will now implement passive imputation yourself using the *boys* dataset from 
-the **mice** package. You already explored the missing data in the *boys* data 
-in the last practical, so we will not repeat those steps. 
+You will now implement passive imputation yourself using the *boys* dataset. The
+*boys* dataset is distributed with **mice**, so you will be able to access these
+data once you've loaded the **mice** package. The *boys* data are a subset of a
+large Dutch dataset containing growth measures from the Fourth Dutch Growth Study. 
 
-Unless otherwise specified, all remaining questions refer to the *boys* dataset.
+Unless otherwise specified, all questions in this section refer to the *boys* 
+dataset. 
+
+---
+
+##
+
+**Check the documentation for the *boys* data.**
+
+```{r, eval = FALSE}
+?boys
+```
+
+---
+
+##
+
+**Summarize the *boys* data to get a sense of their characteristics.**
+
+```{r}
+head(boys)
+summary(boys)
+str(boys)
+```
+
+---
+
+##
+
+**Use the mice::md.pattern() function to summarize the response patterns.**
+
+- How many different missing data patterns are present in the *boys* data?
+- Which pattern occurs most frequently in these data?
+
+```{r}
+(pats <- md.pattern(boys))
+```
+
+```{asis}
+There are 13 total patterns. The pattern where `gen`, `phb`, and `tv` are 
+missing occurs the most frequently.
+```
 
 ---
 
